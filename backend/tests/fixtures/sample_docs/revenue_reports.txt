@@ -1,0 +1,26 @@
+ACME CORPORATION — REVENUE REPORTS
+Document ID: FIN-REV-2025
+
+Company Total Q3 revenue was $15,100,000 for July through September 2025.
+Sales Q3 revenue was $7,500,000.
+
+Q2 2025 REVENUE BY DEPARTMENT
+Engineering: $4,500,000
+Sales: $7,100,000
+Marketing: $1,650,000
+Operations: $950,000
+Company Total Q2: $14,150,000
+
+Q3 2025 REVENUE BY DEPARTMENT
+Engineering: $4,800,000
+Sales: $7,500,000
+Marketing: $1,800,000
+Operations: $1,000,000
+Company Total Q3: $15,100,000
+
+NOTES
+Sales department led revenue growth in both Q2 and Q3.
+Average enterprise deal size in Q3: $215,000.
+Top 5 clients represent 38% of total revenue.
+
+CONTACT: finance@acme-corp.com

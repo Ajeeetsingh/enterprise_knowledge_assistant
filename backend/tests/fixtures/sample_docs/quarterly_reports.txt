@@ -1,0 +1,30 @@
+ACME CORPORATION — QUARTERLY FINANCIAL REPORTS
+Report ID: FIN-QTR-2025 | Prepared by: Finance Department
+
+Q2 2025 COMPANY SUMMARY
+Total Revenue: $14,150,000
+Total Expenses: $9,740,000
+Net Profit: $4,410,000
+Operating Margin: 31.2%
+Headcount: 291
+
+Q3 2025 COMPANY SUMMARY
+Total Revenue: $15,100,000
+Total Expenses: $10,120,000
+Net Profit: $4,980,000
+Operating Margin: 33.0%
+Headcount: 304
+
+Sales generated the highest revenue in Q3 2025 at $7,500,000 and is managed by Emily Davis.
+Sales Director Emily Davis manages the Sales department.
+The manager of the Sales department is Emily Davis.
+
+DEPARTMENT REVENUE Q3 2025
+Engineering: $4,800,000
+Sales: $7,500,000
+Marketing: $1,800,000
+Operations: $1,000,000
+
+Engineering Manager David Kim leads the Engineering department.
+
+CONTACT: finance@acme-corp.com | ext. 3200

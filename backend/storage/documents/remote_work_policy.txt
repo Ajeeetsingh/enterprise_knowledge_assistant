@@ -1,0 +1,20 @@
+ACME CORPORATION — REMOTE WORK POLICY
+Document ID: HR-RWP-2025-001 | Effective: January 1, 2025
+
+HYBRID WORK
+Eligible employees may work remotely up to 3 days per week with written manager approval.
+Fully remote arrangements require VP-level approval and annual review.
+
+CORE HOURS
+Core collaboration hours: 10:00 AM to 3:00 PM in the employee's local timezone.
+Employees must be reachable via Slack, email, and video conferencing during core hours.
+
+EQUIPMENT AND SECURITY
+Company-issued laptops must use ACME endpoint protection and full-disk encryption.
+VPN is mandatory when accessing internal systems from outside the office.
+Remote workers in Finance, HR, and Engineering must enroll in MFA by June 30, 2025.
+
+INTERNATIONAL REMOTE WORK
+Limited to 30 calendar days per year with prior HR and Legal approval.
+
+CONTACT: hr@acme-corp.com

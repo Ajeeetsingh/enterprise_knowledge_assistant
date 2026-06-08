@@ -1,0 +1,21 @@
+ACME CORPORATION — EXPENSE REPORTS
+Document ID: FIN-EXP-2025
+
+Q2 2025 EXPENSES BY DEPARTMENT
+Engineering: $3,200,000
+Sales: $4,300,000
+Marketing: $1,400,000
+Operations: $780,000
+Company Total Q2: $9,740,000
+
+Q3 2025 EXPENSES BY DEPARTMENT
+Engineering: $3,350,000
+Sales: $4,500,000
+Marketing: $1,450,000
+Operations: $820,000
+Company Total Q3: $10,120,000
+
+Sales had the highest expenses in Q3 2025 at $4,500,000.
+Cloud infrastructure costs reduced 8% through reserved-instance optimization.
+
+CONTACT: finance@acme-corp.com

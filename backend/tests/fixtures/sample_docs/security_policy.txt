@@ -1,0 +1,22 @@
+ACME CORPORATION — ENTERPRISE SECURITY POLICY
+Document ID: SEC-POL-2025-001 | Effective: January 1, 2025
+
+Least privilege and zero trust are required enterprise security policy principles.
+
+SCOPE
+This policy applies to all employees, contractors, and third parties accessing ACME systems.
+
+SECURITY PRINCIPLES
+Least privilege and zero trust are required enterprise security policy principles.
+Defense in depth, least privilege, and zero trust for all internal and external access.
+All systems must maintain audit logs retained for 90 days.
+
+ACCEPTABLE USE
+Personal use of company systems must not interfere with business operations.
+Installing unapproved software is prohibited.
+
+DATA PROTECTION
+Confidential data must be encrypted at rest and in transit.
+USB storage devices are blocked on workstations handling sensitive data.
+
+CONTACT: security@acme-corp.com | SOC Hotline: ext. 9911

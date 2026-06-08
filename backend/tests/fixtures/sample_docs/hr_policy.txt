@@ -1,0 +1,116 @@
+ACME CORPORATION — HUMAN RESOURCES POLICY MANUAL
+Document ID: HR-POL-2025-001 | Effective: January 1, 2025 | Owner: HR Department
+
+================================================================================
+SECTION 1: ANNUAL LEAVE AND TIME OFF
+================================================================================
+
+1.1 Paid Annual Leave
+All full-time employees accrue 1.67 days of paid annual leave per month (20 days per year).
+Part-time employees receive pro-rated leave based on scheduled hours.
+Leave must be requested at least 14 calendar days in advance via the Workday HR portal.
+Managers must approve or deny requests within 3 business days.
+Unused annual leave above 5 days may be carried forward to the next fiscal year (maximum 10 days).
+
+1.2 Sick Leave
+Employees receive 10 days of paid sick leave per year.
+A doctor's note is required for absences exceeding 3 consecutive days.
+Sick leave does not roll over and is not paid out upon termination.
+
+1.3 Parental Leave
+Primary caregivers: 16 weeks fully paid parental leave.
+Secondary caregivers: 4 weeks fully paid parental leave.
+Parental leave must be taken within 12 months of the child's birth or adoption.
+Employees must notify HR at least 30 days before intended leave start date.
+
+1.4 Bereavement Leave
+Immediate family (spouse, parent, child, sibling): 5 paid days.
+Extended family (grandparent, in-law): 3 paid days.
+Additional unpaid leave may be granted at manager discretion.
+
+================================================================================
+SECTION 2: REMOTE WORK AND FLEXIBLE ARRANGEMENTS
+================================================================================
+
+2.1 Hybrid Work Policy
+Eligible employees may work remotely up to 3 days per week with written manager approval.
+Fully remote arrangements require VP-level approval and annual review.
+Core collaboration hours: 10:00 AM – 3:00 PM in the employee's local timezone.
+Employees must be reachable via Slack and email during core hours.
+
+2.2 Equipment and Stipend
+Home office equipment stipend: $500 per year (receipts required).
+Company-issued laptop must use ACME endpoint protection and full-disk encryption.
+VPN connection is mandatory when accessing internal systems from outside the office.
+
+2.3 International Remote Work
+International remote work is limited to 30 calendar days per year.
+Prior written approval from HR and Legal is required.
+Tax and compliance implications must be reviewed before travel.
+
+================================================================================
+SECTION 3: PERFORMANCE MANAGEMENT
+================================================================================
+
+3.1 Review Cycle
+Annual performance reviews are conducted in Q4 (October–December).
+Mid-year check-ins are mandatory in Q2.
+Review components: self-assessment (20%), manager evaluation (60%), peer feedback (20%).
+
+3.2 Rating Scale
+Exceeds Expectations (EE): Consistently surpasses goals; eligible for top-tier bonus.
+Meets Expectations (ME): Delivers on all core responsibilities.
+Needs Improvement (NI): Below expectations; requires a Performance Improvement Plan (PIP).
+Unsatisfactory (U): Immediate PIP or separation may be initiated.
+
+3.3 Promotions
+Promotion nominations are accepted during Q4 review cycle only.
+Minimum time in role before promotion consideration: 18 months.
+Promotion budget is allocated at 8% of department headcount annually.
+
+================================================================================
+SECTION 4: COMPENSATION AND BENEFITS
+================================================================================
+
+4.1 Salary Review
+Merit increases are effective April 1 each year.
+Average merit increase budget: 3.5% of payroll.
+High performers (EE rating) may receive up to 8% increase.
+
+4.2 Health and Wellness
+Medical, dental, and vision coverage begins on day one of employment.
+Company pays 85% of employee premium; 60% of dependent premium.
+Annual wellness stipend: $600 for gym, mental health apps, or fitness equipment.
+
+4.3 Retirement
+401(k) plan with 100% company match on the first 6% of employee contributions.
+Vesting schedule: 25% per year; fully vested after 4 years.
+
+4.4 Professional Development
+Annual learning budget: $2,000 per employee for courses, certifications, and conferences.
+Tuition reimbursement up to $10,000 per year for job-relevant degree programs.
+
+================================================================================
+SECTION 5: CODE OF CONDUCT AND COMPLIANCE
+================================================================================
+
+5.1 Workplace Standards
+All employees must comply with ACME's Anti-Harassment and Equal Opportunity Policy.
+Conflicts of interest must be disclosed to HR within 5 business days of identification.
+Gifts from vendors exceeding $100 in value must be reported and may be declined.
+
+5.2 Data Handling
+Confidential employee data (salary, performance, medical) must not be shared outside HR.
+Violations of data privacy policies may result in termination and legal action.
+
+5.3 Mandatory Training
+New hire onboarding: 2 weeks including compliance, security, and product training.
+Annual refresher: security awareness (due by March 31), anti-harassment (due by June 30).
+
+================================================================================
+CONTACTS
+================================================================================
+HR General Inquiries: hr@acme-corp.com
+Benefits Helpdesk: benefits@acme-corp.com | ext. 4501
+Leave Requests: Workday portal or ext. 4500
+Policy Updates: Published quarterly on the ACME intranet (hr.acme-corp.com/policies)

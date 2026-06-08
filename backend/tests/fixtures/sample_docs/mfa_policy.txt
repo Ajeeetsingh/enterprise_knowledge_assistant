@@ -1,0 +1,17 @@
+ACME CORPORATION — MULTI-FACTOR AUTHENTICATION POLICY
+Document ID: SEC-MFA-2025-001 | Effective: January 1, 2025
+
+REQUIREMENTS
+MFA is mandatory for all remote access and admin accounts.
+Finance, HR, and Engineering departments must enroll by June 30, 2025.
+Hardware security keys are recommended for privileged accounts.
+
+ENROLLMENT
+Employees enroll via sso.acme-corp.com using the corporate identity portal.
+New hires must enable MFA within 5 business days of account creation.
+
+COMPLIANCE
+Non-compliant accounts are flagged weekly and escalated to department managers.
+Remote workers without MFA will have VPN access revoked after the deadline.
+
+CONTACT: security@acme-corp.com

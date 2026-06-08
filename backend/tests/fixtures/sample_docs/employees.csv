@@ -1,0 +1,16 @@
+employee_id,full_name,department,job_title,hire_date,employment_status,salary_usd,manager,location,performance_rating,email,security_incident
+EMP-1002,Michael Chen,Finance,Financial Analyst,2019-08-01,active,98000,Sarah Johnson,New York,Meets Expectations,mchen@acme-corp.com,SEC-2025-0889 privilege escalation
+EMP-1001,Jane Smith,Engineering,Senior Software Engineer,2021-03-15,active,145000,David Kim,Seattle,Exceeds Expectations,jsmith@acme-corp.com,
+EMP-1003,Alice Lee,Human Resources,HR Business Partner,2020-11-20,active,105000,Robert Williams,San Francisco,Exceeds Expectations,alee@acme-corp.com,
+EMP-1004,Raj Patel,Sales,Account Executive,2022-06-10,active,87000,Emily Davis,Chicago,Meets Expectations,rpatel@acme-corp.com,
+EMP-1005,David Kim,Engineering,Engineering Manager,2018-01-08,active,175000,CTO,Seattle,Exceeds Expectations,dkim@acme-corp.com,
+EMP-1006,Sarah Johnson,Finance,Chief Financial Officer,2017-05-22,active,220000,CEO,New York,Exceeds Expectations,sjohnson@acme-corp.com,
+EMP-1007,Robert Williams,Human Resources,HR Director,2016-09-14,active,165000,CEO,San Francisco,Exceeds Expectations,rwilliams@acme-corp.com,
+EMP-1008,Emily Davis,Sales,Sales Director,2018-11-03,active,158000,CEO,Chicago,Exceeds Expectations,edavis@acme-corp.com,
+EMP-1009,Thomas Wright,Operations,Operations Manager,2020-04-27,active,112000,Sarah Johnson,Austin,Meets Expectations,twright@acme-corp.com,
+EMP-1010,Sophia Martinez,Marketing,Marketing Manager,2021-07-19,active,118000,Emily Davis,San Francisco,Meets Expectations,smartinez@acme-corp.com,
+EMP-1011,James O'Brien,Engineering,DevOps Engineer,2023-02-01,active,128000,David Kim,Seattle,Meets Expectations,jobrien@acme-corp.com,
+EMP-1012,Lisa Nguyen,Finance,Accounts Payable Specialist,2022-09-12,active,72000,Sarah Johnson,New York,Meets Expectations,lnguyen@acme-corp.com,SEC-2025-0890 malware on FIN-WS-034
+EMP-1013,Carlos Rivera,Sales,Sales Development Rep,2024-01-15,active,65000,Emily Davis,Chicago,Meets Expectations,crivera@acme-corp.com,
+EMP-1014,Anna Kowalski,Human Resources,Recruiter,2023-08-07,active,78000,Robert Williams,Remote,Meets Expectations,akowalski@acme-corp.com,
+EMP-1015,Kevin Brooks,Security,Security Analyst,2019-12-02,active,115000,CTO,Seattle,Exceeds Expectations,kbrooks@acme-corp.com,
