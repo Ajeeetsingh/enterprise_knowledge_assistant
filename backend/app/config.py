@@ -20,12 +20,12 @@ class Settings(BaseSettings):
 
     app_name: str = "Enterprise Knowledge Assistant"
     app_version: str = "0.1.0"
-    environment: str = "development"
+    app_env: str = "development"
     debug: bool = False
 
     # Database
     database_url: str = (
-        "postgresql://eka:eka@localhost:5432/enterprise_knowledge"
+        "postgresql+psycopg://postgres:postgres@localhost:5432/eka"
     )
 
     # Logging

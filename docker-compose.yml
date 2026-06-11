@@ -1,17 +1,17 @@
 services:
   postgres:
-    image: postgres:16-alpine
+    image: postgres:16
     container_name: eka-postgres
     environment:
-      POSTGRES_USER: eka
-      POSTGRES_PASSWORD: eka
-      POSTGRES_DB: enterprise_knowledge
+      POSTGRES_DB: eka
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U eka -d enterprise_knowledge"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d eka"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -24,8 +24,9 @@ services:
     env_file:
       - .env
     environment:
-      DATABASE_URL: postgresql://eka:eka@postgres:5432/enterprise_knowledge
-      ENVIRONMENT: development
+      DATABASE_URL: postgresql+psycopg://postgres:postgres@postgres:5432/eka
+      APP_ENV: development
+      DEBUG: "true"
       LOG_LEVEL: INFO
     ports:
       - "8000:8000"

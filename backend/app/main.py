@@ -34,7 +34,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         "Application starting",
         app=settings.app_name,
         version=settings.app_version,
-        environment=settings.environment,
+        environment=settings.app_env,
         tenant_id=settings.tenant_id,
     )
 
