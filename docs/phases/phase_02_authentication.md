@@ -4,7 +4,21 @@
 
 **Phase:** 02
 
-**Status:** 🔄 Planned
+**Status:** ✅ Complete (Phases 2.1–2.8)
+
+**Sub-phases:**
+
+| Phase | Focus | Doc |
+|-------|-------|-----|
+| 2.1 | Identity layer (User, Role models) | [phase_02_1_identity_layer.md](phase_02_1_identity_layer.md) |
+| 2.2 | Password security | [phase_02_2_password_security.md](phase_02_2_password_security.md) |
+| 2.3 | JWT token service | [phase_02_3_jwt_service.md](phase_02_3_jwt_service.md) |
+| 2.4A | Authentication API | [phase_02_4a_authentication_api.md](phase_02_4a_authentication_api.md) |
+| 2.4B | Current user dependency | [phase_02_4b_authentication_dependency.md](phase_02_4b_authentication_dependency.md) |
+| 2.5 | RBAC authorization | [phase_02_5_rbac_authorization.md](phase_02_5_rbac_authorization.md) |
+| 2.6 | User management | [phase_02_6_user_management.md](phase_02_6_user_management.md) |
+| 2.7 | Role management | [phase_02_7_role_management.md](phase_02_7_role_management.md) |
+| 2.8 | Production review | [phase_02_8_authentication_review.md](phase_02_8_authentication_review.md) |
 
 **Estimated Duration:** 5–7 Days
 

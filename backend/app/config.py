@@ -43,7 +43,7 @@ class Settings(BaseSettings):
     api_v1_prefix: str = "/api/v1"
     cors_origins: list[str] = ["http://localhost:5173", "http://localhost:3000"]
 
-    # Reserved for Phase 2 (auth) — loaded but unused in Phase 1
+    # JWT (Phase 2.3 token service — consumed by app.auth.jwt)
     jwt_secret: str = "change-me-in-production"
     jwt_algorithm: str = "HS256"
     jwt_access_token_expire_minutes: int = 30

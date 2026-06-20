@@ -33,6 +33,40 @@ python test_pipeline.py
 
 The first run downloads the embedding model (~90 MB) from Hugging Face.
 
+## Backend Bootstrap
+
+Seed scripts initialize the authentication database for local development and manual Phase 2 testing. Run them after migrations (`alembic upgrade head`) with Postgres available.
+
+### `scripts/seed_roles.py`
+
+Creates the four fixed application roles: **Admin**, **Employee**, **HR**, and **Finance**. Safe to run multiple times — existing roles are skipped.
+
+```bash
+python scripts/seed_roles.py
+```
+
+Run this **first** before creating users or testing role assignment.
+
+### `scripts/seed_admin_user.py`
+
+Creates the default administrator account used for manual API testing:
+
+| Field | Value |
+|-------|-------|
+| Email | `admin@example.com` |
+| Password | `AdminPass1!` |
+| Role | Admin |
+| Superuser | Yes |
+
+Safe to run multiple times — if the user already exists, the script prints `Admin user already exists.` and exits without changes.
+
+```bash
+python scripts/seed_roles.py
+python scripts/seed_admin_user.py
+```
+
+Use this after `seed_roles.py` when you need an Admin token for user management, role assignment, and protected endpoint testing. The script does not modify authentication or RBAC logic; it reuses the existing User model, Role model, password service, and database session.
+
 ## Project Structure
 
 ```
