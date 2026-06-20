@@ -14,7 +14,7 @@ from app.auth import hash_password
 from app.auth.jwt import create_access_token
 from app.config import Settings, get_settings
 from app.db.base import Base
-from app.db.models import Role, User  # noqa: F401 — register models
+from app.db.models import Document, Role, User  # noqa: F401 — register models
 from app.dependencies import get_db
 from app.main import app
 
@@ -116,6 +116,11 @@ def access_token_for(user: User) -> str:
         [role.name for role in user.roles],
         settings=TEST_SETTINGS,
     )
+
+
+def bearer_headers(token: str) -> dict[str, str]:
+    """Build Authorization headers for integration tests."""
+    return {"Authorization": f"Bearer {token}"}
 
 
 @pytest.fixture

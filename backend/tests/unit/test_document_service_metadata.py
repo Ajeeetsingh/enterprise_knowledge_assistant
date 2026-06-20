@@ -1,0 +1,168 @@
+"""Unit tests for document metadata persistence in DocumentService."""
+
+from __future__ import annotations
+
+import uuid
+
+import pytest
+from sqlalchemy import create_engine
+from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.pool import StaticPool
+
+from app.auth import hash_password
+from app.core.exceptions import DocumentNotFoundError
+from app.db.base import Base
+from app.db.models import Document, Role, User  # noqa: F401
+from app.db.repositories.document_repository import DocumentRepository
+from app.documents.status import DocumentStatus
+from app.ingestion.embedding.base import EmbeddingProvider
+from app.ingestion.pipeline import create_default_pipeline
+from app.ingestion.processor import DocumentProcessor
+from app.ingestion.vector_store.base import VectorStore
+from app.services.document_service import DocumentService
+from app.storage.local import LocalStorage
+from unittest.mock import MagicMock
+
+
+@pytest.fixture
+def db_session() -> Session:
+    engine = create_engine(
+        "sqlite://",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    Base.metadata.create_all(engine)
+    session_factory = sessionmaker(
+        bind=engine,
+        autocommit=False,
+        autoflush=False,
+        expire_on_commit=False,
+    )
+    session = session_factory()
+    try:
+        yield session
+    finally:
+        session.close()
+        Base.metadata.drop_all(engine)
+        engine.dispose()
+
+
+@pytest.fixture
+def uploader_id(db_session: Session) -> uuid.UUID:
+    role = Role(name="Admin", description="Administrator")
+    user = User(
+        email="admin@example.com",
+        username="admin",
+        full_name="Admin User",
+        password_hash=hash_password("Str0ng!Passw0rd"),
+        is_active=True,
+    )
+    user.roles.append(role)
+    db_session.add_all([role, user])
+    db_session.commit()
+    return user.id
+
+
+def _mock_processor(text: str = "policy text") -> MagicMock:
+    proc = MagicMock(spec=DocumentProcessor)
+    proc.process.return_value = text
+    return proc
+
+
+def _mock_embedder() -> MagicMock:
+    emb = MagicMock(spec=EmbeddingProvider)
+    emb.embed.side_effect = lambda texts: [[0.1] * 4 for _ in texts]
+    return emb
+
+
+def _mock_store() -> MagicMock:
+    store = MagicMock(spec=VectorStore)
+    store.add_chunks.side_effect = (
+        lambda chunks, embs, document_id=None: [c.chunk_id for c in chunks]
+    )
+    return store
+
+
+def _build_service(storage, store) -> DocumentService:
+    pipeline = create_default_pipeline(
+        storage,
+        processor=_mock_processor(),
+        embedding_provider=_mock_embedder(),
+        vector_store=store,
+    )
+    return DocumentService(pipeline=pipeline, storage=storage, vector_store=store)
+
+
+def test_upload_document_persists_metadata(
+    db_session: Session,
+    uploader_id: uuid.UUID,
+    tmp_path,
+) -> None:
+    storage = LocalStorage(base_path=tmp_path)
+    store = _mock_store()
+    pipeline = create_default_pipeline(
+        storage,
+        processor=_mock_processor("Employee handbook."),
+        embedding_provider=_mock_embedder(),
+        vector_store=store,
+    )
+    service = DocumentService(pipeline=pipeline, storage=storage, vector_store=store)
+    repository = DocumentRepository(db_session)
+
+    upload_result = service.upload_document(
+        repository,
+        filename="handbook.txt",
+        content_type="text/plain",
+        content=b"Employee handbook.",
+        uploaded_by=uploader_id,
+    )
+
+    persisted = repository.get_by_id(uuid.UUID(upload_result.document_id))
+
+    assert persisted is not None
+    assert persisted.filename == "handbook.txt"
+    assert persisted.status == DocumentStatus.SEARCHABLE.value
+    assert persisted.uploaded_by == uploader_id
+    assert persisted.storage_path
+    assert persisted.file_size == len(b"Employee handbook.")
+
+
+def test_get_document_raises_when_missing(db_session: Session, tmp_path) -> None:
+    storage = LocalStorage(base_path=tmp_path)
+    store = _mock_store()
+    service = _build_service(storage, store)
+    repository = DocumentRepository(db_session)
+
+    with pytest.raises(DocumentNotFoundError):
+        service.get_document(repository, uuid.uuid4())
+
+
+def test_list_documents_returns_paginated_metadata(
+    db_session: Session,
+    uploader_id: uuid.UUID,
+    tmp_path,
+) -> None:
+    storage = LocalStorage(base_path=tmp_path)
+    store = _mock_store()
+    service = _build_service(storage, store)
+    repository = DocumentRepository(db_session)
+
+    service.upload_document(
+        repository,
+        filename="one.txt",
+        content_type="text/plain",
+        content=b"one",
+        uploaded_by=uploader_id,
+    )
+    service.upload_document(
+        repository,
+        filename="two.txt",
+        content_type="text/plain",
+        content=b"two",
+        uploaded_by=uploader_id,
+    )
+
+    documents, total = service.list_documents(repository, limit=1, offset=0)
+
+    assert total == 2
+    assert len(documents) == 1

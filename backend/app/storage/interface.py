@@ -1,11 +1,16 @@
-"""Storage adapter interface — future S3/SharePoint implementations."""
+"""Storage adapter interface — future S3/SharePoint/Azure implementations."""
 
 from abc import ABC, abstractmethod
 from pathlib import Path
 
 
 class StorageAdapter(ABC):
-    """Abstract file storage adapter."""
+    """Abstract file storage adapter.
+
+    Implementations such as ``LocalStorage`` (MVP), ``S3Storage``, and
+    ``AzureBlobStorage`` (future) plug into the ingestion pipeline without
+    modifying pipeline stage code.
+    """
 
     @abstractmethod
     def save(self, relative_path: str, content: bytes) -> Path:

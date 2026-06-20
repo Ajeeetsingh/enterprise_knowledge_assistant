@@ -9,6 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.router import api_v1_router, health_router
 from app.config import get_settings
+from app.core.exception_handlers import register_exception_handlers
 from app.core.logging import get_logger, log_with_fields, setup_logging
 from app.db.session import check_database_connection, engine
 
@@ -74,6 +75,8 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+
+    register_exception_handlers(application)
 
     # Health probes at root for Docker / orchestrators
     application.include_router(health_router)
