@@ -7,7 +7,7 @@ from collections.abc import AsyncIterator
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.router import api_router
+from app.api.router import api_v1_router, health_router
 from app.config import get_settings
 from app.core.logging import get_logger, log_with_fields, setup_logging
 from app.db.session import check_database_connection, engine
@@ -75,11 +75,11 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
-    # Health endpoints at root (container/orchestrator probes)
-    application.include_router(api_router)
+    # Health probes at root for Docker / orchestrators
+    application.include_router(health_router)
 
-    # API v1 routes (future modules mount here)
-    application.include_router(api_router, prefix=settings.api_v1_prefix)
+    # All business API routes under /api/v1
+    application.include_router(api_v1_router, prefix=settings.api_v1_prefix)
 
     return application
 

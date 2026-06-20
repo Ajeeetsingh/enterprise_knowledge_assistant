@@ -15,12 +15,6 @@ def test_health_liveness() -> None:
     assert response.json() == {"status": "healthy"}
 
 
-def test_health_liveness_prefixed() -> None:
-    response = client.get("/api/v1/health")
-    assert response.status_code == 200
-    assert response.json() == {"status": "healthy"}
-
-
 def test_ready_endpoint_when_database_available() -> None:
     with patch("app.api.v1.health.check_database_connection", return_value=True):
         response = client.get("/ready")
@@ -33,10 +27,3 @@ def test_ready_endpoint_when_database_unavailable() -> None:
         response = client.get("/ready")
     assert response.status_code == 503
     assert response.json() == {"status": "unavailable"}
-
-
-def test_ready_endpoint_prefixed() -> None:
-    with patch("app.api.v1.health.check_database_connection", return_value=True):
-        response = client.get("/api/v1/ready")
-    assert response.status_code == 200
-    assert response.json() == {"status": "ready"}
