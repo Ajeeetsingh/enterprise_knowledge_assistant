@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from fastapi.testclient import TestClient
 
+from app.auth.dependencies import AUTHORIZATION_DENIED_MESSAGE
 from app.db.models import User
 from tests.integration.conftest import access_token_for
 
@@ -47,7 +48,7 @@ def test_employee_denied_admin_demo(client: TestClient, active_user: User) -> No
     response = client.get(ADMIN_DEMO_URL, headers=_bearer_headers(token))
 
     assert response.status_code == 403
-    assert response.json()["detail"] == "Insufficient permissions."
+    assert response.json()["detail"] == AUTHORIZATION_DENIED_MESSAGE
 
 
 def test_employee_denied_hr_demo(client: TestClient, active_user: User) -> None:
@@ -55,7 +56,7 @@ def test_employee_denied_hr_demo(client: TestClient, active_user: User) -> None:
     response = client.get(HR_DEMO_URL, headers=_bearer_headers(token))
 
     assert response.status_code == 403
-    assert response.json()["detail"] == "Insufficient permissions."
+    assert response.json()["detail"] == AUTHORIZATION_DENIED_MESSAGE
 
 
 def test_missing_token(client: TestClient) -> None:
@@ -85,4 +86,4 @@ def test_non_superuser_rejection(client: TestClient, admin_user: User) -> None:
     response = client.get(SUPERUSER_DEMO_URL, headers=_bearer_headers(token))
 
     assert response.status_code == 403
-    assert response.json()["detail"] == "Insufficient permissions."
+    assert response.json()["detail"] == AUTHORIZATION_DENIED_MESSAGE

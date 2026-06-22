@@ -10,7 +10,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from app.auth import hash_password
+from tests.constants import TEST_PASSWORD_HASH
 from app.core.exceptions import DocumentIngestionError, DocumentValidationError
 from app.db.base import Base
 from app.db.models import Document, Role, User  # noqa: F401
@@ -210,7 +210,7 @@ def test_upload_document_returns_business_result(
         email="admin@example.com",
         username="admin",
         full_name="Admin User",
-        password_hash=hash_password("Str0ng!Passw0rd"),
+        password_hash=TEST_PASSWORD_HASH,
         is_active=True,
     )
     user.roles.append(role)

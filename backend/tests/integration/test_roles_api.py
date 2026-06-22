@@ -8,6 +8,7 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
+from app.auth.dependencies import AUTHORIZATION_DENIED_MESSAGE
 from app.db.models import Role, User
 from tests.integration.conftest import access_token_for
 
@@ -160,7 +161,7 @@ def test_non_admin_forbidden(
     response = client.get(ROLES_URL, headers=_bearer_headers(token))
 
     assert response.status_code == 403
-    assert response.json()["detail"] == "Insufficient permissions."
+    assert response.json()["detail"] == AUTHORIZATION_DENIED_MESSAGE
 
 
 def test_multiple_role_assignment(

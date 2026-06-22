@@ -7,6 +7,7 @@ import uuid
 from fastapi.testclient import TestClient
 
 from app.db.models import User
+from app.auth.dependencies import AUTHORIZATION_DENIED_MESSAGE
 from tests.integration.conftest import TEST_PASSWORD, access_token_for
 
 USERS_URL = "/api/v1/users"
@@ -111,7 +112,7 @@ def test_non_admin_forbidden(client: TestClient, active_user: User) -> None:
     response = client.get(USERS_URL, headers=_bearer_headers(token))
 
     assert response.status_code == 403
-    assert response.json()["detail"] == "Insufficient permissions."
+    assert response.json()["detail"] == AUTHORIZATION_DENIED_MESSAGE
 
 
 def test_invalid_user_id(client: TestClient, admin_user: User) -> None:

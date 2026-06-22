@@ -9,7 +9,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from app.auth import hash_password
+from tests.constants import TEST_PASSWORD_HASH
 from app.db.base import Base
 from app.db.models import Document, Role, User  # noqa: F401
 from app.db.repositories.document_repository import DocumentFilter, DocumentRepository
@@ -46,7 +46,7 @@ def uploader_id(db_session: Session) -> uuid.UUID:
         email="admin@example.com",
         username="admin",
         full_name="Admin User",
-        password_hash=hash_password("Str0ng!Passw0rd"),
+        password_hash=TEST_PASSWORD_HASH,
         is_active=True,
     )
     user.roles.append(role)
@@ -186,7 +186,7 @@ def test_list_filters_by_uploaded_by(
         email="other@example.com",
         username="other",
         full_name="Other User",
-        password_hash=hash_password("Str0ng!Passw0rd"),
+        password_hash=TEST_PASSWORD_HASH,
         is_active=True,
     )
     db_session.add(other_user)

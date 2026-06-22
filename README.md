@@ -199,6 +199,28 @@ Add new files to `data/` and map the filename stem in `CATEGORY_MAP` inside `loa
 
 ## Testing
 
+### Backend API suite (default)
+
+The FastAPI backend has a pytest suite under `backend/tests/`. From the
+`backend/` directory:
+
+```bash
+cd backend
+python -m pytest
+```
+
+This runs **~309 unit and integration tests** in about **10 seconds**. It does
+**not** include the legacy RAG pipeline script in `backend/tests/rag/`.
+
+See **[backend/TESTING.md](backend/TESTING.md)** for:
+
+- Which tests run by default and why
+- Why legacy RAG tests are excluded from pytest
+- How to run RAG validation manually
+- Planned migration to pytest-marked RAG tests
+
+### Phase 00 prototype suite (legacy)
+
 ```bash
 python test_pipeline.py
 ```
@@ -213,6 +235,17 @@ The suite covers:
 Results are written to `results/test_results.json` and `results/test_results.txt`.
 
 The enterprise test suite (`realistic_enterprise_test.py`) writes to the same `results/` folder.
+
+### Backend RAG script (manual)
+
+The migrated RAG checks also live as a standalone script:
+
+```bash
+cd backend
+python tests/rag/test_pipeline.py
+```
+
+Details are in [backend/TESTING.md](backend/TESTING.md).
 
 ## Configuration
 

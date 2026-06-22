@@ -393,6 +393,7 @@ class DocumentService:
             tenant_id=resolved_tenant,
             version=version_info.version,
             parent_document_id=version_info.parent_document_id,
+            owner_id=uploaded_by,
         )
 
         try:

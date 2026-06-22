@@ -132,11 +132,26 @@ class RagService:
         assert self._engine is not None
         return self._engine
 
-    def answer_question(self, question: str, role: str) -> "QueryResponse":
+    def answer_question(
+        self,
+        question: str,
+        role: str,
+        authorized_sources: frozenset[str] | None = None,
+    ) -> "QueryResponse":
         """Run a natural-language query through the RAG engine.
 
         Returns the native ``QueryResponse`` from the RAG engine.
         ``role`` is required by the engine for category-level RBAC.
+
+        Args:
+            question: The user's natural-language question.
+            role: Primary role name used for category-based RBAC.
+            authorized_sources: Optional set of source filenames the user
+                may access (document-level authorization, Phase 5.5).
+                ``None`` means no additional source restriction is applied.
+
+        Returns:
+            ``QueryResponse`` containing the answer, citations, and metadata.
         """
         normalized_question = question.strip()
         if not normalized_question:
@@ -149,7 +164,7 @@ class RagService:
         engine = self._ensure_initialized()
 
         try:
-            return engine.query(normalized_question, normalized_role)
+            return engine.query(normalized_question, normalized_role, authorized_sources)
         except RuntimeError as exc:
             message = str(exc).lower()
             if "index not built" in message or "not initialized" in message:

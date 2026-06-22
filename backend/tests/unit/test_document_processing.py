@@ -10,7 +10,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from app.auth import hash_password
+from tests.constants import TEST_PASSWORD_HASH
 from app.core.exceptions import (
     DocumentIngestionError,
     DocumentStorageError,
@@ -73,7 +73,7 @@ def uploader_id(db_session: Session) -> uuid.UUID:
         email="admin@example.com",
         username="admin",
         full_name="Admin User",
-        password_hash=hash_password("Str0ng!Passw0rd"),
+        password_hash=TEST_PASSWORD_HASH,
         is_active=True,
     )
     user.roles.append(role)

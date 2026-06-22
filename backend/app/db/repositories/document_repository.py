@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 
 from app.db.models.document import Document
 from app.documents.status import DocumentStatus
+from app.documents.visibility import DEFAULT_VISIBILITY, DocumentVisibility
 
 
 @dataclass(frozen=True)
@@ -41,8 +42,31 @@ class DocumentRepository:
         tenant_id: str | None = None,
         version: int = 1,
         parent_document_id: uuid.UUID | None = None,
+        # Phase 5.2 security metadata — all optional with safe defaults
+        department: str | None = None,
+        owner_id: uuid.UUID | None = None,
+        visibility: DocumentVisibility = DEFAULT_VISIBILITY,
+        allowed_roles: list[str] | None = None,
     ) -> Document:
-        """Persist a new document metadata record."""
+        """Persist a new document metadata record.
+
+        Args:
+            document_id: Pre-assigned primary key.
+            filename: Original upload filename.
+            content_type: MIME type.
+            file_size: File size in bytes.
+            checksum: Content checksum (SHA-256 hex).
+            storage_path: Path relative to storage root.
+            uploaded_by: UUID of the uploading user.
+            status: Initial lifecycle status.
+            tenant_id: Optional tenant identifier.
+            version: Document version number (default 1).
+            parent_document_id: Parent document UUID for versioned docs.
+            department: Optional owning department name.
+            owner_id: Optional document owner UUID (defaults to uploader).
+            visibility: Access scope; defaults to ``RESTRICTED``.
+            allowed_roles: Role names permitted when visibility is RESTRICTED.
+        """
         document = Document(
             id=document_id,
             filename=filename,
@@ -55,7 +79,11 @@ class DocumentRepository:
             tenant_id=tenant_id,
             version=version,
             parent_document_id=parent_document_id,
+            department=department,
+            owner_id=owner_id,
+            visibility=visibility.value,
         )
+        document.allowed_roles = allowed_roles
         self._db.add(document)
         self._db.commit()
         self._db.refresh(document)
@@ -185,3 +213,32 @@ class DocumentRepository:
         if exclude_deleted:
             query = query.where(Document.status != DocumentStatus.DELETED.value)
         return self._db.scalar(query.order_by(Document.uploaded_at.desc()).limit(1))
+
+    def find_by_filenames(
+        self,
+        filenames: list[str],
+        *,
+        exclude_deleted: bool = True,
+    ) -> list[Document]:
+        """Return documents matching any of the given filenames.
+
+        Performs a single IN-query so callers can resolve many filenames
+        without issuing N+1 individual queries.  The result order is
+        deterministic (latest upload first per filename).
+
+        Args:
+            filenames: Exact filename strings to look up.
+            exclude_deleted: When ``True`` (default), omit deleted records.
+
+        Returns:
+            List of matching documents.  Unknown filenames are silently
+            omitted; no exception is raised.
+        """
+        if not filenames:
+            return []
+        query = select(Document).where(Document.filename.in_(filenames))
+        if exclude_deleted:
+            query = query.where(Document.status != DocumentStatus.DELETED.value)
+        return list(
+            self._db.scalars(query.order_by(Document.uploaded_at.desc()))
+        )

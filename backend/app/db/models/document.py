@@ -2,27 +2,43 @@
 
 from __future__ import annotations
 
+import json
 import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import BigInteger, DateTime, ForeignKey, String, Uuid, func
+from sqlalchemy import BigInteger, DateTime, ForeignKey, String, Text, Uuid, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
+from app.documents.visibility import DEFAULT_VISIBILITY, DocumentVisibility
 
 if TYPE_CHECKING:
     from app.db.models.user import User
 
 
 class Document(Base):
-    """Persisted document metadata.
+    """Persisted document metadata including Phase 5.2 security fields.
 
-    Files are stored via ``StorageAdapter``; this model tracks metadata only.
+    Core identity and ingestion columns are unchanged from Phase 4.
+    Security metadata added in Phase 5.2:
+
+    - ``department``   — optional owning department (HR, Finance, …)
+    - ``owner_id``     — FK to the user who owns (not just uploaded) the doc
+    - ``visibility``   — discovery scope: public / restricted / private
+    - ``allowed_roles``— JSON-encoded list of role names permitted to access
+                         the document when visibility is RESTRICTED
+
+    Storing ``allowed_roles`` as JSON text keeps the schema portable across
+    PostgreSQL and SQLite while supporting future migration to a proper
+    association table (Phase 5.x ACLs) without changing the column type.
     """
 
     __tablename__ = "documents"
 
+    # ------------------------------------------------------------------ #
+    # Core identity                                                        #
+    # ------------------------------------------------------------------ #
     id: Mapped[uuid.UUID] = mapped_column(
         Uuid(as_uuid=True),
         primary_key=True,
@@ -68,4 +84,96 @@ class Document(Base):
         nullable=False,
     )
 
-    uploader: Mapped[User] = relationship()
+    # ------------------------------------------------------------------ #
+    # Phase 5.2 — Security metadata                                        #
+    # ------------------------------------------------------------------ #
+    department: Mapped[str | None] = mapped_column(
+        String(100),
+        nullable=True,
+        index=True,
+    )
+    """Optional owning department (e.g. 'HR', 'Finance').
+
+    Used in future phases for department-level authorization filters.
+    ``None`` means the document belongs to no specific department.
+    """
+
+    owner_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid(as_uuid=True),
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    """User who owns (governs) this document.
+
+    Defaults to the uploader at creation time.  Can be reassigned in
+    future phases without changing ``uploaded_by``.
+    """
+
+    visibility: Mapped[str] = mapped_column(
+        String(20),
+        nullable=False,
+        default=DEFAULT_VISIBILITY.value,
+        index=True,
+    )
+    """Discovery scope stored as a plain string value of ``DocumentVisibility``.
+
+    Using a string (not a DB-native enum) keeps the column portable and
+    allows new visibility levels to be added without a DDL migration.
+    """
+
+    _allowed_roles: Mapped[str | None] = mapped_column(
+        "allowed_roles",
+        Text,
+        nullable=True,
+    )
+    """JSON-encoded list of role names.
+
+    Stored as ``Text`` so the schema is portable.  Access through the
+    ``allowed_roles`` Python property which handles serialization.
+    Example raw value: ``'["Admin", "HR"]'``
+    """
+
+    # ------------------------------------------------------------------ #
+    # Relationships                                                        #
+    # ------------------------------------------------------------------ #
+    uploader: Mapped[User] = relationship(
+        foreign_keys=[uploaded_by],
+    )
+    owner: Mapped[User | None] = relationship(
+        foreign_keys=[owner_id],
+    )
+
+    # ------------------------------------------------------------------ #
+    # allowed_roles property                                               #
+    # ------------------------------------------------------------------ #
+    @property
+    def allowed_roles(self) -> list[str]:
+        """Return the list of allowed role names, or an empty list."""
+        if self._allowed_roles is None:
+            return []
+        try:
+            result = json.loads(self._allowed_roles)
+            if isinstance(result, list):
+                return [str(r) for r in result]
+        except (json.JSONDecodeError, TypeError):
+            pass
+        return []
+
+    @allowed_roles.setter
+    def allowed_roles(self, roles: list[str] | None) -> None:
+        """Persist *roles* as a JSON string, or ``None`` to clear."""
+        if roles is None:
+            self._allowed_roles = None
+        else:
+            self._allowed_roles = json.dumps(sorted(set(roles)))
+
+    # ------------------------------------------------------------------ #
+    # Convenience helpers                                                  #
+    # ------------------------------------------------------------------ #
+    @property
+    def visibility_enum(self) -> DocumentVisibility:
+        """Return the ``DocumentVisibility`` member for ``self.visibility``."""
+        from app.documents.visibility import resolve_visibility
+        resolved = resolve_visibility(self.visibility)
+        return resolved if resolved is not None else DEFAULT_VISIBILITY

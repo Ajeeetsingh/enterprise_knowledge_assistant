@@ -120,6 +120,7 @@ def test_answer_question_delegates_to_engine(
     mock_engine.query.assert_called_once_with(
         "What is the remote work policy?",
         "employee",
+        None,
     )
     assert response.answer.startswith("Employees may work remotely")
 

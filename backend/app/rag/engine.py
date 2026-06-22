@@ -53,8 +53,25 @@ class EnterpriseRAG:
         self._initialized = True
         return len(chunks)
 
-    def query(self, user_query: str, role: str) -> QueryResponse:
-        """Process a query with routing and RBAC enforcement."""
+    def query(
+        self,
+        user_query: str,
+        role: str,
+        authorized_sources: frozenset[str] | None = None,
+    ) -> QueryResponse:
+        """Process a query with routing and RBAC enforcement.
+
+        Args:
+            user_query: Natural-language question from the user.
+            role: Primary role name for category-level RBAC.
+            authorized_sources: Optional set of source filenames the user
+                may access (document-level auth, Phase 5.5).  When provided,
+                only chunks from these sources participate in the search.
+                ``None`` means no additional source restriction is applied.
+
+        Returns:
+            ``QueryResponse`` containing the answer, citations, and metadata.
+        """
         if not self._initialized:
             raise RuntimeError("RAG pipeline not initialized. Call initialize() first.")
 
@@ -81,6 +98,7 @@ class EnterpriseRAG:
             user_query,
             top_k=3,
             allowed_categories=allowed_categories,
+            allowed_sources=authorized_sources,
         )
 
         if not results:

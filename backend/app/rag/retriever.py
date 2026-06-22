@@ -62,11 +62,29 @@ class SemanticRetriever:
         top_k: int = 3,
         allowed_categories: set[str] | None = None,
         category_filter: str | None = None,
+        allowed_sources: set[str] | None = None,
     ) -> list[RetrievalResult]:
         """Search the FAISS index and return ranked results.
 
         When ``allowed_categories`` is provided, only chunks in those categories
         are returned. This enforces RBAC at retrieval time.
+
+        When ``allowed_sources`` is provided, only chunks whose ``source``
+        (filename) is in the set are returned.  This enforces document-level
+        authorization introduced in Phase 5.5.  Both filters are ANDed when
+        both are provided.
+
+        Args:
+            query: Natural-language search query.
+            top_k: Maximum number of results to return.
+            allowed_categories: Optional category whitelist (category RBAC).
+            category_filter: Override ``allowed_categories`` with a single
+                category (used by routing).
+            allowed_sources: Optional source filename whitelist
+                (document-level authorization).
+
+        Returns:
+            Ranked list of ``RetrievalResult`` objects for authorized chunks.
         """
         if self.index is None or not self.chunks:
             raise RuntimeError("Index not built. Call build_index() first.")
@@ -87,6 +105,10 @@ class SemanticRetriever:
 
             chunk = self.chunks[idx]
             if permitted and chunk.category not in permitted:
+                continue
+
+            # Document-level authorization filter (Phase 5.5).
+            if allowed_sources is not None and chunk.source not in allowed_sources:
                 continue
 
             confidence = float(max(0.0, min(1.0, score)))

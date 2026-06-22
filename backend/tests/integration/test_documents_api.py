@@ -22,6 +22,7 @@ from app.ingestion.vector_store.base import VectorStore
 from app.main import app
 from app.services.document_service import build_document_service
 from app.storage.local import LocalStorage
+from app.auth.dependencies import AUTHORIZATION_DENIED_MESSAGE
 from tests.integration.conftest import access_token_for, bearer_headers
 
 UPLOAD_URL = "/api/v1/documents/upload"
@@ -222,11 +223,11 @@ def test_non_admin_user_returns_403(
     response = _upload_file(documents_client, token)
 
     assert response.status_code == 403
-    assert response.json()["detail"] == "Insufficient permissions."
+    assert response.json()["detail"] == AUTHORIZATION_DENIED_MESSAGE
     mock_document_service.upload_document.assert_not_called()
 
 
-def test_hr_user_returns_403(
+def test_hr_user_can_upload(
     documents_client: TestClient,
     mock_document_service: MagicMock,
     hr_user: User,
@@ -235,9 +236,8 @@ def test_hr_user_returns_403(
 
     response = _upload_file(documents_client, token)
 
-    assert response.status_code == 403
-    assert response.json()["detail"] == "Insufficient permissions."
-    mock_document_service.upload_document.assert_not_called()
+    assert response.status_code == 200
+    mock_document_service.upload_document.assert_called_once()
 
 
 def test_documents_route_has_no_manual_exception_handling() -> None:
@@ -438,7 +438,7 @@ def test_get_document_not_found_returns_404(
     assert response.json()["detail"] == "Document not found."
 
 
-def test_list_documents_requires_admin(
+def test_list_documents_allowed_with_document_read_permission(
     real_document_client: TestClient,
     active_user: User,
 ) -> None:
@@ -446,8 +446,8 @@ def test_list_documents_requires_admin(
 
     response = real_document_client.get(LIST_URL, headers=bearer_headers(token))
 
-    assert response.status_code == 403
-    assert response.json()["detail"] == "Insufficient permissions."
+    assert response.status_code == 200
+    assert "items" in response.json()
 
 
 def test_openapi_includes_list_and_detail_endpoints(client: TestClient) -> None:
@@ -562,7 +562,7 @@ def test_delete_document_requires_admin(
     )
 
     assert response.status_code == 403
-    assert response.json()["detail"] == "Insufficient permissions."
+    assert response.json()["detail"] == AUTHORIZATION_DENIED_MESSAGE
 
 
 def test_openapi_includes_delete_endpoint(client: TestClient) -> None:

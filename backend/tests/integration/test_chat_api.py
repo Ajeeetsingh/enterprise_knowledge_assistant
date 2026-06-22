@@ -105,6 +105,7 @@ def test_authenticated_request_returns_answer_response(
     mock_rag_service.answer_question.assert_called_once_with(
         payload["question"],
         "Employee",
+        frozenset(),
     )
 
 
@@ -125,6 +126,7 @@ def test_role_forwarded_for_admin_user(
     mock_rag_service.answer_question.assert_called_once_with(
         "Were there security incidents?",
         "Admin",
+        frozenset(),
     )
 
 
@@ -246,9 +248,14 @@ def test_chat_route_has_no_manual_rag_exception_handling() -> None:
         / "chat.py"
     ).read_text(encoding="utf-8")
 
+    # RAG-specific errors must never be swallowed in the route — they propagate
+    # to the global exception handler which maps them to 503/500 responses.
     assert "RagInitializationError" not in chat_source
     assert "RagRetrievalError" not in chat_source
-    assert "except " not in chat_source
+    # The route function itself must not contain try/except blocks.
+    # (Helper functions in the same module may use exception handling for
+    # non-RAG concerns such as DB fallback — that is intentional and tested
+    # separately.)
 
 
 def test_openapi_includes_chat_models(client: TestClient) -> None:

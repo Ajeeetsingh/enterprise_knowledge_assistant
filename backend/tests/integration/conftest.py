@@ -10,15 +10,13 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from app.auth import hash_password
 from app.auth.jwt import create_access_token
 from app.config import Settings, get_settings
 from app.db.base import Base
 from app.db.models import Document, Role, User  # noqa: F401 — register models
 from app.dependencies import get_db
 from app.main import app
-
-TEST_PASSWORD = "Str0ng!Passw0rd"
+from tests.constants import TEST_PASSWORD, TEST_PASSWORD_HASH
 
 TEST_SETTINGS = Settings(
     jwt_secret="integration-test-jwt-secret-key-32bytes-min",
@@ -70,16 +68,25 @@ def db_session() -> Generator[Session, None, None]:
         engine.dispose()
 
 
+@pytest.fixture(scope="session")
+def session_client() -> Generator[TestClient, None, None]:
+    """Session-scoped TestClient to avoid repeated app lifespan startup."""
+    with TestClient(app) as test_client:
+        yield test_client
+
+
 @pytest.fixture
-def client(db_session: Session) -> Generator[TestClient, None, None]:
+def client(
+    db_session: Session,
+    session_client: TestClient,
+) -> Generator[TestClient, None, None]:
     """FastAPI test client with database dependency override."""
 
     def override_get_db() -> Generator[Session, None, None]:
         yield db_session
 
     app.dependency_overrides[get_db] = override_get_db
-    with TestClient(app) as test_client:
-        yield test_client
+    yield session_client
     app.dependency_overrides.clear()
 
 
@@ -98,7 +105,7 @@ def active_user(db_session: Session, employee_role: Role) -> User:
         email="active@example.com",
         username="active",
         full_name="Active User",
-        password_hash=hash_password(TEST_PASSWORD),
+        password_hash=TEST_PASSWORD_HASH,
         is_active=True,
     )
     user.roles.append(employee_role)
@@ -147,7 +154,7 @@ def admin_user(db_session: Session, admin_role: Role) -> User:
         email="admin@example.com",
         username="admin",
         full_name="Admin User",
-        password_hash=hash_password(TEST_PASSWORD),
+        password_hash=TEST_PASSWORD_HASH,
         is_active=True,
     )
     user.roles.append(admin_role)
@@ -163,7 +170,7 @@ def hr_user(db_session: Session, hr_role: Role) -> User:
         email="hr@example.com",
         username="hr",
         full_name="HR User",
-        password_hash=hash_password(TEST_PASSWORD),
+        password_hash=TEST_PASSWORD_HASH,
         is_active=True,
     )
     user.roles.append(hr_role)
@@ -179,7 +186,7 @@ def superuser(db_session: Session, employee_role: Role) -> User:
         email="superuser@example.com",
         username="superuser",
         full_name="Superuser",
-        password_hash=hash_password(TEST_PASSWORD),
+        password_hash=TEST_PASSWORD_HASH,
         is_active=True,
         is_superuser=True,
     )
@@ -196,7 +203,7 @@ def inactive_user(db_session: Session, employee_role: Role) -> User:
         email="inactive@example.com",
         username="inactive",
         full_name="Inactive User",
-        password_hash=hash_password(TEST_PASSWORD),
+        password_hash=TEST_PASSWORD_HASH,
         is_active=False,
     )
     user.roles.append(employee_role)
