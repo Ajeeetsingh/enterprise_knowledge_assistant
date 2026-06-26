@@ -26,6 +26,7 @@ from app.dependencies import get_db, get_rag_service_dep
 from app.documents.visibility import DocumentVisibility
 from app.main import app
 from tests.constants import TEST_PASSWORD, TEST_PASSWORD_HASH
+from tests.integration.chat_helpers import ask_payload, create_conversation
 from tests.integration.conftest import access_token_for, bearer_headers
 
 LOGIN_URL = "/api/v1/auth/login"
@@ -350,11 +351,12 @@ class TestRagQueryAuditEvents:
         self, audit_client: TestClient, active_user: User
     ) -> None:
         token = access_token_for(active_user)
+        conversation_id = create_conversation(audit_client, token)
         with patch("app.api.v1.chat.AuditService.record") as mock_record:
             response = audit_client.post(
                 ASK_URL,
                 headers=bearer_headers(token),
-                json={"question": "What is the leave policy?"},
+                json=ask_payload(conversation_id, "What is the leave policy?"),
             )
         assert response.status_code == 200
         types = _recorded_types(mock_record)
@@ -364,12 +366,239 @@ class TestRagQueryAuditEvents:
         self, audit_client: TestClient, active_user: User
     ) -> None:
         token = access_token_for(active_user)
+        conversation_id = create_conversation(audit_client, token)
         with patch("app.api.v1.chat.AuditService.record") as mock_record:
             audit_client.post(
                 ASK_URL,
                 headers=bearer_headers(token),
-                json={"question": "What is the leave policy?"},
+                json=ask_payload(conversation_id, "What is the leave policy?"),
             )
         events = [c.args[0] for c in mock_record.call_args_list]
         rag_events = [e for e in events if e.event_type == AuditEventType.RAG_QUERY]
         assert rag_events[0].outcome == AuditOutcome.SUCCESS
+
+
+# ---------------------------------------------------------------------------
+# Phase 7.6 — Persisted audit search API
+# ---------------------------------------------------------------------------
+
+AUDIT_SEARCH_URL = "/api/v1/audit"
+
+
+def _seed_audit_logs(db_session: Session, admin_user: User) -> list[uuid.UUID]:
+    from app.db.models.enums.audit import AuditEventCategory, AuditStatus
+    from app.db.repositories.audit_repository import AuditRepository
+
+    repo = AuditRepository(db_session)
+    auth_log = repo.create(
+        event_type="auth.login.success",
+        event_category=AuditEventCategory.AUTH,
+        action="login",
+        status=AuditStatus.SUCCESS,
+        user_id=admin_user.id,
+    )
+    chat_log = repo.create(
+        event_type="chat.question.asked",
+        event_category=AuditEventCategory.CHAT,
+        action="ask_question",
+        status=AuditStatus.SUCCESS,
+        user_id=admin_user.id,
+        resource_type="conversation",
+        resource_id=str(uuid.uuid4()),
+        metadata={"query_length": 12},
+    )
+    security_log = repo.create(
+        event_type="security.permission.denied",
+        event_category=AuditEventCategory.SECURITY,
+        action="permission_check",
+        status=AuditStatus.FAILED,
+        metadata={"required_permission": "role:Admin", "resource": "/api/v1/users"},
+    )
+    return [auth_log.id, chat_log.id, security_log.id]
+
+
+class TestAuditSearchApi:
+    def test_admin_can_list_audits(
+        self,
+        client: TestClient,
+        admin_user: User,
+        db_session: Session,
+    ) -> None:
+        _seed_audit_logs(db_session, admin_user)
+        token = access_token_for(admin_user)
+
+        response = client.get(
+            AUDIT_SEARCH_URL,
+            headers=bearer_headers(token),
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["total"] == 3
+        assert len(data["items"]) == 3
+        assert data["limit"] == 20
+        assert data["offset"] == 0
+
+    def test_admin_can_retrieve_audit(
+        self,
+        client: TestClient,
+        admin_user: User,
+        db_session: Session,
+    ) -> None:
+        log_ids = _seed_audit_logs(db_session, admin_user)
+        token = access_token_for(admin_user)
+
+        response = client.get(
+            f"{AUDIT_SEARCH_URL}/{log_ids[0]}",
+            headers=bearer_headers(token),
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["id"] == str(log_ids[0])
+        assert data["event_type"] == "auth.login.success"
+
+    def test_filter_by_event_category(
+        self,
+        client: TestClient,
+        admin_user: User,
+        db_session: Session,
+    ) -> None:
+        _seed_audit_logs(db_session, admin_user)
+        token = access_token_for(admin_user)
+
+        response = client.get(
+            AUDIT_SEARCH_URL,
+            headers=bearer_headers(token),
+            params={"event_category": "CHAT"},
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["total"] == 1
+        assert data["items"][0]["event_category"] == "CHAT"
+
+    def test_filter_by_event_type(
+        self,
+        client: TestClient,
+        admin_user: User,
+        db_session: Session,
+    ) -> None:
+        _seed_audit_logs(db_session, admin_user)
+        token = access_token_for(admin_user)
+
+        response = client.get(
+            AUDIT_SEARCH_URL,
+            headers=bearer_headers(token),
+            params={"event_type": "security.permission.denied"},
+        )
+
+        assert response.status_code == 200
+        assert response.json()["total"] == 1
+
+    def test_pagination(
+        self,
+        client: TestClient,
+        admin_user: User,
+        db_session: Session,
+    ) -> None:
+        _seed_audit_logs(db_session, admin_user)
+        token = access_token_for(admin_user)
+
+        first_page = client.get(
+            AUDIT_SEARCH_URL,
+            headers=bearer_headers(token),
+            params={"limit": 2, "offset": 0},
+        )
+        second_page = client.get(
+            AUDIT_SEARCH_URL,
+            headers=bearer_headers(token),
+            params={"limit": 2, "offset": 2},
+        )
+
+        assert first_page.status_code == 200
+        assert second_page.status_code == 200
+        assert first_page.json()["total"] == 3
+        assert len(first_page.json()["items"]) == 2
+        assert len(second_page.json()["items"]) == 1
+
+    def test_non_admin_denied(
+        self,
+        client: TestClient,
+        active_user: User,
+        db_session: Session,
+    ) -> None:
+        _seed_audit_logs(db_session, active_user)
+        token = access_token_for(active_user)
+
+        response = client.get(
+            AUDIT_SEARCH_URL,
+            headers=bearer_headers(token),
+        )
+
+        assert response.status_code == 403
+
+    def test_superuser_can_list_audits(
+        self,
+        client: TestClient,
+        superuser: User,
+        db_session: Session,
+        admin_user: User,
+    ) -> None:
+        _seed_audit_logs(db_session, admin_user)
+        token = access_token_for(superuser)
+
+        response = client.get(
+            AUDIT_SEARCH_URL,
+            headers=bearer_headers(token),
+        )
+
+        assert response.status_code == 200
+        assert response.json()["total"] == 3
+
+    def test_not_found_handling(
+        self,
+        client: TestClient,
+        admin_user: User,
+    ) -> None:
+        token = access_token_for(admin_user)
+
+        response = client.get(
+            f"{AUDIT_SEARCH_URL}/{uuid.uuid4()}",
+            headers=bearer_headers(token),
+        )
+
+        assert response.status_code == 404
+
+    def test_invalid_date_range_rejected(
+        self,
+        client: TestClient,
+        admin_user: User,
+    ) -> None:
+        token = access_token_for(admin_user)
+
+        response = client.get(
+            AUDIT_SEARCH_URL,
+            headers=bearer_headers(token),
+            params={
+                "date_from": "2026-06-23T12:00:00Z",
+                "date_to": "2026-06-23T10:00:00Z",
+            },
+        )
+
+        assert response.status_code == 422
+
+    def test_invalid_limit_rejected(
+        self,
+        client: TestClient,
+        admin_user: User,
+    ) -> None:
+        token = access_token_for(admin_user)
+
+        response = client.get(
+            AUDIT_SEARCH_URL,
+            headers=bearer_headers(token),
+            params={"limit": 101},
+        )
+
+        assert response.status_code == 422

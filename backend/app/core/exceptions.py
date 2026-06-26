@@ -128,3 +128,50 @@ class DocumentIntegrityError(DocumentServiceError):
 
     status_code = 409
     public_message = "Document integrity check failed."
+
+
+# --- Conversation service errors (Phase 6.2) ---
+
+
+class ConversationServiceError(ServiceError):
+    """Base conversation service error."""
+
+    public_message = "Conversation operation failed."
+
+
+class ConversationNotFoundError(ConversationServiceError):
+    """Raised when a requested conversation does not exist."""
+
+    status_code = 404
+    public_message = "Conversation not found."
+
+
+class ConversationAccessDeniedError(ConversationServiceError):
+    """Raised when a user attempts to access another user's conversation."""
+
+    status_code = 403
+    public_message = "You do not have access to this conversation."
+
+
+class ConversationValidationError(ConversationServiceError):
+    """Raised when conversation input fails validation (e.g. title too long)."""
+
+    status_code = 422
+    public_message = "Invalid conversation data."
+
+
+# --- Message service errors (Phase 6.3) ---
+
+
+class MessageValidationError(ConversationServiceError):
+    """Raised when message content is empty, blank, or otherwise invalid."""
+
+    status_code = 422
+    public_message = "Invalid message content."
+
+
+class InvalidConfidenceScoreError(ConversationServiceError):
+    """Raised when a confidence score falls outside the range [0.0, 1.0]."""
+
+    status_code = 422
+    public_message = "Confidence score must be between 0.0 and 1.0."

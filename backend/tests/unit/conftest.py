@@ -9,7 +9,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.db.base import Base
-from app.db.models import Role, User  # noqa: F401 — register models with metadata
+from app.db.models import AuditLog, Role, User  # noqa: F401 — register models with metadata
 
 
 @pytest.fixture

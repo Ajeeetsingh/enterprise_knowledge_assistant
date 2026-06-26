@@ -11,14 +11,15 @@ from app.audit.service import AuditService
 from app.auth.dependencies import require_permission
 from app.auth.permissions import Permission
 from app.db.models import User
-from app.dependencies import get_db
+from app.dependencies import get_audit_service, get_db
 from app.schemas.users import (
     UserCreateRequest,
     UserListResponse,
     UserResponse,
     UserUpdateRequest,
 )
-from app.services import user_service
+from app.services import auth_audit_integration, user_service
+from app.services.audit_service import AuditService as PersistedAuditService
 
 router = APIRouter()
 
@@ -29,6 +30,15 @@ def _admin_id(user: User) -> str:
 
 def _admin_username(user: User) -> str:
     return user.username or user.email
+
+
+def _client_ip(request: Request) -> str | None:
+    forwarded_for = request.headers.get("X-Forwarded-For")
+    if forwarded_for:
+        return forwarded_for.split(",")[0].strip()
+    if request.client:
+        return request.client.host
+    return None
 
 
 @router.get("", response_model=UserListResponse)
@@ -61,6 +71,7 @@ def create_user_endpoint(
     request: Request,
     db: Session = Depends(get_db),
     current_admin: User = Depends(require_permission(Permission.USER_CREATE)),
+    audit_service: PersistedAuditService = Depends(get_audit_service),
 ) -> UserResponse:
     """Create a new user."""
     try:
@@ -82,6 +93,15 @@ def create_user_endpoint(
             target_email=user.email,
         )
     )
+    auth_audit_integration.record_user_created(
+        audit_service,
+        admin_user_id=current_admin.id,
+        target_user_id=user.id,
+        target_email=user.email,
+        target_username=user.username,
+        ip_address=_client_ip(request),
+        user_agent=request.headers.get("User-Agent"),
+    )
     return UserResponse.from_user(user)
 
 
@@ -92,9 +112,11 @@ def update_user_endpoint(
     request: Request,
     db: Session = Depends(get_db),
     current_admin: User = Depends(require_permission(Permission.USER_UPDATE)),
+    audit_service: PersistedAuditService = Depends(get_audit_service),
 ) -> UserResponse:
     """Update user profile fields."""
     try:
+        existing = user_service.get_user(db, user_id)
         user = user_service.update_user(
             db,
             user_id,
@@ -112,6 +134,16 @@ def update_user_endpoint(
             target_user_id=str(user_id),
         )
     )
+    if existing.is_active and not user.is_active:
+        auth_audit_integration.record_user_disabled(
+            audit_service,
+            admin_user_id=current_admin.id,
+            target_user_id=user.id,
+            target_email=user.email,
+            target_username=user.username,
+            ip_address=_client_ip(request),
+            user_agent=request.headers.get("User-Agent"),
+        )
     return UserResponse.from_user(user)
 
 
@@ -121,6 +153,7 @@ def delete_user_endpoint(
     request: Request,
     db: Session = Depends(get_db),
     current_admin: User = Depends(require_permission(Permission.USER_DELETE)),
+    audit_service: PersistedAuditService = Depends(get_audit_service),
 ) -> UserResponse:
     """Soft-delete a user by setting is_active to false."""
     try:
@@ -134,5 +167,14 @@ def delete_user_endpoint(
             admin_username=_admin_username(current_admin),
             target_user_id=str(user_id),
         )
+    )
+    auth_audit_integration.record_user_disabled(
+        audit_service,
+        admin_user_id=current_admin.id,
+        target_user_id=user.id,
+        target_email=user.email,
+        target_username=user.username,
+        ip_address=_client_ip(request),
+        user_agent=request.headers.get("User-Agent"),
     )
     return UserResponse.from_user(user)

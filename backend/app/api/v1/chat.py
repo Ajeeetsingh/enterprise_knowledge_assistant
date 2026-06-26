@@ -6,7 +6,7 @@ import logging
 import time
 import uuid
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 
 from app.audit.service import AuditService
 from app.auth.retrieval_authorization import (
@@ -14,15 +14,28 @@ from app.auth.retrieval_authorization import (
     RetrievalAuthorizationService,
 )
 from app.auth.security import get_current_user
-from app.core.exceptions import AuthorizationError
+from app.core.exceptions import (
+    AuthorizationError,
+    ConversationAccessDeniedError,
+    RagInitializationError,
+    RagRetrievalError,
+)
 from app.core.logging import get_logger, log_with_fields
 from app.db.models import User
 from app.db.repositories.document_repository import DocumentRepository
-from app.dependencies import get_document_repository, get_rag_service_dep
-from app.mappers import map_to_answer_response
+from app.dependencies import (
+    get_audit_service,
+    get_conversation_chat_service,
+    get_document_repository,
+    get_rag_service_dep,
+)
+from app.mappers.chat import map_chat_result_to_answer_response
 from app.rag.types import Citation, QueryResponse
 from app.schemas.chat import AnswerResponse, ChatAskRequest
 from app.schemas.errors import ErrorResponse
+from app.services import chat_audit_integration, security_audit_integration
+from app.services.audit_service import AuditService as PersistedAuditService
+from app.services.conversation_chat_service import ConversationChatService
 from app.services.rag_service import RagService
 
 router = APIRouter()
@@ -42,7 +55,11 @@ _CHAT_ERROR_RESPONSES: dict[int, dict[str, object]] = {
     },
     403: {
         "model": ErrorResponse,
-        "description": "Authenticated user has no assigned role.",
+        "description": "Authenticated user has no assigned role or does not own the conversation.",
+    },
+    404: {
+        "model": ErrorResponse,
+        "description": "Conversation not found.",
     },
     422: {
         "model": ErrorResponse,
@@ -61,6 +78,15 @@ _CHAT_ERROR_RESPONSES: dict[int, dict[str, object]] = {
 
 def _elapsed_ms(start: float) -> float:
     return round((time.perf_counter() - start) * 1000, 2)
+
+
+def _client_ip(request: Request) -> str | None:
+    forwarded_for = request.headers.get("X-Forwarded-For")
+    if forwarded_for:
+        return forwarded_for.split(",")[0].strip()
+    if request.client:
+        return request.client.host
+    return None
 
 
 def _log_chat_success(user_id: str, start: float) -> None:
@@ -164,36 +190,98 @@ def _get_authorized_sources(
 @router.post(
     "/ask",
     response_model=AnswerResponse,
-    summary="Ask a knowledge question",
+    summary="Ask a knowledge question in a conversation",
     description=(
-        "Submit a natural-language question about enterprise policies or documents. "
-        "Returns a grounded answer with citations and a confidence score."
+        "Submit a natural-language question within an existing conversation. "
+        "Recent conversation history is assembled into a context-aware query "
+        "before retrieval. Returns a grounded answer with citations and a "
+        "confidence score."
     ),
     responses=_CHAT_ERROR_RESPONSES,
 )
 def ask_question(
     body: ChatAskRequest,
+    request: Request,
     current_user: User = Depends(get_current_user),
+    chat_service: ConversationChatService = Depends(get_conversation_chat_service),
     rag_service: RagService = Depends(get_rag_service_dep),
     repository: DocumentRepository = Depends(get_document_repository),
+    audit_service: PersistedAuditService = Depends(get_audit_service),
 ) -> AnswerResponse:
-    """Submit an enterprise question and receive a RAG-generated answer."""
+    """Submit a conversation-aware enterprise question and receive a RAG answer."""
     start = time.perf_counter()
     user_id = str(current_user.id)
     query_id = str(uuid.uuid4())
-    role_name = _primary_role_name(current_user)
+    ip_address = _client_ip(request)
+    user_agent = request.headers.get("User-Agent")
+    clean_question = body.question.strip()
 
-    # Compute authorized document sources (Phase 5.5 document-level auth).
+    chat_audit_integration.record_question_asked(
+        audit_service,
+        user_id=current_user.id,
+        conversation_id=body.conversation_id,
+        query_length=len(clean_question),
+        ip_address=ip_address,
+        user_agent=user_agent,
+    )
+
+    try:
+        role_name = _primary_role_name(current_user)
+    except AuthorizationError as exc:
+        security_audit_integration.record_permission_denied(
+            audit_service,
+            user_id=current_user.id,
+            required_permission="role:assigned",
+            resource=request.url.path,
+            ip_address=ip_address,
+            user_agent=user_agent,
+        )
+        raise exc
+
     authorized_sources = _get_authorized_sources(current_user, repository, query_id)
 
-    query_response = rag_service.answer_question(
-        body.question,
-        role_name,
-        authorized_sources,
+    try:
+        result = chat_service.ask_question(
+            current_user,
+            body.conversation_id,
+            body.question,
+            role_name,
+            rag_service,
+            authorized_sources,
+        )
+    except (RagRetrievalError, RagInitializationError) as exc:
+        chat_audit_integration.record_retrieval_failed(
+            audit_service,
+            user_id=current_user.id,
+            conversation_id=body.conversation_id,
+            reason=exc.public_message,
+            ip_address=ip_address,
+            user_agent=user_agent,
+        )
+        raise
+    except ConversationAccessDeniedError as exc:
+        security_audit_integration.record_permission_denied(
+            audit_service,
+            user_id=current_user.id,
+            required_permission="conversation:owner",
+            resource=request.url.path,
+            ip_address=ip_address,
+            user_agent=user_agent,
+        )
+        raise exc
+
+    chat_audit_integration.record_answer_generated(
+        audit_service,
+        user_id=current_user.id,
+        conversation_id=result.conversation_id,
+        citation_count=len(result.citations),
+        confidence_score=result.confidence_score,
+        ip_address=ip_address,
+        user_agent=user_agent,
     )
 
     AuditService.record(
         AuditService.rag_query(user_id=user_id, query_id=query_id)
     )
     _log_chat_success(user_id, start)
-    return map_to_answer_response(query_response)
+    return map_chat_result_to_answer_response(result)

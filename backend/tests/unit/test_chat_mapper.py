@@ -2,10 +2,14 @@
 
 from __future__ import annotations
 
+import uuid
 from types import SimpleNamespace
 
-from app.mappers import map_to_answer_response
+from app.mappers.chat import map_chat_result_to_answer_response, map_to_answer_response
 from app.schemas.chat import AnswerResponse, CitationResponse
+from app.services.conversation_chat_service import ConversationChatResult
+
+CONVERSATION_ID = uuid.uuid4()
 
 INTERNAL_FIELDS = {
     "query",
@@ -39,9 +43,13 @@ def _sample_query_response() -> SimpleNamespace:
 
 
 def test_map_to_answer_response_maps_all_public_fields() -> None:
-    result = map_to_answer_response(_sample_query_response())
+    result = map_to_answer_response(
+        _sample_query_response(),
+        conversation_id=CONVERSATION_ID,
+    )
 
     assert isinstance(result, AnswerResponse)
+    assert result.conversation_id == CONVERSATION_ID
     assert result.answer == "Employees receive 20 annual leave days."
     assert result.confidence_score == 0.85
     assert result.message == "Answer generated from hr_policy.txt."
@@ -67,11 +75,12 @@ def test_map_to_answer_response_excludes_internal_fields() -> None:
         message="Access denied.",
     )
 
-    result = map_to_answer_response(query_response)
+    result = map_to_answer_response(query_response, conversation_id=CONVERSATION_ID)
     payload = result.model_dump()
 
     assert INTERNAL_FIELDS.isdisjoint(payload.keys())
     assert set(payload.keys()) == {
+        "conversation_id",
         "answer",
         "confidence_score",
         "citations",
@@ -93,8 +102,30 @@ def test_map_to_answer_response_handles_empty_citations() -> None:
         message="Search completed but no matching chunks were found.",
     )
 
-    result = map_to_answer_response(query_response)
+    result = map_to_answer_response(query_response, conversation_id=CONVERSATION_ID)
 
     assert result.answer == ""
     assert result.citations == []
     assert result.confidence_score == 0.0
+
+
+def test_map_chat_result_to_answer_response() -> None:
+    result = map_chat_result_to_answer_response(
+        ConversationChatResult(
+            conversation_id=CONVERSATION_ID,
+            answer="Answer text.",
+            citations=[
+                {
+                    "source": "hr_policy.txt",
+                    "excerpt": "Excerpt.",
+                    "confidence": 0.8,
+                }
+            ],
+            confidence_score=0.75,
+            message="Generated.",
+        )
+    )
+
+    assert result.conversation_id == CONVERSATION_ID
+    assert result.answer == "Answer text."
+    assert result.citations[0].source == "hr_policy.txt"

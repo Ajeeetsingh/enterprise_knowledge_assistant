@@ -23,20 +23,35 @@ from app.db.models import User
 class AuthServiceError(Exception):
     """Base authentication service error with an HTTP status code."""
 
-    def __init__(self, message: str, status_code: int) -> None:
+    def __init__(
+        self,
+        message: str,
+        status_code: int,
+        *,
+        subject_user_id: uuid.UUID | None = None,
+    ) -> None:
         self.message = message
         self.status_code = status_code
+        self.subject_user_id = subject_user_id
         super().__init__(message)
 
 
 class InvalidCredentialsError(AuthServiceError):
-    def __init__(self) -> None:
-        super().__init__("Invalid email or password.", status_code=401)
+    def __init__(self, *, subject_user_id: uuid.UUID | None = None) -> None:
+        super().__init__(
+            "Invalid email or password.",
+            status_code=401,
+            subject_user_id=subject_user_id,
+        )
 
 
 class InactiveAccountError(AuthServiceError):
-    def __init__(self) -> None:
-        super().__init__("Account is inactive.", status_code=403)
+    def __init__(self, *, subject_user_id: uuid.UUID | None = None) -> None:
+        super().__init__(
+            "Account is inactive.",
+            status_code=403,
+            subject_user_id=subject_user_id,
+        )
 
 
 class InvalidRefreshTokenError(AuthServiceError):
@@ -50,8 +65,9 @@ class MissingTokenError(AuthServiceError):
 
 
 class InvalidAccessTokenError(AuthServiceError):
-    def __init__(self) -> None:
+    def __init__(self, *, token_reason: str = "invalid token") -> None:
         super().__init__("Could not validate credentials.", status_code=401)
+        self.token_reason = token_reason
 
 
 class UserNotFoundError(AuthServiceError):
@@ -63,6 +79,7 @@ class UserNotFoundError(AuthServiceError):
 class LoginTokens:
     access_token: str
     refresh_token: str
+    user_id: uuid.UUID
 
 
 def _get_user_by_email(db: Session, email: str) -> User | None:
@@ -92,15 +109,16 @@ def login(db: Session, email: str, password: str) -> LoginTokens:
         raise InvalidCredentialsError()
 
     if not user.is_active:
-        raise InactiveAccountError()
+        raise InactiveAccountError(subject_user_id=user.id)
 
     if not verify_password(password, user.password_hash):
-        raise InvalidCredentialsError()
+        raise InvalidCredentialsError(subject_user_id=user.id)
 
     roles = _role_names(user)
     return LoginTokens(
         access_token=create_access_token(user.id, user.email, roles),
         refresh_token=create_refresh_token(user.id),
+        user_id=user.id,
     )
 
 
@@ -131,8 +149,12 @@ def get_authenticated_user(db: Session, access_token: str | None) -> User:
 
     try:
         payload = verify_token(access_token, expected_type=ACCESS_TOKEN_TYPE)
-    except (TokenExpiredError, TokenInvalidError, TokenTypeError) as exc:
-        raise InvalidAccessTokenError() from exc
+    except TokenExpiredError as exc:
+        raise InvalidAccessTokenError(token_reason="expired token") from exc
+    except TokenInvalidError as exc:
+        raise InvalidAccessTokenError(token_reason="invalid signature") from exc
+    except TokenTypeError as exc:
+        raise InvalidAccessTokenError(token_reason="malformed token") from exc
 
     user_id = uuid.UUID(str(payload["user_id"]))
     user = _get_user_by_id(db, user_id)

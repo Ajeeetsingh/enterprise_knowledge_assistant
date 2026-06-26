@@ -5,7 +5,7 @@ from __future__ import annotations
 import uuid
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, File, Query, UploadFile
+from fastapi import APIRouter, Depends, File, Query, Request, UploadFile
 
 from app.audit.service import AuditService
 from app.auth.dependencies import require_document_access, require_permission
@@ -13,7 +13,11 @@ from app.auth.permissions import Permission
 from app.db.models import User
 from app.db.models.document import Document
 from app.db.repositories.document_repository import DocumentRepository
-from app.dependencies import get_document_repository, get_document_service_dep
+from app.dependencies import (
+    get_audit_service,
+    get_document_repository,
+    get_document_service_dep,
+)
 from app.documents.status import DocumentStatus
 from app.ingestion.supported_types import EXTENSION_TO_MIME
 from app.mappers.documents import (
@@ -31,6 +35,8 @@ from app.schemas.documents import (
 )
 from app.schemas.errors import ErrorResponse
 from app.services.document_service import DocumentService
+from app.services.audit_service import AuditService as PersistedAuditService
+from app.services import document_audit_integration
 
 router = APIRouter()
 
@@ -67,6 +73,15 @@ def _resolve_content_type(filename: str, declared_type: str | None) -> str:
         return declared_type
     ext = Path(filename).suffix.lower()
     return EXTENSION_TO_MIME.get(ext, declared_type or "application/octet-stream")
+
+
+def _client_ip(request: Request) -> str | None:
+    forwarded_for = request.headers.get("X-Forwarded-For")
+    if forwarded_for:
+        return forwarded_for.split(",")[0].strip()
+    if request.client:
+        return request.client.host
+    return None
 
 
 @router.get(
@@ -168,10 +183,12 @@ def get_document(
 )
 def delete_document(
     document_id: uuid.UUID,
+    request: Request,
     current_user: User = Depends(require_permission(Permission.DOCUMENT_DELETE)),
     document: Document = Depends(require_document_access("delete")),
     document_service: DocumentService = Depends(get_document_service_dep),
     repository: DocumentRepository = Depends(get_document_repository),
+    audit_service: PersistedAuditService = Depends(get_audit_service),
 ) -> DocumentLifecycleResponse:
     """Delete a document and remove it from searchable knowledge."""
     user_id = str(current_user.id)
@@ -184,6 +201,13 @@ def delete_document(
 
     AuditService.record(
         AuditService.document_deleted(user_id=user_id, document_id=str(document_id))
+    )
+    document_audit_integration.record_document_deleted_from_document(
+        audit_service,
+        user_id=current_user.id,
+        document=document,
+        ip_address=_client_ip(request),
+        user_agent=request.headers.get("User-Agent"),
     )
     return map_to_lifecycle_response(result)
 
@@ -200,6 +224,7 @@ def delete_document(
     responses=_DOCUMENT_ERROR_RESPONSES,
 )
 def upload_document(
+    request: Request,
     file: UploadFile = File(
         ...,
         description="Enterprise document file to ingest into the knowledge base.",
@@ -207,6 +232,7 @@ def upload_document(
     current_user: User = Depends(require_permission(Permission.DOCUMENT_CREATE)),
     document_service: DocumentService = Depends(get_document_service_dep),
     repository: DocumentRepository = Depends(get_document_repository),
+    audit_service: PersistedAuditService = Depends(get_audit_service),
 ) -> DocumentUploadResponse:
     """Accept a document upload and return its lifecycle status."""
     user_id = str(current_user.id)
@@ -229,4 +255,25 @@ def upload_document(
             filename=result.filename,
         )
     )
+
+    uploaded_document = repository.get_by_id(uuid.UUID(result.document_id))
+    if uploaded_document is not None:
+        document_audit_integration.record_document_uploaded_from_document(
+            audit_service,
+            user_id=current_user.id,
+            document=uploaded_document,
+            ip_address=_client_ip(request),
+            user_agent=request.headers.get("User-Agent"),
+        )
+    else:
+        document_audit_integration.record_document_uploaded(
+            audit_service,
+            user_id=current_user.id,
+            document_id=uuid.UUID(result.document_id),
+            document_name=result.filename,
+            document_type=content_type,
+            ip_address=_client_ip(request),
+            user_agent=request.headers.get("User-Agent"),
+        )
+
     return map_to_upload_response(result)

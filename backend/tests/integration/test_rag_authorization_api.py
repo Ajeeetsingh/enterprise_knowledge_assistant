@@ -26,9 +26,23 @@ from app.dependencies import get_db, get_rag_service_dep
 from app.documents.visibility import DocumentVisibility
 from app.main import app
 from tests.constants import TEST_PASSWORD_HASH
+from tests.integration.chat_helpers import ask_payload, create_conversation
 from tests.integration.conftest import access_token_for, bearer_headers
 
 ASK_URL = "/api/v1/chat/ask"
+
+
+def _post_chat(
+    client: TestClient,
+    token: str,
+    question: str,
+) -> TestClient:
+    conversation_id = create_conversation(client, token)
+    return client.post(
+        ASK_URL,
+        headers=bearer_headers(token),
+        json=ask_payload(conversation_id, question),
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -153,10 +167,10 @@ class TestAuthorizedSourcesForwarded:
         )
 
         token = access_token_for(active_user)
-        response = chat_client.post(
-            ASK_URL,
-            headers=bearer_headers(token),
-            json={"question": "What is the leave policy?"},
+        response = _post_chat(
+            chat_client,
+            token,
+            "What is the leave policy?",
         )
 
         assert response.status_code == 200
@@ -181,10 +195,10 @@ class TestAuthorizedSourcesForwarded:
         )
 
         token = access_token_for(active_user)
-        chat_client.post(
-            ASK_URL,
-            headers=bearer_headers(token),
-            json={"question": "General policy?"},
+        _post_chat(
+            chat_client,
+            token,
+            "General policy?",
         )
 
         call_args = mock_rag_service.answer_question.call_args
@@ -208,10 +222,10 @@ class TestAuthorizedSourcesForwarded:
         )
 
         token = access_token_for(active_user)
-        chat_client.post(
-            ASK_URL,
-            headers=bearer_headers(token),
-            json={"question": "HR policy?"},
+        _post_chat(
+            chat_client,
+            token,
+            "HR policy?",
         )
 
         call_args = mock_rag_service.answer_question.call_args
@@ -235,10 +249,10 @@ class TestAuthorizedSourcesForwarded:
         )
 
         token = access_token_for(hr_user)
-        chat_client.post(
-            ASK_URL,
-            headers=bearer_headers(token),
-            json={"question": "HR policy?"},
+        _post_chat(
+            chat_client,
+            token,
+            "HR policy?",
         )
 
         call_args = mock_rag_service.answer_question.call_args
@@ -269,10 +283,10 @@ class TestAuthorizedSourcesForwarded:
         )
 
         token = access_token_for(admin_user)
-        chat_client.post(
-            ASK_URL,
-            headers=bearer_headers(token),
-            json={"question": "Everything?"},
+        _post_chat(
+            chat_client,
+            token,
+            "Everything?",
         )
 
         call_args = mock_rag_service.answer_question.call_args
@@ -297,10 +311,10 @@ class TestAuthorizedSourcesForwarded:
         )
 
         token = access_token_for(active_user)
-        chat_client.post(
-            ASK_URL,
-            headers=bearer_headers(token),
-            json={"question": "My private doc?"},
+        _post_chat(
+            chat_client,
+            token,
+            "My private doc?",
         )
 
         call_args = mock_rag_service.answer_question.call_args
@@ -331,10 +345,10 @@ class TestAuthorizedSourcesForwarded:
         )
 
         token = access_token_for(finance_user)
-        chat_client.post(
-            ASK_URL,
-            headers=bearer_headers(token),
-            json={"question": "Finance question?"},
+        _post_chat(
+            chat_client,
+            token,
+            "Finance question?",
         )
 
         call_args = mock_rag_service.answer_question.call_args
@@ -356,10 +370,10 @@ class TestEmptyAndNoDBScenarios:
     ) -> None:
         """With no DB docs, authorized_sources is an empty frozenset (filesystem files pass through at retriever level)."""
         token = access_token_for(active_user)
-        response = chat_client.post(
-            ASK_URL,
-            headers=bearer_headers(token),
-            json={"question": "Leave policy?"},
+        response = _post_chat(
+            chat_client,
+            token,
+            "Leave policy?",
         )
         assert response.status_code == 200
         mock_rag_service.answer_question.assert_called_once()
@@ -370,15 +384,16 @@ class TestEmptyAndNoDBScenarios:
         mock_rag_service: MagicMock,
         active_user: User,
     ) -> None:
-        """Phase 5.5 must not change the public response shape."""
+        """Phase 6.6 extends the public response with conversation_id."""
         token = access_token_for(active_user)
-        response = chat_client.post(
-            ASK_URL,
-            headers=bearer_headers(token),
-            json={"question": "Leave policy?"},
+        response = _post_chat(
+            chat_client,
+            token,
+            "Leave policy?",
         )
         assert response.status_code == 200
         data = response.json()
+        assert "conversation_id" in data
         assert "answer" in data
         assert "citations" in data
         assert "confidence_score" in data

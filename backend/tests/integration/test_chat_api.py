@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import uuid
 from types import SimpleNamespace
 from unittest.mock import MagicMock
 
@@ -10,10 +11,12 @@ from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
 from app.db.models import User
+from app.db.repositories.message_repository import MessageRepository
 from app.dependencies import get_db, get_rag_service_dep
 from app.main import app
 from app.schemas.chat import QUESTION_MAX_LENGTH
 from app.core.exceptions import RagInitializationError, RagRetrievalError
+from tests.integration.chat_helpers import ask_payload, create_conversation
 from tests.integration.conftest import access_token_for, bearer_headers
 
 ASK_URL = "/api/v1/chat/ask"
@@ -28,6 +31,7 @@ INTERNAL_RESPONSE_FIELDS = {
 }
 
 PUBLIC_RESPONSE_FIELDS = {
+    "conversation_id",
     "answer",
     "confidence_score",
     "citations",
@@ -84,7 +88,8 @@ def test_authenticated_request_returns_answer_response(
     active_user: User,
 ) -> None:
     token = access_token_for(active_user)
-    payload = {"question": "How many annual leaves do employees receive?"}
+    conversation_id = create_conversation(chat_client, token)
+    payload = ask_payload(conversation_id, "How many annual leaves do employees receive?")
 
     response = chat_client.post(ASK_URL, headers=bearer_headers(token), json=payload)
 
@@ -92,6 +97,7 @@ def test_authenticated_request_returns_answer_response(
     data = response.json()
     assert set(data.keys()) == PUBLIC_RESPONSE_FIELDS
     assert INTERNAL_RESPONSE_FIELDS.isdisjoint(data.keys())
+    assert data["conversation_id"] == conversation_id
     assert data["answer"] == "Employees receive 20 annual leave days."
     assert data["confidence_score"] == 0.85
     assert data["message"] == "Answer generated from hr_policy.txt."
@@ -102,11 +108,11 @@ def test_authenticated_request_returns_answer_response(
             "confidence": 0.88,
         }
     ]
-    mock_rag_service.answer_question.assert_called_once_with(
-        payload["question"],
-        "Employee",
-        frozenset(),
-    )
+    mock_rag_service.answer_question.assert_called_once()
+    call_args = mock_rag_service.answer_question.call_args[0]
+    assert payload["question"] in call_args[0]
+    assert call_args[1] == "Employee"
+    assert call_args[2] == frozenset()
 
 
 def test_role_forwarded_for_admin_user(
@@ -115,25 +121,23 @@ def test_role_forwarded_for_admin_user(
     admin_user: User,
 ) -> None:
     token = access_token_for(admin_user)
+    conversation_id = create_conversation(chat_client, token)
 
     response = chat_client.post(
         ASK_URL,
         headers=bearer_headers(token),
-        json={"question": "Were there security incidents?"},
+        json=ask_payload(conversation_id, "Were there security incidents?"),
     )
 
     assert response.status_code == 200
-    mock_rag_service.answer_question.assert_called_once_with(
-        "Were there security incidents?",
-        "Admin",
-        frozenset(),
-    )
+    mock_rag_service.answer_question.assert_called_once()
+    assert mock_rag_service.answer_question.call_args[0][1] == "Admin"
 
 
 def test_missing_jwt_returns_401(chat_client: TestClient) -> None:
     response = chat_client.post(
         ASK_URL,
-        json={"question": "What is the leave policy?"},
+        json={"conversation_id": str(uuid.uuid4()), "question": "What is the leave policy?"},
     )
 
     assert response.status_code == 401
@@ -144,7 +148,10 @@ def test_invalid_jwt_returns_401(chat_client: TestClient) -> None:
     response = chat_client.post(
         ASK_URL,
         headers=bearer_headers("invalid-token"),
-        json={"question": "What is the leave policy?"},
+        json={
+            "conversation_id": str(uuid.uuid4()),
+            "question": "What is the leave policy?",
+        },
     )
 
     assert response.status_code == 401
@@ -160,35 +167,41 @@ def test_initialization_failure_returns_503(
         "Knowledge base data directory is not available."
     )
     token = access_token_for(active_user)
+    conversation_id = create_conversation(chat_client, token)
 
     response = chat_client.post(
         ASK_URL,
         headers=bearer_headers(token),
-        json={"question": "What is the leave policy?"},
+        json=ask_payload(conversation_id, "What is the leave policy?"),
     )
 
     assert response.status_code == 503
     assert response.json()["detail"] == "Knowledge service is temporarily unavailable."
 
 
-def test_retrieval_failure_returns_500(
+def test_retrieval_failure_returns_500_and_keeps_user_message(
     chat_client: TestClient,
     mock_rag_service: MagicMock,
     active_user: User,
+    db_session: Session,
 ) -> None:
     mock_rag_service.answer_question.side_effect = RagRetrievalError(
         "Knowledge retrieval failed."
     )
     token = access_token_for(active_user)
+    conversation_id = create_conversation(chat_client, token)
 
     response = chat_client.post(
         ASK_URL,
         headers=bearer_headers(token),
-        json={"question": "What is the leave policy?"},
+        json=ask_payload(conversation_id, "What is the leave policy?"),
     )
 
     assert response.status_code == 500
     assert response.json()["detail"] == "Failed to process knowledge request."
+    messages = MessageRepository(db_session).list_for_conversation(uuid.UUID(conversation_id))
+    assert len(messages) == 1
+    assert messages[0].content == "What is the leave policy?"
 
 
 def test_empty_question_returns_422(
@@ -196,11 +209,12 @@ def test_empty_question_returns_422(
     active_user: User,
 ) -> None:
     token = access_token_for(active_user)
+    conversation_id = create_conversation(chat_client, token)
 
     response = chat_client.post(
         ASK_URL,
         headers=bearer_headers(token),
-        json={"question": "   "},
+        json=ask_payload(conversation_id, "   "),
     )
 
     assert response.status_code == 422
@@ -211,11 +225,12 @@ def test_missing_question_returns_422(
     active_user: User,
 ) -> None:
     token = access_token_for(active_user)
+    conversation_id = create_conversation(chat_client, token)
 
     response = chat_client.post(
         ASK_URL,
         headers=bearer_headers(token),
-        json={},
+        json={"conversation_id": conversation_id},
     )
 
     assert response.status_code == 422
@@ -226,18 +241,19 @@ def test_question_exceeding_max_length_returns_422(
     active_user: User,
 ) -> None:
     token = access_token_for(active_user)
+    conversation_id = create_conversation(chat_client, token)
 
     response = chat_client.post(
         ASK_URL,
         headers=bearer_headers(token),
-        json={"question": "a" * (QUESTION_MAX_LENGTH + 1)},
+        json=ask_payload(conversation_id, "a" * (QUESTION_MAX_LENGTH + 1)),
     )
 
     assert response.status_code == 422
     assert response.json()["detail"] == "Invalid request."
 
 
-def test_chat_route_has_no_manual_rag_exception_handling() -> None:
+def test_chat_route_records_rag_failures_before_re_raising() -> None:
     from pathlib import Path
 
     chat_source = (
@@ -248,14 +264,17 @@ def test_chat_route_has_no_manual_rag_exception_handling() -> None:
         / "chat.py"
     ).read_text(encoding="utf-8")
 
-    # RAG-specific errors must never be swallowed in the route — they propagate
-    # to the global exception handler which maps them to 503/500 responses.
-    assert "RagInitializationError" not in chat_source
-    assert "RagRetrievalError" not in chat_source
-    # The route function itself must not contain try/except blocks.
-    # (Helper functions in the same module may use exception handling for
-    # non-RAG concerns such as DB fallback — that is intentional and tested
-    # separately.)
+    marker = "except (RagRetrievalError, RagInitializationError)"
+    assert marker in chat_source
+    assert "chat_audit_integration.record_retrieval_failed" in chat_source
+
+    block_start = chat_source.index(marker)
+    block_end = chat_source.index("\n    except ", block_start + len(marker))
+    rag_except_block = chat_source[block_start:block_end]
+
+    # RAG failures are audited, then re-raised for the global exception handler.
+    assert "raise" in rag_except_block
+    assert "HTTPException" not in rag_except_block
 
 
 def test_openapi_includes_chat_models(client: TestClient) -> None:
@@ -270,7 +289,7 @@ def test_openapi_includes_chat_models(client: TestClient) -> None:
     assert "ErrorResponse" in schemas
 
     ask_op = response.json()["paths"]["/api/v1/chat/ask"]["post"]
-    assert ask_op["summary"] == "Ask a knowledge question"
+    assert ask_op["summary"] == "Ask a knowledge question in a conversation"
     assert "200" in ask_op["responses"]
     assert ask_op["responses"]["200"]["content"]["application/json"]["schema"][
         "$ref"

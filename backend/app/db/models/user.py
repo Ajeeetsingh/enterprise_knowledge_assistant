@@ -13,6 +13,8 @@ from app.db.base import Base
 from app.db.models.user_role import user_roles
 
 if TYPE_CHECKING:
+    from app.db.models.audit_log import AuditLog
+    from app.db.models.conversation import Conversation
     from app.db.models.role import Role
 
 
@@ -60,4 +62,15 @@ class User(Base):
     roles: Mapped[list[Role]] = relationship(
         secondary=user_roles,
         back_populates="users",
+    )
+
+    conversations: Mapped[list[Conversation]] = relationship(
+        "Conversation",
+        back_populates="user",
+        cascade="all, delete-orphan",
+    )
+
+    audit_logs: Mapped[list[AuditLog]] = relationship(
+        "AuditLog",
+        back_populates="user",
     )

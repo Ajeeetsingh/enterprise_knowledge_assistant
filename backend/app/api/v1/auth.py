@@ -6,7 +6,7 @@ from app.audit.service import AuditService
 from app.auth.dependencies import require_any_role, require_role, require_superuser
 from app.auth.security import get_current_user
 from app.db.models import User
-from app.dependencies import get_db
+from app.dependencies import get_audit_service, get_db
 from app.schemas.auth import (
     AuthorizationDemoResponse,
     CurrentUserResponse,
@@ -16,7 +16,8 @@ from app.schemas.auth import (
     RefreshRequest,
     RefreshResponse,
 )
-from app.services import auth_service
+from app.services import auth_audit_integration, auth_service
+from app.services.audit_service import AuditService as PersistedAuditService
 
 router = APIRouter()
 
@@ -36,6 +37,7 @@ def login_endpoint(
     body: LoginRequest,
     request: Request,
     db=Depends(get_db),
+    audit_service: PersistedAuditService = Depends(get_audit_service),
 ) -> LoginResponse:
     """Authenticate with email and password."""
     ip = _client_ip(request)
@@ -51,6 +53,14 @@ def login_endpoint(
                 user_agent=ua,
             )
         )
+        auth_audit_integration.record_login_failed(
+            audit_service,
+            email=body.email,
+            reason=exc.message,
+            subject_user_id=exc.subject_user_id,
+            ip_address=ip,
+            user_agent=ua,
+        )
         raise HTTPException(status_code=exc.status_code, detail=exc.message) from exc
 
     AuditService.record(
@@ -59,6 +69,13 @@ def login_endpoint(
             ip_address=ip,
             user_agent=ua,
         )
+    )
+    auth_audit_integration.record_login_success(
+        audit_service,
+        user_id=tokens.user_id,
+        email=body.email,
+        ip_address=ip,
+        user_agent=ua,
     )
     return LoginResponse(
         access_token=tokens.access_token,
@@ -81,10 +98,20 @@ def refresh_endpoint(
 
 
 @router.post("/logout", response_model=LogoutResponse)
-def logout_endpoint(request: Request) -> LogoutResponse:
+def logout_endpoint(
+    request: Request,
+    audit_service: PersistedAuditService = Depends(get_audit_service),
+) -> LogoutResponse:
     """Stateless logout — client should discard stored tokens."""
+    ip = _client_ip(request)
+    ua = request.headers.get("User-Agent")
     AuditService.record(
-        AuditService.logout(ip_address=_client_ip(request))
+        AuditService.logout(ip_address=ip)
+    )
+    auth_audit_integration.record_logout(
+        audit_service,
+        ip_address=ip,
+        user_agent=ua,
     )
     result = auth_service.logout()
     return LogoutResponse(message=result["message"])

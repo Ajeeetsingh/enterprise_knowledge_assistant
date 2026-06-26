@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import uuid
+
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 QUESTION_MIN_LENGTH = 1
@@ -15,12 +17,18 @@ class ChatAskRequest(BaseModel):
         json_schema_extra={
             "examples": [
                 {
-                    "question": "How many annual leave days do employees receive?",
+                    "conversation_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+                    "question": "What about adoptive parents?",
                 }
             ]
         }
     )
 
+    conversation_id: uuid.UUID = Field(
+        ...,
+        description="Existing conversation identifier. Auto-creation is not supported.",
+        examples=["a1b2c3d4-e5f6-7890-abcd-ef1234567890"],
+    )
     question: str = Field(
         ...,
         min_length=QUESTION_MIN_LENGTH,
@@ -67,6 +75,7 @@ class AnswerResponse(BaseModel):
         json_schema_extra={
             "examples": [
                 {
+                    "conversation_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
                     "answer": "Full-time employees receive 20 annual leave days per year.",
                     "confidence_score": 0.85,
                     "citations": [
@@ -82,6 +91,11 @@ class AnswerResponse(BaseModel):
         }
     )
 
+    conversation_id: uuid.UUID = Field(
+        ...,
+        description="Conversation the answer belongs to.",
+        examples=["a1b2c3d4-e5f6-7890-abcd-ef1234567890"],
+    )
     answer: str = Field(
         ...,
         description="Generated answer grounded in retrieved enterprise documents.",

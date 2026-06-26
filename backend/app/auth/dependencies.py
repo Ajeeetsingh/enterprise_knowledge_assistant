@@ -21,6 +21,9 @@ from app.auth.security import get_current_user
 from app.core.logging import get_logger
 from app.db.models import User
 from app.db.models.document import Document
+from app.services.audit_dependencies import get_audit_service
+from app.services import security_audit_integration
+from app.services.audit_service import AuditService as PersistedAuditService
 
 logger = get_logger(__name__)
 
@@ -153,20 +156,39 @@ def _user_identifier(user: User) -> str:
     return user.username or user.email
 
 
+def _client_ip(request: Request) -> str | None:
+    forwarded_for = request.headers.get("X-Forwarded-For")
+    if forwarded_for:
+        return forwarded_for.split(",")[0].strip()
+    if request.client:
+        return request.client.host
+    return None
+
+
 def _log_authorization_denied(
     *,
     request: Request,
     user: User,
     check_type: str,
     check_value: str,
+    audit_service: PersistedAuditService,
 ) -> None:
+    required_permission = f"{check_type}:{check_value}"
     event = AuditService.permission_denied(
         user_id=str(user.id),
         username=_user_identifier(user),
-        permission=f"{check_type}:{check_value}",
+        permission=required_permission,
         endpoint=request.url.path,
     )
     AuditService.record(event)
+    security_audit_integration.record_permission_denied(
+        audit_service,
+        user_id=user.id,
+        required_permission=required_permission,
+        resource=request.url.path,
+        ip_address=_client_ip(request),
+        user_agent=request.headers.get("User-Agent"),
+    )
 
 
 def _raise_forbidden() -> None:
@@ -181,6 +203,7 @@ def require_permission(
     def dependency(
         request: Request,
         current_user: User = Depends(get_current_user),
+        audit_service: PersistedAuditService = Depends(get_audit_service),
     ) -> User:
         if not user_has_permission(current_user, permission):
             resolved = resolve_permission(permission)
@@ -190,6 +213,7 @@ def require_permission(
                 user=current_user,
                 check_type="permission",
                 check_value=check_value,
+                audit_service=audit_service,
             )
             _raise_forbidden()
         return current_user
@@ -205,6 +229,7 @@ def require_all_permissions(
     def dependency(
         request: Request,
         current_user: User = Depends(get_current_user),
+        audit_service: PersistedAuditService = Depends(get_audit_service),
     ) -> User:
         if not user_has_all_permissions(current_user, permissions):
             resolved_values = [
@@ -217,6 +242,7 @@ def require_all_permissions(
                 user=current_user,
                 check_type="permissions",
                 check_value=",".join(resolved_values) or "unknown",
+                audit_service=audit_service,
             )
             _raise_forbidden()
         return current_user
@@ -230,6 +256,7 @@ def require_role(role: str | SystemRole) -> Callable[..., User]:
     def dependency(
         request: Request,
         current_user: User = Depends(get_current_user),
+        audit_service: PersistedAuditService = Depends(get_audit_service),
     ) -> User:
         if not user_has_role(current_user, role):
             resolved = resolve_system_role(role)
@@ -239,6 +266,7 @@ def require_role(role: str | SystemRole) -> Callable[..., User]:
                 user=current_user,
                 check_type="role",
                 check_value=check_value,
+                audit_service=audit_service,
             )
             _raise_forbidden()
         return current_user
@@ -254,6 +282,7 @@ def require_any_role(
     def dependency(
         request: Request,
         current_user: User = Depends(get_current_user),
+        audit_service: PersistedAuditService = Depends(get_audit_service),
     ) -> User:
         if not user_has_any_role(current_user, role_names):
             targets = normalize_role_names(role_names)
@@ -263,6 +292,7 @@ def require_any_role(
                 user=current_user,
                 check_type="roles",
                 check_value=check_value,
+                audit_service=audit_service,
             )
             _raise_forbidden()
         return current_user
@@ -273,6 +303,7 @@ def require_any_role(
 def require_superuser(
     request: Request,
     current_user: User = Depends(get_current_user),
+    audit_service: PersistedAuditService = Depends(get_audit_service),
 ) -> User:
     """Require the authenticated user to be a superuser."""
     if not current_user.is_superuser:
@@ -281,9 +312,17 @@ def require_superuser(
             user=current_user,
             check_type="superuser",
             check_value="true",
+            audit_service=audit_service,
         )
         _raise_forbidden()
     return current_user
+
+
+def require_audit_admin(current_user: User = Depends(get_current_user)) -> User:
+    """Require Admin role or superuser flag for audit history access."""
+    if current_user.is_superuser or user_has_role(current_user, "Admin"):
+        return current_user
+    _raise_forbidden()
 
 
 def require_document_access(
@@ -323,6 +362,7 @@ def require_document_access(
         request: Request,
         current_user: User = Depends(get_current_user),
         repository: DocumentRepository = Depends(get_document_repository),
+        audit_service: PersistedAuditService = Depends(get_audit_service),
     ) -> Document:
         document = repository.get_by_id(document_id)
         if document is None:
@@ -356,6 +396,14 @@ def require_document_access(
                     reason=decision.reason,
                     endpoint=request.url.path,
                 )
+            )
+            security_audit_integration.record_permission_denied(
+                audit_service,
+                user_id=current_user.id,
+                required_permission=f"document:{action}",
+                resource=request.url.path,
+                ip_address=_client_ip(request),
+                user_agent=request.headers.get("User-Agent"),
             )
             _raise_forbidden()
 

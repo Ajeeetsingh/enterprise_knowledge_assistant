@@ -127,15 +127,16 @@ def test_document_id_is_returned(
     mock_document_service: MagicMock,
     admin_user: User,
 ) -> None:
+    document_id = "b2c3d4e5-f6a7-8901-bcde-f12345678901"
     mock_document_service.upload_document.return_value = _fake_upload_result(
-        document_id="doc-uuid-1234",
+        document_id=document_id,
     )
     token = access_token_for(admin_user)
 
     response = _upload_file(documents_client, token)
 
     assert response.status_code == 200
-    assert response.json()["document_id"] == "doc-uuid-1234"
+    assert response.json()["document_id"] == document_id
 
 
 def test_lifecycle_status_returned(

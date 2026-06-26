@@ -139,6 +139,11 @@ class DocumentRepository:
         )
         return documents, total
 
+    def count(self) -> int:
+        """Return the total number of documents."""
+        count_query = select(func.count()).select_from(Document)
+        return self._db.scalar(count_query) or 0
+
     def update(self, document: Document) -> Document:
         """Persist changes to an existing document record."""
         self._db.add(document)
