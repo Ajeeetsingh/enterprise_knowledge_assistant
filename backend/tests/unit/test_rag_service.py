@@ -22,6 +22,7 @@ TEST_DOCUMENTS_PATH = BACKEND_ROOT / "tests" / "fixtures" / "sample_docs"
 TEST_SETTINGS = Settings(
     documents_path=TEST_DOCUMENTS_PATH,
     indexes_path=BACKEND_ROOT / "storage" / "indexes",
+    llm_provider="none",
 )
 
 
@@ -36,6 +37,15 @@ def clear_rag_service_cache() -> None:
 @pytest.fixture
 def service() -> RagService:
     return RagService(TEST_SETTINGS)
+
+
+@pytest.fixture
+def mock_vector_store() -> MagicMock:
+    store = MagicMock()
+    store.size = 42
+    store.model_name = "sentence-transformers/all-MiniLM-L6-v2"
+    store.dimension = 384
+    return store
 
 
 @pytest.fixture
@@ -67,12 +77,22 @@ def test_service_starts_uninitialized(service: RagService) -> None:
 def test_initialize_loads_engine(
     service: RagService,
     mock_engine_module: tuple[MagicMock, MagicMock],
+    mock_vector_store: MagicMock,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     mock_engine_cls, mock_engine = mock_engine_module
+    monkeypatch.setattr(
+        "app.services.document_service.get_document_service",
+        lambda: MagicMock(vector_store=mock_vector_store),
+    )
 
     chunk_count = service.initialize()
 
-    mock_engine_cls.assert_called_once_with(data_dir=str(TEST_DOCUMENTS_PATH))
+    mock_engine_cls.assert_called_once_with(
+        vector_store=mock_vector_store,
+        llm_provider=None,
+        llm_fallback_enabled=True,
+    )
     mock_engine.initialize.assert_called_once_with()
     assert chunk_count == 42
     assert service.is_initialized is True
@@ -81,8 +101,14 @@ def test_initialize_loads_engine(
 def test_initialize_is_idempotent(
     service: RagService,
     mock_engine_module: tuple[MagicMock, MagicMock],
+    mock_vector_store: MagicMock,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     mock_engine_cls, mock_engine = mock_engine_module
+    monkeypatch.setattr(
+        "app.services.document_service.get_document_service",
+        lambda: MagicMock(vector_store=mock_vector_store),
+    )
 
     first_count = service.initialize()
     second_count = service.initialize()
@@ -95,12 +121,17 @@ def test_initialize_is_idempotent(
 
 def test_create_engine_delegates_to_enterprise_rag(
     mock_engine_module: tuple[MagicMock, MagicMock],
+    mock_vector_store: MagicMock,
 ) -> None:
     mock_engine_cls, mock_engine = mock_engine_module
 
-    engine, chunk_count = _create_engine(str(TEST_DOCUMENTS_PATH))
+    engine, chunk_count = _create_engine(mock_vector_store, TEST_SETTINGS)
 
-    mock_engine_cls.assert_called_once_with(data_dir=str(TEST_DOCUMENTS_PATH))
+    mock_engine_cls.assert_called_once_with(
+        vector_store=mock_vector_store,
+        llm_provider=None,
+        llm_fallback_enabled=True,
+    )
     mock_engine.initialize.assert_called_once_with()
     assert engine is mock_engine
     assert chunk_count == 42
@@ -109,8 +140,14 @@ def test_create_engine_delegates_to_enterprise_rag(
 def test_answer_question_delegates_to_engine(
     service: RagService,
     mock_engine_module: tuple[MagicMock, MagicMock],
+    mock_vector_store: MagicMock,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     _, mock_engine = mock_engine_module
+    monkeypatch.setattr(
+        "app.services.document_service.get_document_service",
+        lambda: MagicMock(vector_store=mock_vector_store),
+    )
 
     response = service.answer_question(
         "What is the remote work policy?",
@@ -121,6 +158,7 @@ def test_answer_question_delegates_to_engine(
         "What is the remote work policy?",
         "employee",
         None,
+        conversation_history=None,
     )
     assert response.answer.startswith("Employees may work remotely")
 
@@ -128,8 +166,14 @@ def test_answer_question_delegates_to_engine(
 def test_answer_question_initializes_once(
     service: RagService,
     mock_engine_module: tuple[MagicMock, MagicMock],
+    mock_vector_store: MagicMock,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     mock_engine_cls, mock_engine = mock_engine_module
+    monkeypatch.setattr(
+        "app.services.document_service.get_document_service",
+        lambda: MagicMock(vector_store=mock_vector_store),
+    )
 
     service.answer_question("First question?", "employee")
     service.answer_question("Second question?", "hr")
@@ -139,24 +183,19 @@ def test_answer_question_initializes_once(
     assert mock_engine.query.call_count == 2
 
 
-def test_missing_data_directory_raises_initialization_error(
-    service: RagService,
-    mock_engine_module: tuple[MagicMock, MagicMock],
-) -> None:
-    _, mock_engine = mock_engine_module
-    mock_engine.initialize.side_effect = FileNotFoundError("missing dir")
-
-    with pytest.raises(RagInitializationError, match="data directory"):
-        service.answer_question("Any question?", "employee")
-
-
 def test_empty_knowledge_base_raises_initialization_error(
     service: RagService,
     mock_engine_module: tuple[MagicMock, MagicMock],
+    mock_vector_store: MagicMock,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     _, mock_engine = mock_engine_module
     mock_engine.initialize.side_effect = ValueError(
         "Cannot build index: no document chunks provided."
+    )
+    monkeypatch.setattr(
+        "app.services.document_service.get_document_service",
+        lambda: MagicMock(vector_store=mock_vector_store),
     )
 
     with pytest.raises(RagInitializationError, match="no indexable documents"):
@@ -166,9 +205,15 @@ def test_empty_knowledge_base_raises_initialization_error(
 def test_embedding_model_failure_raises_initialization_error(
     service: RagService,
     mock_engine_module: tuple[MagicMock, MagicMock],
+    mock_vector_store: MagicMock,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     mock_engine_cls, _ = mock_engine_module
     mock_engine_cls.side_effect = OSError("Model download failed")
+    monkeypatch.setattr(
+        "app.services.document_service.get_document_service",
+        lambda: MagicMock(vector_store=mock_vector_store),
+    )
 
     with pytest.raises(RagInitializationError, match="Failed to initialize"):
         service.answer_question("Any question?", "employee")
@@ -177,11 +222,17 @@ def test_embedding_model_failure_raises_initialization_error(
 def test_retrieval_failure_raises_retrieval_error(
     service: RagService,
     mock_engine_module: tuple[MagicMock, MagicMock],
+    mock_vector_store: MagicMock,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     _, mock_engine = mock_engine_module
     mock_engine.initialize.return_value = 10
     mock_engine.query.side_effect = RuntimeError(
         "Index not built. Call build_index() first."
+    )
+    monkeypatch.setattr(
+        "app.services.document_service.get_document_service",
+        lambda: MagicMock(vector_store=mock_vector_store),
     )
 
     with pytest.raises(RagRetrievalError, match="index is not available"):

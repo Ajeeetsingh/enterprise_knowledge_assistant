@@ -66,6 +66,11 @@ class CitationResponse(BaseModel):
         description="Retrieval confidence score for this citation (0–1).",
         examples=[0.88],
     )
+    page: int | None = Field(
+        default=None,
+        description="PDF page number this chunk was extracted from (1-indexed), or null.",
+        examples=[4],
+    )
 
 
 class AnswerResponse(BaseModel):

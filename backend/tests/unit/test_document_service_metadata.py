@@ -137,6 +137,30 @@ def test_get_document_raises_when_missing(db_session: Session, tmp_path) -> None
         service.get_document(repository, uuid.uuid4())
 
 
+def test_get_document_raises_when_deleted(
+    db_session: Session,
+    uploader_id: uuid.UUID,
+    tmp_path,
+) -> None:
+    storage = LocalStorage(base_path=tmp_path)
+    store = _mock_store()
+    service = _build_service(storage, store)
+    repository = DocumentRepository(db_session)
+
+    result = service.upload_document(
+        repository,
+        filename="gone.txt",
+        content_type="text/plain",
+        content=b"gone",
+        uploaded_by=uploader_id,
+    )
+    document_id = uuid.UUID(result.document_id)
+    repository.mark_deleted(document_id)
+
+    with pytest.raises(DocumentNotFoundError):
+        service.get_document(repository, document_id)
+
+
 def test_list_documents_returns_paginated_metadata(
     db_session: Session,
     uploader_id: uuid.UUID,

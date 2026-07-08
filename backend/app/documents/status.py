@@ -22,6 +22,9 @@ class DocumentStatus(StrEnum):
     INDEXED = "indexed"
     SEARCHABLE = "searchable"
     FAILED = "failed"
+    FAILED_EXTRACTION = "failed_extraction"
+    FAILED_EMBEDDING = "failed_embedding"
+    FAILED_INDEXING = "failed_indexing"
     RETRY_PENDING = "retry_pending"
     DELETED = "deleted"
 

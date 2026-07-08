@@ -243,6 +243,66 @@ def test_mark_deleted_updates_status(
     assert updated.status == DocumentStatus.DELETED.value
 
 
+def test_list_excludes_deleted_documents_by_default(
+    db_session: Session,
+    uploader_id: uuid.UUID,
+) -> None:
+    repository = DocumentRepository(db_session)
+    active = _create_document(repository, uploader_id=uploader_id, filename="active.txt")
+    deleted = _create_document(
+        repository,
+        uploader_id=uploader_id,
+        filename="removed.txt",
+        status=DocumentStatus.DELETED,
+    )
+
+    page, total = repository.list(limit=20, offset=0)
+
+    assert total == 1
+    assert len(page) == 1
+    assert page[0].id == active.id
+    assert deleted.id not in {document.id for document in page}
+
+
+def test_list_includes_deleted_when_status_filter_applied(
+    db_session: Session,
+    uploader_id: uuid.UUID,
+) -> None:
+    repository = DocumentRepository(db_session)
+    _create_document(repository, uploader_id=uploader_id, filename="active.txt")
+    deleted = _create_document(
+        repository,
+        uploader_id=uploader_id,
+        filename="removed.txt",
+        status=DocumentStatus.DELETED,
+    )
+
+    page, total = repository.list(
+        limit=20,
+        offset=0,
+        filters=DocumentFilter(status=DocumentStatus.DELETED),
+    )
+
+    assert total == 1
+    assert page[0].id == deleted.id
+
+
+def test_count_excludes_deleted_documents(
+    db_session: Session,
+    uploader_id: uuid.UUID,
+) -> None:
+    repository = DocumentRepository(db_session)
+    _create_document(repository, uploader_id=uploader_id, filename="active.txt")
+    _create_document(
+        repository,
+        uploader_id=uploader_id,
+        filename="removed.txt",
+        status=DocumentStatus.DELETED,
+    )
+
+    assert repository.count() == 1
+
+
 def test_find_by_checksum_returns_matches(
     db_session: Session,
     uploader_id: uuid.UUID,

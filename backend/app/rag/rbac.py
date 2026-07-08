@@ -7,10 +7,10 @@ from dataclasses import dataclass
 VALID_ROLES = frozenset({"admin", "hr", "finance", "employee"})
 
 ROLE_PERMISSIONS: dict[str, frozenset[str]] = {
-    "admin": frozenset({"hr", "finance", "security", "employee"}),
-    "hr": frozenset({"hr", "employee"}),
-    "finance": frozenset({"finance"}),
-    "employee": frozenset({"hr"}),
+    "admin": frozenset({"hr", "finance", "security", "employee", "general"}),
+    "hr": frozenset({"hr", "employee", "general"}),
+    "finance": frozenset({"finance", "general"}),
+    "employee": frozenset({"hr", "general"}),
 }
 
 

@@ -109,7 +109,12 @@ class DocumentRepository:
         offset: int,
         filters: DocumentFilter | None = None,
     ) -> tuple[list[Document], int]:
-        """Return a page of documents and the total matching count."""
+        """Return a page of documents and the total matching count.
+
+        Soft-deleted documents (``status=DELETED``) are excluded from the default
+        listing. Pass ``filters.status=DocumentStatus.DELETED`` to include only
+        deleted records for audit or admin review.
+        """
         query = select(Document)
         count_query = select(func.count()).select_from(Document)
 
@@ -123,11 +128,21 @@ class DocumentRepository:
                 count_query = count_query.where(
                     Document.status == filters.status.value
                 )
+            else:
+                query = query.where(Document.status != DocumentStatus.DELETED.value)
+                count_query = count_query.where(
+                    Document.status != DocumentStatus.DELETED.value
+                )
             if filters.uploaded_by is not None:
                 query = query.where(Document.uploaded_by == filters.uploaded_by)
                 count_query = count_query.where(
                     Document.uploaded_by == filters.uploaded_by
                 )
+        else:
+            query = query.where(Document.status != DocumentStatus.DELETED.value)
+            count_query = count_query.where(
+                Document.status != DocumentStatus.DELETED.value
+            )
 
         total = self._db.scalar(count_query) or 0
         documents = list(
@@ -140,8 +155,12 @@ class DocumentRepository:
         return documents, total
 
     def count(self) -> int:
-        """Return the total number of documents."""
-        count_query = select(func.count()).select_from(Document)
+        """Return the total number of non-deleted documents."""
+        count_query = (
+            select(func.count())
+            .select_from(Document)
+            .where(Document.status != DocumentStatus.DELETED.value)
+        )
         return self._db.scalar(count_query) or 0
 
     def update(self, document: Document) -> Document:

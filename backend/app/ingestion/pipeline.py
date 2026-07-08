@@ -13,6 +13,7 @@ from app.ingestion.stages import (
     ChunkingStage,
     EmbeddingStage,
     ExtractionStage,
+    IndexValidationStage,
     IndexingStage,
     MetadataStage,
     PipelineStage,
@@ -152,13 +153,17 @@ def create_default_pipeline(
     vector_store: VectorStore | None = None,
 ) -> IngestionPipeline:
     """Build the default ordered ingestion pipeline with working stages."""
+    from app.embeddings.manager import get_embedding_manager
     from app.ingestion.processor import DefaultDocumentProcessor
     from app.ingestion.embedding.sentence_transformer import SentenceTransformerEmbeddingProvider
     from app.ingestion.vector_store.faiss_store import FaissVectorStore
 
     resolved_processor = processor or DefaultDocumentProcessor()
-    resolved_embedder = embedding_provider or SentenceTransformerEmbeddingProvider()
-    resolved_store = vector_store or FaissVectorStore()
+    shared_manager = get_embedding_manager()
+    resolved_embedder = embedding_provider or SentenceTransformerEmbeddingProvider(
+        embedding_manager=shared_manager,
+    )
+    resolved_store = vector_store or FaissVectorStore(embedding_manager=shared_manager)
 
     stages: list[PipelineStage] = [
         ValidationStage(),
@@ -167,6 +172,7 @@ def create_default_pipeline(
         ChunkingStage(),
         EmbeddingStage(resolved_embedder),
         IndexingStage(resolved_store),
+        IndexValidationStage(resolved_store),
         MetadataStage(),
     ]
     return IngestionPipeline(stages)

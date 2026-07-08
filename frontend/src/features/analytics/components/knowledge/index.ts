@@ -1,0 +1,7 @@
+export { default as CollectionUsageChart } from './CollectionUsageChart'
+export { default as DocumentUsageChart } from './DocumentUsageChart'
+export { default as FreshnessTable } from './FreshnessTable'
+export { default as KnowledgeGapTable } from './KnowledgeGapTable'
+export { default as KnowledgeOverviewCards } from './KnowledgeOverviewCards'
+export { default as SearchTrendChart } from './SearchTrendChart'
+export { default as TopDocumentsTable } from './TopDocumentsTable'

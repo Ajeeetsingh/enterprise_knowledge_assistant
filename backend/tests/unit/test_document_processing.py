@@ -181,8 +181,8 @@ def test_processing_progress_reports_failed_stage(tmp_path) -> None:
     )
     assert progress.current_stage == "extraction"
     assert progress.completed_stages == ["validation", "storage"]
-    assert progress.total_stages == 7
-    assert progress.progress_percentage == pytest.approx(28.57, rel=0.01)
+    assert progress.total_stages == 8
+    assert progress.progress_percentage == pytest.approx(25.0, rel=0.01)
 
 
 def test_processing_metrics_from_stage_durations() -> None:

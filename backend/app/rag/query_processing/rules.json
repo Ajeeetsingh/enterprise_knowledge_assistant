@@ -1,0 +1,182 @@
+{
+  "version": "1.0.0",
+  "description": "Query intelligence rules for expansion, entities, and retrieval strategies.",
+  "acronyms": {
+    "HQ": ["headquarters"],
+    "CEO": ["chief executive officer"],
+    "CTO": ["chief technology officer"],
+    "CFO": ["chief financial officer"],
+    "COO": ["chief operating officer"],
+    "HR": ["human resources"],
+    "IT": ["information technology"],
+    "RBAC": ["role based access control"],
+    "AML": ["anti money laundering"],
+    "KYC": ["know your customer"],
+    "BCP": ["business continuity plan"],
+    "DR": ["disaster recovery"],
+    "SOP": ["standard operating procedure"],
+    "VPN": ["virtual private network"],
+    "MFA": ["multi factor authentication"],
+    "GTFS": ["GlobalTrust Financial Services"]
+  },
+  "synonyms": {
+    "headquarters": ["office", "location", "corporate office", "branch"],
+    "employee": ["staff", "associate", "personnel"],
+    "finance": ["financial", "fiscal"],
+    "policy": ["guideline", "standard"],
+    "procedure": ["process", "workflow", "sop"],
+    "revenue": ["income", "earnings"],
+    "budget": ["allocation", "spending plan"],
+    "security": ["cybersecurity", "information security"],
+    "compliance": ["regulatory", "regulation"],
+    "vendor": ["supplier", "third party"],
+    "complaint": ["grievance", "dispute"],
+    "loan": ["mortgage", "credit facility"],
+    "risk": ["exposure", "threat"]
+  },
+  "entities": {
+    "CEO": {
+      "canonical": "Chief Executive Officer",
+      "aliases": ["ceo", "chief executive", "chief executive officer"]
+    },
+    "HQ": {
+      "canonical": "Headquarters",
+      "aliases": ["hq", "headquarters", "corporate office"]
+    },
+    "Project Phoenix": {
+      "canonical": "Phoenix Modernization Initiative",
+      "aliases": ["project phoenix", "phoenix", "phoenix initiative"]
+    },
+    "Atlas": {
+      "canonical": "Atlas Digital Banking Platform",
+      "aliases": ["atlas", "atlas platform", "digital banking platform"]
+    },
+    "David Chen": {
+      "canonical": "David Chen",
+      "aliases": ["david chen", "mr. chen"]
+    },
+    "GlobalTrust": {
+      "canonical": "GlobalTrust Financial Services",
+      "aliases": ["globaltrust", "gtfs", "global trust"]
+    }
+  },
+  "multi_query_variants": {
+    "headquarters": [
+      "Where is the company headquarters?",
+      "Where is the corporate office located?"
+    ],
+    "ceo": [
+      "Who is the Chief Executive Officer?",
+      "Who leads GlobalTrust Financial Services?"
+    ],
+    "revenue": [
+      "What is the quarterly revenue?",
+      "What are the financial earnings?"
+    ],
+    "policy": [
+      "What does the policy state?",
+      "What are the policy requirements?"
+    ],
+    "compliance": [
+      "What are the compliance requirements?",
+      "What regulations apply?"
+    ],
+    "security": [
+      "What are the security requirements?",
+      "What controls are mandated?"
+    ]
+  },
+  "strategies": {
+    "entity_lookup": {
+      "sparse_weight_multiplier": 1.25,
+      "dense_weight_multiplier": 0.9,
+      "metadata_bonus_multiplier": 1.0,
+      "rerank_top_n": 12,
+      "retrieval_depth_multiplier": 0.85
+    },
+    "definition": {
+      "sparse_weight_multiplier": 1.1,
+      "dense_weight_multiplier": 1.1,
+      "metadata_bonus_multiplier": 1.15,
+      "rerank_top_n": 20,
+      "retrieval_depth_multiplier": 1.0
+    },
+    "numeric": {
+      "sparse_weight_multiplier": 1.45,
+      "dense_weight_multiplier": 0.85,
+      "metadata_bonus_multiplier": 1.0,
+      "rerank_top_n": 20,
+      "retrieval_depth_multiplier": 1.0
+    },
+    "financial": {
+      "sparse_weight_multiplier": 1.5,
+      "dense_weight_multiplier": 0.8,
+      "metadata_bonus_multiplier": 1.05,
+      "rerank_top_n": 20,
+      "retrieval_depth_multiplier": 1.1
+    },
+    "policy": {
+      "sparse_weight_multiplier": 1.15,
+      "dense_weight_multiplier": 1.0,
+      "metadata_bonus_multiplier": 1.35,
+      "rerank_top_n": 20,
+      "retrieval_depth_multiplier": 1.0
+    },
+    "procedure": {
+      "sparse_weight_multiplier": 1.2,
+      "dense_weight_multiplier": 0.95,
+      "metadata_bonus_multiplier": 1.2,
+      "rerank_top_n": 20,
+      "retrieval_depth_multiplier": 1.0
+    },
+    "security": {
+      "sparse_weight_multiplier": 1.25,
+      "dense_weight_multiplier": 0.95,
+      "metadata_bonus_multiplier": 1.25,
+      "rerank_top_n": 20,
+      "retrieval_depth_multiplier": 1.0
+    },
+    "compliance": {
+      "sparse_weight_multiplier": 1.3,
+      "dense_weight_multiplier": 0.9,
+      "metadata_bonus_multiplier": 1.3,
+      "rerank_top_n": 20,
+      "retrieval_depth_multiplier": 1.0
+    },
+    "cross_document": {
+      "sparse_weight_multiplier": 1.1,
+      "dense_weight_multiplier": 1.15,
+      "metadata_bonus_multiplier": 1.1,
+      "rerank_top_n": 25,
+      "retrieval_depth_multiplier": 1.35
+    },
+    "comparison": {
+      "sparse_weight_multiplier": 1.35,
+      "dense_weight_multiplier": 0.9,
+      "metadata_bonus_multiplier": 1.1,
+      "rerank_top_n": 20,
+      "retrieval_depth_multiplier": 1.15
+    },
+    "list": {
+      "sparse_weight_multiplier": 1.3,
+      "dense_weight_multiplier": 0.9,
+      "metadata_bonus_multiplier": 1.15,
+      "rerank_top_n": 20,
+      "retrieval_depth_multiplier": 1.1
+    },
+    "table": {
+      "sparse_weight_multiplier": 1.4,
+      "dense_weight_multiplier": 0.85,
+      "metadata_bonus_multiplier": 1.1,
+      "rerank_top_n": 20,
+      "retrieval_depth_multiplier": 1.1
+    },
+    "general": {
+      "sparse_weight_multiplier": 1.0,
+      "dense_weight_multiplier": 1.0,
+      "metadata_bonus_multiplier": 1.0,
+      "rerank_top_n": 20,
+      "retrieval_depth_multiplier": 1.0
+    }
+  }
+}

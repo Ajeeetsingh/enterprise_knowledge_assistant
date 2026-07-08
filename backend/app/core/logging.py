@@ -47,6 +47,23 @@ def setup_logging() -> None:
     logging.getLogger("sqlalchemy.engine").setLevel(
         logging.INFO if settings.debug else logging.WARNING
     )
+    _configure_third_party_loggers(settings)
+
+
+def _configure_third_party_loggers(settings) -> None:
+    """Reduce noisy HTTP / ML library INFO logs unless debug mode is enabled."""
+    noisy_loggers = (
+        "httpx",
+        "httpcore",
+        "huggingface_hub",
+        "transformers",
+        "urllib3",
+        "filelock",
+        "sentence_transformers",
+    )
+    noisy_level = logging.DEBUG if settings.debug else logging.WARNING
+    for logger_name in noisy_loggers:
+        logging.getLogger(logger_name).setLevel(noisy_level)
 
 
 def get_logger(name: str) -> logging.Logger:

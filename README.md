@@ -1,278 +1,83 @@
-# Enterprise RAG Intelligence Challenge
+# Enterprise Knowledge Assistant
 
-A modular retrieval-augmented generation (RAG) system for querying enterprise documents with role-based access control. The pipeline ingests HR policies, finance reports, security logs, employee records, and IT security policies, then returns cited answers grounded in retrieved context.
-
-## Features
-
-- **PDF/TXT/CSV/JSON ingestion** — automatic document loading and chunking from `data/`
-- **Semantic retrieval using FAISS** — `all-MiniLM-L6-v2` embeddings with cosine similarity search
-- **Query-aware routing** — keyword-based intent classification into HR, finance, security, and employee domains
-- **RBAC enforcement** — four roles (`admin`, `hr`, `finance`, `employee`) with per-category access rules
-- **Cross-source retrieval** — top 3 chunks retrieved across all authorized document sources
-- **Explainable answers with citations** — each response includes source filenames and excerpted evidence
-- **Confidence scoring** — retrieval similarity score (0–1) on every answer
-- **Automated test suite** — 37/37 passing (`python test_pipeline.py`)
+Production-grade enterprise RAG platform: FastAPI backend, React frontend, PostgreSQL, document ingestion, hybrid retrieval, cross-encoder reranking, query intelligence, analytics, and admin tooling.
 
 ## Quick Start
 
-```bash
-# 1. Create virtual environment
-python -m venv .venv
-.venv\Scripts\activate        # Windows
-# source .venv/bin/activate   # macOS/Linux
+### Backend
 
-# 2. Install dependencies
+```bash
+cd backend
 pip install -r requirements.txt
-
-# 3. Run the demo
-python app.py
-
-# 4. Run the test suite
-python test_pipeline.py
+pip install -r requirements-dev.txt   # pytest for development
+alembic upgrade head
+uvicorn app.main:app --reload
 ```
 
-The first run downloads the embedding model (~90 MB) from Hugging Face.
-
-## Backend Bootstrap
-
-Seed scripts initialize the authentication database for local development and manual Phase 2 testing. Run them after migrations (`alembic upgrade head`) with Postgres available.
-
-### `scripts/seed_roles.py`
-
-Creates the four fixed application roles: **Admin**, **Employee**, **HR**, and **Finance**. Safe to run multiple times — existing roles are skipped.
+### Frontend
 
 ```bash
-python scripts/seed_roles.py
+cd frontend
+npm install
+npm run dev
 ```
 
-Run this **first** before creating users or testing role assignment.
+### Manual testing
 
-### `scripts/seed_admin_user.py`
-
-Creates the default administrator account used for manual API testing:
-
-| Field | Value |
-|-------|-------|
-| Email | `admin@example.com` |
-| Password | `AdminPass1!` |
-| Role | Admin |
-| Superuser | Yes |
-
-Safe to run multiple times — if the user already exists, the script prints `Admin user already exists.` and exits without changes.
-
-```bash
-python scripts/seed_roles.py
-python scripts/seed_admin_user.py
-```
-
-Use this after `seed_roles.py` when you need an Admin token for user management, role assignment, and protected endpoint testing. The script does not modify authentication or RBAC logic; it reuses the existing User model, Role model, password service, and database session.
-
-## Project Structure
-
-```
-RAG_Pipeline/
-├── app.py                 # Main application and CLI
-├── answer_generator.py    # Natural-language answer composition
-├── loader.py              # Document ingestion (PDF, TXT, CSV, JSON)
-├── retriever.py           # FAISS semantic search
-├── router.py              # Query intent routing
-├── rbac.py                # Role-based access control
-├── test_pipeline.py       # Automated test suite
-├── requirements.txt
-├── architecture.md        # Detailed system design
-└── data/
-    ├── hr_policy.txt
-    ├── finance_report.txt
-    ├── security_logs.json
-    ├── it_security_policy.pdf
-    └── employees.csv
-```
-
-## How It Works
-
-```
-User Query + Role
-       │
-       ▼
-  Query Router ──► category (hr / finance / security / employee)
-       │
-       ▼
-  RBAC Check ──► allow or deny
-       │
-       ▼
-  FAISS Retrieval ──► top 3 chunks from authorized sources
-       │
-       ▼
-  Answer Generator ──► natural-language answer + citations
-```
-
-1. **Ingest** — documents are parsed, tagged by category, and split into 400-character overlapping chunks
-2. **Route** — the query is classified by keyword scoring (security keywords take priority on ties)
-3. **Authorize** — RBAC checks whether the user's role may access the routed category
-4. **Retrieve** — FAISS returns the 3 most semantically similar chunks from all permitted sources
-5. **Answer** — context is synthesized into a direct response with source citations and confidence score
-
-## Usage
-
-### Interactive CLI
-
-After running `python app.py`, enter queries as:
-
-```
-<role> | <question>
-```
-
-Examples:
-
-```
-hr | What is the parental leave policy?
-finance | What was Q3 revenue for the Sales department?
-admin | What are the password requirements?
-admin | Were there any malware incidents?
-employee | What is the remote work policy?
-```
-
-Type `quit` to exit.
-
-### Programmatic API
-
-```python
-from app import EnterpriseRAG
-
-rag = EnterpriseRAG()
-rag.initialize()
-
-response = rag.query("What are the password requirements?", role="admin")
-
-print(response.answer)
-print(response.sources_used)
-print(response.citations)
-print(response.confidence_score)
-print(response.access_granted)
-```
-
-### Response Format
-
-```json
-{
-  "query": "What are the password requirements?",
-  "role": "admin",
-  "routed_category": "security",
-  "route_confidence": 1.0,
-  "answer": "Employees must use passwords of at least 14 characters with mixed character types. Passwords must be changed every 90 days.",
-  "sources_used": ["it_security_policy.pdf", "security_logs.json"],
-  "citations": [
-    {
-      "source": "it_security_policy.pdf",
-      "excerpt": "ACME CORPORATION - IT SECURITY POLICY Document ID: SEC-POL-2025-002...",
-      "confidence": 0.6096
-    }
-  ],
-  "confidence_score": 0.6096,
-  "access_granted": true,
-  "message": "Answer generated from it_security_policy.pdf, security_logs.json."
-}
-```
-
-## RBAC Matrix
-
-| Role | HR | Finance | Security | Employee Records |
-|------|:--:|:-------:|:--------:|:----------------:|
-| admin | Yes | Yes | Yes | Yes |
-| hr | Yes | No | No | Yes |
-| finance | No | Yes | No | No |
-| employee | Yes | No | No | No |
-
-Access is denied before retrieval when a role cannot view the routed document category.
-
-## Supported Document Formats
-
-| Format | Loader | Example File | Category |
-|--------|--------|--------------|----------|
-| PDF | `pypdf` text extraction | `it_security_policy.pdf` | security |
-| TXT | plain text read | `hr_policy.txt` | hr |
-| TXT | plain text read | `finance_report.txt` | finance |
-| JSON | structured field parsing | `security_logs.json` | security |
-| CSV | row flattening | `employees.csv` | employee |
-
-Add new files to `data/` and map the filename stem in `CATEGORY_MAP` inside `loader.py`.
+See **[docs/MANUAL_TESTING_GUIDE.md](docs/MANUAL_TESTING_GUIDE.md)** for Docker setup, demo users, and end-to-end checklists.
 
 ## Testing
-
-### Backend API suite (default)
-
-The FastAPI backend has a pytest suite under `backend/tests/`. From the
-`backend/` directory:
 
 ```bash
 cd backend
 python -m pytest
 ```
 
-This runs **~309 unit and integration tests** in about **10 seconds**. It does
-**not** include the legacy RAG pipeline script in `backend/tests/rag/`.
+See **[backend/TESTING.md](backend/TESTING.md)** for test layout and retrieval evaluation.
 
-See **[backend/TESTING.md](backend/TESTING.md)** for:
-
-- Which tests run by default and why
-- Why legacy RAG tests are excluded from pytest
-- How to run RAG validation manually
-- Planned migration to pytest-marked RAG tests
-
-### Phase 00 prototype suite (legacy)
-
-```bash
-python test_pipeline.py
-```
-
-The suite covers:
-
-- **Ingestion** — all 5 files load, PDF chunks exist, category mapping
-- **Routing** — HR, finance, security, employee, and security keyword queries
-- **RBAC** — allow/deny matrix and per-role category lists
-- **End-to-end** — 11 full pipeline queries including PDF, multi-source, and access denials
-
-Results are written to `results/test_results.json` and `results/test_results.txt`.
-
-The enterprise test suite (`realistic_enterprise_test.py`) writes to the same `results/` folder.
-
-### Backend RAG script (manual)
-
-The migrated RAG checks also live as a standalone script:
+### Retrieval benchmark (144-case golden dataset)
 
 ```bash
 cd backend
-python tests/rag/test_pipeline.py
+python -m app.evaluation.benchmark --label my_run --llm-provider none --no-compare
+# or
+python scripts/benchmark.py --retrieval --label my_run --llm-provider none --no-compare
 ```
 
-Details are in [backend/TESTING.md](backend/TESTING.md).
+See **[docs/EVALUATION_FRAMEWORK.md](docs/EVALUATION_FRAMEWORK.md)**.
 
-## Configuration
+## Production RAG Pipeline
 
-| Setting | Location | Default |
-|---------|----------|---------|
-| Chunk size | `loader.py` | 400 characters |
-| Chunk overlap | `loader.py` | 50 characters |
-| Embedding model | `retriever.py` | `all-MiniLM-L6-v2` |
-| Top-K retrieval | `app.py` | 3 chunks |
-| Confidence threshold | `answer_generator.py` | 0.35 |
-| Data directory | `app.py` | `./data` |
+```
+Normalization → Structure Extraction → Semantic Chunking → Embeddings
+  → Query Intelligence → Hybrid (Dense + BM25 + RRF) → Metadata Rescoring
+  → Cross-Encoder Reranking → LLM
+```
 
-## Dependencies
+Architecture guides:
 
-- `sentence-transformers` — embedding model
-- `faiss-cpu` — vector similarity search
-- `pypdf` — PDF text extraction
-- `torch`, `numpy` — model runtime
+| Topic | Document |
+|-------|----------|
+| Ingestion pipeline | [docs/INGESTION_PIPELINE.md](docs/INGESTION_PIPELINE.md) |
+| Retrieval pipeline | [docs/RETRIEVAL_PIPELINE.md](docs/RETRIEVAL_PIPELINE.md) |
+| Evaluation framework | [docs/EVALUATION_FRAMEWORK.md](docs/EVALUATION_FRAMEWORK.md) |
 
 ## Architecture
 
-See [architecture.md](architecture.md) for layer-by-layer design documentation including ingestion, embedding, FAISS indexing, query routing, RBAC, and answer generation.
+- **[docs/02_system_architecture.md](docs/02_system_architecture.md)** — system design
+- **[docs/05_testing_strategy.md](docs/05_testing_strategy.md)** — testing philosophy
+- **[folder_structure.md](folder_structure.md)** — repository layout
 
-## Extending
+## Legacy CLI
 
-- **New documents** — add files to `data/` and update `CATEGORY_MAP` in `loader.py`
-- **New roles** — update `ROLE_PERMISSIONS` in `rbac.py`
-- **New routing keywords** — update `ROUTE_KEYWORDS` in `router.py`
-- **Persisted index** — use `faiss.write_index()` / `faiss.read_index()` for faster startup
-- **LLM answers** — replace `AnswerGenerator` with an external model call; retrieval and RBAC layers stay the same
+The Phase 00 prototype CLI still delegates to the backend RAG module:
+
+```bash
+python app.py
+```
+
+Production chat and APIs use `RagService` → `EnterpriseRAG` with the shared FAISS/BM25 index from document ingestion.
+
+## Scripts
+
+Backend operational scripts are documented in **[backend/scripts/README.md](backend/scripts/README.md)**.

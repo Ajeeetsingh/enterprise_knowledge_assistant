@@ -1,0 +1,3497 @@
+{
+  "version": "2.0.0",
+  "description": "Full golden evaluation dataset with 100+ cases across the GTFS corpus. Organized by document type, difficulty, and query category.",
+  "metadata": {
+    "corpus": "F:\\PycharmProjects\\enterprise_knowledge_assistant\\data",
+    "case_count": 144,
+    "breakdown": {
+      "by_document_type": {
+        "business_continuity": 8,
+        "compliance": 16,
+        "overview": 8,
+        "financial_report": 24,
+        "handbook": 8,
+        "policy": 8,
+        "legal_policy": 8,
+        "procedure": 24,
+        "procurement": 8,
+        "risk_framework": 8,
+        "security_policy": 16,
+        "guide": 8
+      },
+      "by_difficulty": {
+        "hard": 66,
+        "easy": 24,
+        "medium": 54
+      },
+      "by_query_category": {
+        "cross_reference": 65,
+        "factual_lookup": 24,
+        "compliance_rule": 15,
+        "policy_rule": 14,
+        "financial_data": 16,
+        "table_query": 1,
+        "security_requirement": 9
+      }
+    },
+    "generator": "build_golden_dataset.py"
+  },
+  "cases": [
+    {
+      "id": "BCP-001",
+      "question": "What related GTFS document is referenced?",
+      "expected_answer": "GTFS-BCP-001",
+      "expected_document": "GTFS-BCP-001_Business_Continuity_Disaster_Recovery_Plan.pdf",
+      "expected_page": 1,
+      "expected_chunks": [
+        0
+      ],
+      "category": "general",
+      "difficulty": "hard",
+      "document_type": "business_continuity",
+      "query_category": "cross_reference",
+      "tags": [
+        "business_continuity",
+        "cross_reference"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-BCP-001_Business_Continuity_Disaster_Recovery_Plan.pdf"
+      ],
+      "notes": "GlobalTrust Financial Services Business Continuity & Disaster Recovery Plan Business Continuity Office GTFS Confidential | Classification: Confidential Document"
+    },
+    {
+      "id": "BCP-002",
+      "question": "Which executive leader is named?",
+      "expected_answer": "David Chen",
+      "expected_document": "GTFS-BCP-001_Business_Continuity_Disaster_Recovery_Plan.pdf",
+      "expected_page": 1,
+      "expected_chunks": [
+        0
+      ],
+      "category": "general",
+      "difficulty": "easy",
+      "document_type": "business_continuity",
+      "query_category": "factual_lookup",
+      "tags": [
+        "business_continuity",
+        "factual_lookup"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-BCP-001_Business_Continuity_Disaster_Recovery_Plan.pdf"
+      ],
+      "notes": "GlobalTrust Financial Services Business Continuity & Disaster Recovery Plan Business Continuity Office GTFS Confidential | Classification: Confidential Document"
+    },
+    {
+      "id": "BCP-003",
+      "question": "How many employees are mentioned?",
+      "expected_answer": "4,910",
+      "expected_document": "GTFS-BCP-001_Business_Continuity_Disaster_Recovery_Plan.pdf",
+      "expected_page": 2,
+      "expected_chunks": [
+        1
+      ],
+      "category": "general",
+      "difficulty": "easy",
+      "document_type": "business_continuity",
+      "query_category": "factual_lookup",
+      "tags": [
+        "business_continuity",
+        "factual_lookup"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-BCP-001_Business_Continuity_Disaster_Recovery_Plan.pdf"
+      ],
+      "notes": "3. Business Impact Analysis 4. Risk Assessment 5. Recovery Objectives 6. Disaster Recovery Strategy 7. Backup Strategy 8. Crisis Management 9. Cyber Incident Re"
+    },
+    {
+      "id": "BCP-004",
+      "question": "What related GTFS document is referenced?",
+      "expected_answer": "GTFS-SEC-001",
+      "expected_document": "GTFS-BCP-001_Business_Continuity_Disaster_Recovery_Plan.pdf",
+      "expected_page": 3,
+      "expected_chunks": [
+        2
+      ],
+      "category": "general",
+      "difficulty": "hard",
+      "document_type": "business_continuity",
+      "query_category": "cross_reference",
+      "tags": [
+        "business_continuity",
+        "cross_reference"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-BCP-001_Business_Continuity_Disaster_Recovery_Plan.pdf"
+      ],
+      "notes": "The GlobalTrust Financial Services (GTFS) Business Continuity & Disaster Recovery Plan (BCP/DR) ensures operational resilience for 4,910 employees and customers"
+    },
+    {
+      "id": "BCP-005",
+      "question": "What related GTFS document is referenced?",
+      "expected_answer": "GTFS-RISK-001",
+      "expected_document": "GTFS-BCP-001_Business_Continuity_Disaster_Recovery_Plan.pdf",
+      "expected_page": 3,
+      "expected_chunks": [
+        2
+      ],
+      "category": "general",
+      "difficulty": "hard",
+      "document_type": "business_continuity",
+      "query_category": "cross_reference",
+      "tags": [
+        "business_continuity",
+        "cross_reference"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-BCP-001_Business_Continuity_Disaster_Recovery_Plan.pdf"
+      ],
+      "notes": "The GlobalTrust Financial Services (GTFS) Business Continuity & Disaster Recovery Plan (BCP/DR) ensures operational resilience for 4,910 employees and customers"
+    },
+    {
+      "id": "BCP-006",
+      "question": "What related GTFS document is referenced?",
+      "expected_answer": "GTFS-PROC-001",
+      "expected_document": "GTFS-BCP-001_Business_Continuity_Disaster_Recovery_Plan.pdf",
+      "expected_page": 3,
+      "expected_chunks": [
+        3
+      ],
+      "category": "general",
+      "difficulty": "hard",
+      "document_type": "business_continuity",
+      "query_category": "cross_reference",
+      "tags": [
+        "business_continuity",
+        "cross_reference"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-BCP-001_Business_Continuity_Disaster_Recovery_Plan.pdf"
+      ],
+      "notes": "\u007f Financial stability \u2014 Treasury and payment processing prioritised in recovery sequence. \u007f Cyber resilience \u2014 Integrated with GTFS-SEC-001 and GTFS-RISK-001. \u007f"
+    },
+    {
+      "id": "BCP-007",
+      "question": "What related GTFS document is referenced?",
+      "expected_answer": "GTFS-OPS-001",
+      "expected_document": "GTFS-BCP-001_Business_Continuity_Disaster_Recovery_Plan.pdf",
+      "expected_page": 4,
+      "expected_chunks": [
+        6
+      ],
+      "category": "general",
+      "difficulty": "hard",
+      "document_type": "business_continuity",
+      "query_category": "cross_reference",
+      "tags": [
+        "business_continuity",
+        "cross_reference"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-BCP-001_Business_Continuity_Disaster_Recovery_Plan.pdf"
+      ],
+      "notes": "\u25a0 Department Recovery Coordinators Business unit recovery execution BEST PRACTICE: Business Continuity Training is mandatory annually (8 hours) for all employee"
+    },
+    {
+      "id": "BCP-008",
+      "question": "What related GTFS document is referenced?",
+      "expected_answer": "GTFS-OPS-002",
+      "expected_document": "GTFS-BCP-001_Business_Continuity_Disaster_Recovery_Plan.pdf",
+      "expected_page": 5,
+      "expected_chunks": [
+        7
+      ],
+      "category": "general",
+      "difficulty": "hard",
+      "document_type": "business_continuity",
+      "query_category": "cross_reference",
+      "tags": [
+        "business_continuity",
+        "cross_reference"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-BCP-001_Business_Continuity_Disaster_Recovery_Plan.pdf"
+      ],
+      "notes": "Treasury / Ops ATM Network P1 2 hours 30 minutes 4 hours Operations Retail Banking P2 4 hours 1 hour 8 hours Retail Loan Processing P2 4 hours 30 minutes 8 hour"
+    },
+    {
+      "id": "COMP-009",
+      "question": "What compliance topic is covered?",
+      "expected_answer": "Anti-Money Laundering",
+      "expected_document": "GTFS-COMP-001_AML_Policy.pdf",
+      "expected_page": 1,
+      "expected_chunks": [
+        0
+      ],
+      "category": "security",
+      "difficulty": "medium",
+      "document_type": "compliance",
+      "query_category": "compliance_rule",
+      "tags": [
+        "compliance",
+        "compliance_rule"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-COMP-001_AML_Policy.pdf"
+      ],
+      "notes": "GlobalTrust Financial Services Anti-Money Laundering (AML) Policy Compliance & Financial Crime Department GTFS Confidential | Classification: Confidential Docum"
+    },
+    {
+      "id": "COMP-010",
+      "question": "What compliance topic is covered?",
+      "expected_answer": "AML",
+      "expected_document": "GTFS-COMP-001_AML_Policy.pdf",
+      "expected_page": 1,
+      "expected_chunks": [
+        0
+      ],
+      "category": "security",
+      "difficulty": "medium",
+      "document_type": "compliance",
+      "query_category": "compliance_rule",
+      "tags": [
+        "compliance",
+        "compliance_rule"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-COMP-001_AML_Policy.pdf"
+      ],
+      "notes": "GlobalTrust Financial Services Anti-Money Laundering (AML) Policy Compliance & Financial Crime Department GTFS Confidential | Classification: Confidential Docum"
+    },
+    {
+      "id": "COMP-011",
+      "question": "What related GTFS document is referenced?",
+      "expected_answer": "GTFS-COMP-001",
+      "expected_document": "GTFS-COMP-001_AML_Policy.pdf",
+      "expected_page": 1,
+      "expected_chunks": [
+        0
+      ],
+      "category": "security",
+      "difficulty": "hard",
+      "document_type": "compliance",
+      "query_category": "cross_reference",
+      "tags": [
+        "compliance",
+        "cross_reference"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-COMP-001_AML_Policy.pdf"
+      ],
+      "notes": "GlobalTrust Financial Services Anti-Money Laundering (AML) Policy Compliance & Financial Crime Department GTFS Confidential | Classification: Confidential Docum"
+    },
+    {
+      "id": "COMP-012",
+      "question": "How many employees are mentioned?",
+      "expected_answer": "4,910",
+      "expected_document": "GTFS-COMP-001_AML_Policy.pdf",
+      "expected_page": 2,
+      "expected_chunks": [
+        1
+      ],
+      "category": "security",
+      "difficulty": "easy",
+      "document_type": "compliance",
+      "query_category": "factual_lookup",
+      "tags": [
+        "compliance",
+        "factual_lookup"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-COMP-001_AML_Policy.pdf"
+      ],
+      "notes": "Enhanced Due Diligence (EDD) 7. Transaction Monitoring 8. Suspicious Transaction Reporting (STR) 9. Sanctions Screening 10. Employee Responsibilities 11. AML Tr"
+    },
+    {
+      "id": "COMP-013",
+      "question": "What is a stated requirement in this document?",
+      "expected_answer": "read this policy alongside GTFS-HR-001",
+      "expected_document": "GTFS-COMP-001_AML_Policy.pdf",
+      "expected_page": 3,
+      "expected_chunks": [
+        2
+      ],
+      "category": "security",
+      "difficulty": "medium",
+      "document_type": "compliance",
+      "query_category": "policy_rule",
+      "tags": [
+        "compliance",
+        "policy_rule"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-COMP-001_AML_Policy.pdf"
+      ],
+      "notes": "GTFS serves 4,910 employees across Singapore, Dubai, Mumbai, and London and is committed to the highest standards of financial crime prevention. \u007f Financial cri"
+    },
+    {
+      "id": "COMP-014",
+      "question": "What related GTFS document is referenced?",
+      "expected_answer": "GTFS-HR-001",
+      "expected_document": "GTFS-COMP-001_AML_Policy.pdf",
+      "expected_page": 3,
+      "expected_chunks": [
+        2
+      ],
+      "category": "security",
+      "difficulty": "hard",
+      "document_type": "compliance",
+      "query_category": "cross_reference",
+      "tags": [
+        "compliance",
+        "cross_reference"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-COMP-001_AML_Policy.pdf"
+      ],
+      "notes": "GTFS serves 4,910 employees across Singapore, Dubai, Mumbai, and London and is committed to the highest standards of financial crime prevention. \u007f Financial cri"
+    },
+    {
+      "id": "COMP-015",
+      "question": "What compliance topic is covered?",
+      "expected_answer": "KYC",
+      "expected_document": "GTFS-COMP-001_AML_Policy.pdf",
+      "expected_page": 3,
+      "expected_chunks": [
+        3
+      ],
+      "category": "security",
+      "difficulty": "medium",
+      "document_type": "compliance",
+      "query_category": "compliance_rule",
+      "tags": [
+        "compliance",
+        "compliance_rule"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-COMP-001_AML_Policy.pdf"
+      ],
+      "notes": "REGULATORY REQUIREMENT: Failure to comply with this policy may result in regulatory penalties, licence restrictions, and criminal prosecution. All employees mus"
+    },
+    {
+      "id": "COMP-016",
+      "question": "What related GTFS document is referenced?",
+      "expected_answer": "GTFS-COMP-002",
+      "expected_document": "GTFS-COMP-001_AML_Policy.pdf",
+      "expected_page": 3,
+      "expected_chunks": [
+        3
+      ],
+      "category": "security",
+      "difficulty": "hard",
+      "document_type": "compliance",
+      "query_category": "cross_reference",
+      "tags": [
+        "compliance",
+        "cross_reference"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-COMP-001_AML_Policy.pdf"
+      ],
+      "notes": "REGULATORY REQUIREMENT: Failure to comply with this policy may result in regulatory penalties, licence restrictions, and criminal prosecution. All employees mus"
+    },
+    {
+      "id": "COMP-017",
+      "question": "What compliance topic is covered?",
+      "expected_answer": "Know Your Customer",
+      "expected_document": "GTFS-COMP-002_KYC_Guidelines.pdf",
+      "expected_page": 1,
+      "expected_chunks": [
+        0
+      ],
+      "category": "security",
+      "difficulty": "medium",
+      "document_type": "compliance",
+      "query_category": "compliance_rule",
+      "tags": [
+        "compliance",
+        "compliance_rule"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-COMP-002_KYC_Guidelines.pdf"
+      ],
+      "notes": "GlobalTrust Financial Services Know Your Customer (KYC) Guidelines Compliance & Financial Crime Department GTFS Confidential | Classification: Confidential Docu"
+    },
+    {
+      "id": "COMP-018",
+      "question": "What compliance topic is covered?",
+      "expected_answer": "KYC",
+      "expected_document": "GTFS-COMP-002_KYC_Guidelines.pdf",
+      "expected_page": 1,
+      "expected_chunks": [
+        0
+      ],
+      "category": "security",
+      "difficulty": "medium",
+      "document_type": "compliance",
+      "query_category": "compliance_rule",
+      "tags": [
+        "compliance",
+        "compliance_rule"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-COMP-002_KYC_Guidelines.pdf"
+      ],
+      "notes": "GlobalTrust Financial Services Know Your Customer (KYC) Guidelines Compliance & Financial Crime Department GTFS Confidential | Classification: Confidential Docu"
+    },
+    {
+      "id": "COMP-019",
+      "question": "What related GTFS document is referenced?",
+      "expected_answer": "GTFS-COMP-002",
+      "expected_document": "GTFS-COMP-002_KYC_Guidelines.pdf",
+      "expected_page": 1,
+      "expected_chunks": [
+        0
+      ],
+      "category": "security",
+      "difficulty": "hard",
+      "document_type": "compliance",
+      "query_category": "cross_reference",
+      "tags": [
+        "compliance",
+        "cross_reference"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-COMP-002_KYC_Guidelines.pdf"
+      ],
+      "notes": "GlobalTrust Financial Services Know Your Customer (KYC) Guidelines Compliance & Financial Crime Department GTFS Confidential | Classification: Confidential Docu"
+    },
+    {
+      "id": "COMP-020",
+      "question": "What compliance topic is covered?",
+      "expected_answer": "AML",
+      "expected_document": "GTFS-COMP-002_KYC_Guidelines.pdf",
+      "expected_page": 2,
+      "expected_chunks": [
+        1
+      ],
+      "category": "security",
+      "difficulty": "medium",
+      "document_type": "compliance",
+      "query_category": "compliance_rule",
+      "tags": [
+        "compliance",
+        "compliance_rule"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-COMP-002_KYC_Guidelines.pdf"
+      ],
+      "notes": "6. Corporate Customer Requirements 7. Beneficial Ownership Verification 8. Customer Risk Assessment 9. Customer Onboarding Workflow 10. Periodic KYC Reviews 11."
+    },
+    {
+      "id": "COMP-021",
+      "question": "What related GTFS document is referenced?",
+      "expected_answer": "GTFS-COMP-001",
+      "expected_document": "GTFS-COMP-002_KYC_Guidelines.pdf",
+      "expected_page": 2,
+      "expected_chunks": [
+        1
+      ],
+      "category": "security",
+      "difficulty": "hard",
+      "document_type": "compliance",
+      "query_category": "cross_reference",
+      "tags": [
+        "compliance",
+        "cross_reference"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-COMP-002_KYC_Guidelines.pdf"
+      ],
+      "notes": "6. Corporate Customer Requirements 7. Beneficial Ownership Verification 8. Customer Risk Assessment 9. Customer Onboarding Workflow 10. Periodic KYC Reviews 11."
+    },
+    {
+      "id": "COMP-022",
+      "question": "What is a stated requirement in this document?",
+      "expected_answer": "be encrypted using AES-256 at rest and in transit per GTFS-SEC-001",
+      "expected_document": "GTFS-COMP-002_KYC_Guidelines.pdf",
+      "expected_page": 3,
+      "expected_chunks": [
+        2
+      ],
+      "category": "security",
+      "difficulty": "medium",
+      "document_type": "compliance",
+      "query_category": "policy_rule",
+      "tags": [
+        "compliance",
+        "policy_rule"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-COMP-002_KYC_Guidelines.pdf"
+      ],
+      "notes": "KYC is distinct from but complementary to the AML Policy (GTFS-COMP-001), which governs transaction monitoring and suspicious activity reporting. \u007f Customer ide"
+    },
+    {
+      "id": "COMP-023",
+      "question": "What related GTFS document is referenced?",
+      "expected_answer": "GTFS-RISK-001",
+      "expected_document": "GTFS-COMP-002_KYC_Guidelines.pdf",
+      "expected_page": 3,
+      "expected_chunks": [
+        2
+      ],
+      "category": "security",
+      "difficulty": "hard",
+      "document_type": "compliance",
+      "query_category": "cross_reference",
+      "tags": [
+        "compliance",
+        "cross_reference"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-COMP-002_KYC_Guidelines.pdf"
+      ],
+      "notes": "KYC is distinct from but complementary to the AML Policy (GTFS-COMP-001), which governs transaction monitoring and suspicious activity reporting. \u007f Customer ide"
+    },
+    {
+      "id": "COMP-024",
+      "question": "What related GTFS document is referenced?",
+      "expected_answer": "GTFS-SEC-001",
+      "expected_document": "GTFS-COMP-002_KYC_Guidelines.pdf",
+      "expected_page": 3,
+      "expected_chunks": [
+        2
+      ],
+      "category": "security",
+      "difficulty": "hard",
+      "document_type": "compliance",
+      "query_category": "cross_reference",
+      "tags": [
+        "compliance",
+        "cross_reference"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-COMP-002_KYC_Guidelines.pdf"
+      ],
+      "notes": "KYC is distinct from but complementary to the AML Policy (GTFS-COMP-001), which governs transaction monitoring and suspicious activity reporting. \u007f Customer ide"
+    },
+    {
+      "id": "EXEC-025",
+      "question": "Which fiscal year is referenced in this document?",
+      "expected_answer": "FY2026",
+      "expected_document": "GTFS-EXEC-001_Company_Overview.pdf",
+      "expected_page": 1,
+      "expected_chunks": [
+        0
+      ],
+      "category": "general",
+      "difficulty": "medium",
+      "document_type": "overview",
+      "query_category": "financial_data",
+      "tags": [
+        "overview",
+        "financial_data"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-EXEC-001_Company_Overview.pdf"
+      ],
+      "notes": "GlobalTrust Financial Services Trusted. Innovative. Global. COMPANY OVERVIEW Corporate Profile & Strategic Overview FY2026 | Strategic Edition Document ID GTFS-"
+    },
+    {
+      "id": "EXEC-026",
+      "question": "What related GTFS document is referenced?",
+      "expected_answer": "GTFS-EXEC-001",
+      "expected_document": "GTFS-EXEC-001_Company_Overview.pdf",
+      "expected_page": 1,
+      "expected_chunks": [
+        0
+      ],
+      "category": "general",
+      "difficulty": "hard",
+      "document_type": "overview",
+      "query_category": "cross_reference",
+      "tags": [
+        "overview",
+        "cross_reference"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-EXEC-001_Company_Overview.pdf"
+      ],
+      "notes": "GlobalTrust Financial Services Trusted. Innovative. Global. COMPANY OVERVIEW Corporate Profile & Strategic Overview FY2026 | Strategic Edition Document ID GTFS-"
+    },
+    {
+      "id": "EXEC-027",
+      "question": "Which executive leader is named?",
+      "expected_answer": "Sarah Mitchell",
+      "expected_document": "GTFS-EXEC-001_Company_Overview.pdf",
+      "expected_page": 1,
+      "expected_chunks": [
+        0
+      ],
+      "category": "general",
+      "difficulty": "easy",
+      "document_type": "overview",
+      "query_category": "factual_lookup",
+      "tags": [
+        "overview",
+        "factual_lookup"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-EXEC-001_Company_Overview.pdf"
+      ],
+      "notes": "GlobalTrust Financial Services Trusted. Innovative. Global. COMPANY OVERVIEW Corporate Profile & Strategic Overview FY2026 | Strategic Edition Document ID GTFS-"
+    },
+    {
+      "id": "EXEC-028",
+      "question": "When was GlobalTrust established?",
+      "expected_answer": "2012",
+      "expected_document": "GTFS-EXEC-001_Company_Overview.pdf",
+      "expected_page": 3,
+      "expected_chunks": [
+        1
+      ],
+      "category": "general",
+      "difficulty": "easy",
+      "document_type": "overview",
+      "query_category": "factual_lookup",
+      "tags": [
+        "overview",
+        "factual_lookup"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-EXEC-001_Company_Overview.pdf"
+      ],
+      "notes": "3. Core Values 3 4. Executive Leadership 4 5. Business Units 4 6. Geographic Presence 5 7. Strategic Priorities for FY2026 5 8. Technology Landscape 6 9. Corpor"
+    },
+    {
+      "id": "EXEC-029",
+      "question": "How many employees are mentioned?",
+      "expected_answer": "200",
+      "expected_document": "GTFS-EXEC-001_Company_Overview.pdf",
+      "expected_page": 4,
+      "expected_chunks": [
+        2
+      ],
+      "category": "general",
+      "difficulty": "easy",
+      "document_type": "overview",
+      "query_category": "factual_lookup",
+      "tags": [
+        "overview",
+        "factual_lookup"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-EXEC-001_Company_Overview.pdf"
+      ],
+      "notes": "About GlobalTrust Financial Services GlobalTrust Financial Services (GTFS) was established in 2012 in Singapore with a clear mandate: to build a financial insti"
+    },
+    {
+      "id": "EXEC-030",
+      "question": "Which executive leader is named?",
+      "expected_answer": "Daniel Carter",
+      "expected_document": "GTFS-EXEC-001_Company_Overview.pdf",
+      "expected_page": 6,
+      "expected_chunks": [
+        9
+      ],
+      "category": "general",
+      "difficulty": "easy",
+      "document_type": "overview",
+      "query_category": "factual_lookup",
+      "tags": [
+        "overview",
+        "factual_lookup"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-EXEC-001_Company_Overview.pdf"
+      ],
+      "notes": "Executive Leadership The Group's Executive Committee comprises seasoned professionals drawn from leading global financial institutions, technology firms, and re"
+    },
+    {
+      "id": "EXEC-031",
+      "question": "Which executive leader is named?",
+      "expected_answer": "Michael Rodriguez",
+      "expected_document": "GTFS-EXEC-001_Company_Overview.pdf",
+      "expected_page": 6,
+      "expected_chunks": [
+        9
+      ],
+      "category": "general",
+      "difficulty": "easy",
+      "document_type": "overview",
+      "query_category": "factual_lookup",
+      "tags": [
+        "overview",
+        "factual_lookup"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-EXEC-001_Company_Overview.pdf"
+      ],
+      "notes": "Executive Leadership The Group's Executive Committee comprises seasoned professionals drawn from leading global financial institutions, technology firms, and re"
+    },
+    {
+      "id": "EXEC-032",
+      "question": "Which executive leader is named?",
+      "expected_answer": "David Chen",
+      "expected_document": "GTFS-EXEC-001_Company_Overview.pdf",
+      "expected_page": 6,
+      "expected_chunks": [
+        10
+      ],
+      "category": "general",
+      "difficulty": "easy",
+      "document_type": "overview",
+      "query_category": "factual_lookup",
+      "tags": [
+        "overview",
+        "factual_lookup"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-EXEC-001_Company_Overview.pdf"
+      ],
+      "notes": "Daniel Carter Chief Operating Officer (COO) End-to-end operations; business continuity; process optimisation; vendor management; operational risk oversight. Mic"
+    },
+    {
+      "id": "FIN-033",
+      "question": "Which fiscal year is referenced in this document?",
+      "expected_answer": "FY2026",
+      "expected_document": "GTFS-FIN-001_FY2026_Annual_Budget.pdf",
+      "expected_page": 1,
+      "expected_chunks": [
+        0
+      ],
+      "category": "finance",
+      "difficulty": "medium",
+      "document_type": "financial_report",
+      "query_category": "financial_data",
+      "tags": [
+        "financial_report",
+        "financial_data"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-FIN-001_FY2026_Annual_Budget.pdf"
+      ],
+      "notes": "GlobalTrust Financial Services FY2026 Annual Budget Executive Budget Book GTFS Confidential | Classification: Confidential Document ID GTFS-FIN-001 Version 1.0 "
+    },
+    {
+      "id": "FIN-034",
+      "question": "What related GTFS document is referenced?",
+      "expected_answer": "GTFS-FIN-001",
+      "expected_document": "GTFS-FIN-001_FY2026_Annual_Budget.pdf",
+      "expected_page": 1,
+      "expected_chunks": [
+        0
+      ],
+      "category": "finance",
+      "difficulty": "hard",
+      "document_type": "financial_report",
+      "query_category": "cross_reference",
+      "tags": [
+        "financial_report",
+        "cross_reference"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-FIN-001_FY2026_Annual_Budget.pdf"
+      ],
+      "notes": "GlobalTrust Financial Services FY2026 Annual Budget Executive Budget Book GTFS Confidential | Classification: Confidential Document ID GTFS-FIN-001 Version 1.0 "
+    },
+    {
+      "id": "FIN-035",
+      "question": "Which executive leader is named?",
+      "expected_answer": "Michael Rodriguez",
+      "expected_document": "GTFS-FIN-001_FY2026_Annual_Budget.pdf",
+      "expected_page": 1,
+      "expected_chunks": [
+        0
+      ],
+      "category": "finance",
+      "difficulty": "easy",
+      "document_type": "financial_report",
+      "query_category": "factual_lookup",
+      "tags": [
+        "financial_report",
+        "factual_lookup"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-FIN-001_FY2026_Annual_Budget.pdf"
+      ],
+      "notes": "GlobalTrust Financial Services FY2026 Annual Budget Executive Budget Book GTFS Confidential | Classification: Confidential Document ID GTFS-FIN-001 Version 1.0 "
+    },
+    {
+      "id": "FIN-036",
+      "question": "What financial amount is stated?",
+      "expected_answer": "SGD 1.25 billion",
+      "expected_document": "GTFS-FIN-001_FY2026_Annual_Budget.pdf",
+      "expected_page": 2,
+      "expected_chunks": [
+        1
+      ],
+      "category": "finance",
+      "difficulty": "medium",
+      "document_type": "financial_report",
+      "query_category": "financial_data",
+      "tags": [
+        "financial_report",
+        "financial_data"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-FIN-001_FY2026_Annual_Budget.pdf"
+      ],
+      "notes": "8. Strategic Investment Programs 9. Technology Budget 10. HR Budget 11. Risk & Compliance Budget 12. Financial KPIs 13. Financial Risks 14. Budget Approval Proc"
+    },
+    {
+      "id": "FIN-037",
+      "question": "What financial amount is stated?",
+      "expected_answer": "SGD 3.85 billion",
+      "expected_document": "GTFS-FIN-001_FY2026_Annual_Budget.pdf",
+      "expected_page": 2,
+      "expected_chunks": [
+        1
+      ],
+      "category": "finance",
+      "difficulty": "medium",
+      "document_type": "financial_report",
+      "query_category": "financial_data",
+      "tags": [
+        "financial_report",
+        "financial_data"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-FIN-001_FY2026_Annual_Budget.pdf"
+      ],
+      "notes": "8. Strategic Investment Programs 9. Technology Budget 10. HR Budget 11. Risk & Compliance Budget 12. Financial KPIs 13. Financial Risks 14. Budget Approval Proc"
+    },
+    {
+      "id": "FIN-038",
+      "question": "How many employees are mentioned?",
+      "expected_answer": "4,850",
+      "expected_document": "GTFS-FIN-001_FY2026_Annual_Budget.pdf",
+      "expected_page": 2,
+      "expected_chunks": [
+        1
+      ],
+      "category": "finance",
+      "difficulty": "easy",
+      "document_type": "financial_report",
+      "query_category": "factual_lookup",
+      "tags": [
+        "financial_report",
+        "factual_lookup"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-FIN-001_FY2026_Annual_Budget.pdf"
+      ],
+      "notes": "8. Strategic Investment Programs 9. Technology Budget 10. HR Budget 11. Risk & Compliance Budget 12. Financial KPIs 13. Financial Risks 14. Budget Approval Proc"
+    },
+    {
+      "id": "FIN-039",
+      "question": "What financial amount is stated?",
+      "expected_answer": "SGD 640 million",
+      "expected_document": "GTFS-FIN-001_FY2026_Annual_Budget.pdf",
+      "expected_page": 3,
+      "expected_chunks": [
+        2
+      ],
+      "category": "finance",
+      "difficulty": "medium",
+      "document_type": "financial_report",
+      "query_category": "financial_data",
+      "tags": [
+        "financial_report",
+        "financial_data"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-FIN-001_FY2026_Annual_Budget.pdf"
+      ],
+      "notes": "regulatory compliance across our Singapore headquarters and regional operations serving 4,850 employees. FY2026 projected revenue of SGD 3.85 billion reflects e"
+    },
+    {
+      "id": "FIN-040",
+      "question": "What financial amount is stated?",
+      "expected_answer": "SGD 42 million",
+      "expected_document": "GTFS-FIN-001_FY2026_Annual_Budget.pdf",
+      "expected_page": 3,
+      "expected_chunks": [
+        2
+      ],
+      "category": "finance",
+      "difficulty": "medium",
+      "document_type": "financial_report",
+      "query_category": "financial_data",
+      "tags": [
+        "financial_report",
+        "financial_data"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-FIN-001_FY2026_Annual_Budget.pdf"
+      ],
+      "notes": "regulatory compliance across our Singapore headquarters and regional operations serving 4,850 employees. FY2026 projected revenue of SGD 3.85 billion reflects e"
+    },
+    {
+      "id": "FIN-041",
+      "question": "Which fiscal year is referenced in this document?",
+      "expected_answer": "FY2026",
+      "expected_document": "GTFS-FIN-002_Quarterly_Financial_Report_Q1_FY2026.pdf",
+      "expected_page": 1,
+      "expected_chunks": [
+        0
+      ],
+      "category": "finance",
+      "difficulty": "medium",
+      "document_type": "financial_report",
+      "query_category": "financial_data",
+      "tags": [
+        "financial_report",
+        "financial_data"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-FIN-002_Quarterly_Financial_Report_Q1_FY2026.pdf"
+      ],
+      "notes": "GlobalTrust Financial Services Quarterly Financial Report Q1 FY2026 GTFS Confidential | Classification: Confidential Document ID GTFS-FIN-002 Version 1.0 Classi"
+    },
+    {
+      "id": "FIN-042",
+      "question": "What related GTFS document is referenced?",
+      "expected_answer": "GTFS-FIN-002",
+      "expected_document": "GTFS-FIN-002_Quarterly_Financial_Report_Q1_FY2026.pdf",
+      "expected_page": 1,
+      "expected_chunks": [
+        0
+      ],
+      "category": "finance",
+      "difficulty": "hard",
+      "document_type": "financial_report",
+      "query_category": "cross_reference",
+      "tags": [
+        "financial_report",
+        "cross_reference"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-FIN-002_Quarterly_Financial_Report_Q1_FY2026.pdf"
+      ],
+      "notes": "GlobalTrust Financial Services Quarterly Financial Report Q1 FY2026 GTFS Confidential | Classification: Confidential Document ID GTFS-FIN-002 Version 1.0 Classi"
+    },
+    {
+      "id": "FIN-043",
+      "question": "Which executive leader is named?",
+      "expected_answer": "Michael Rodriguez",
+      "expected_document": "GTFS-FIN-002_Quarterly_Financial_Report_Q1_FY2026.pdf",
+      "expected_page": 1,
+      "expected_chunks": [
+        0
+      ],
+      "category": "finance",
+      "difficulty": "easy",
+      "document_type": "financial_report",
+      "query_category": "factual_lookup",
+      "tags": [
+        "financial_report",
+        "factual_lookup"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-FIN-002_Quarterly_Financial_Report_Q1_FY2026.pdf"
+      ],
+      "notes": "GlobalTrust Financial Services Quarterly Financial Report Q1 FY2026 GTFS Confidential | Classification: Confidential Document ID GTFS-FIN-002 Version 1.0 Classi"
+    },
+    {
+      "id": "FIN-044",
+      "question": "What financial amount is stated?",
+      "expected_answer": "SGD 935 million",
+      "expected_document": "GTFS-FIN-002_Quarterly_Financial_Report_Q1_FY2026.pdf",
+      "expected_page": 2,
+      "expected_chunks": [
+        1
+      ],
+      "category": "finance",
+      "difficulty": "medium",
+      "document_type": "financial_report",
+      "query_category": "financial_data",
+      "tags": [
+        "financial_report",
+        "financial_data"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-FIN-002_Quarterly_Financial_Report_Q1_FY2026.pdf"
+      ],
+      "notes": "7. Loan & Mortgage Performance 8. Risk & Compliance Overview 9. Technology Performance 10. Customer Experience 11. Key Achievements 12. Challenges & Risks 13. O"
+    },
+    {
+      "id": "FIN-045",
+      "question": "What financial amount is stated?",
+      "expected_answer": "SGD 3.85 billion",
+      "expected_document": "GTFS-FIN-002_Quarterly_Financial_Report_Q1_FY2026.pdf",
+      "expected_page": 2,
+      "expected_chunks": [
+        1
+      ],
+      "category": "finance",
+      "difficulty": "medium",
+      "document_type": "financial_report",
+      "query_category": "financial_data",
+      "tags": [
+        "financial_report",
+        "financial_data"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-FIN-002_Quarterly_Financial_Report_Q1_FY2026.pdf"
+      ],
+      "notes": "7. Loan & Mortgage Performance 8. Risk & Compliance Overview 9. Technology Performance 10. Customer Experience 11. Key Achievements 12. Challenges & Risks 13. O"
+    },
+    {
+      "id": "FIN-046",
+      "question": "What financial amount is stated?",
+      "expected_answer": "SGD 151 million",
+      "expected_document": "GTFS-FIN-002_Quarterly_Financial_Report_Q1_FY2026.pdf",
+      "expected_page": 2,
+      "expected_chunks": [
+        1
+      ],
+      "category": "finance",
+      "difficulty": "medium",
+      "document_type": "financial_report",
+      "query_category": "financial_data",
+      "tags": [
+        "financial_report",
+        "financial_data"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-FIN-002_Quarterly_Financial_Report_Q1_FY2026.pdf"
+      ],
+      "notes": "7. Loan & Mortgage Performance 8. Risk & Compliance Overview 9. Technology Performance 10. Customer Experience 11. Key Achievements 12. Challenges & Risks 13. O"
+    },
+    {
+      "id": "FIN-047",
+      "question": "What financial amount is stated?",
+      "expected_answer": "SGD 708 million",
+      "expected_document": "GTFS-FIN-002_Quarterly_Financial_Report_Q1_FY2026.pdf",
+      "expected_page": 2,
+      "expected_chunks": [
+        1
+      ],
+      "category": "finance",
+      "difficulty": "medium",
+      "document_type": "financial_report",
+      "query_category": "financial_data",
+      "tags": [
+        "financial_report",
+        "financial_data"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-FIN-002_Quarterly_Financial_Report_Q1_FY2026.pdf"
+      ],
+      "notes": "7. Loan & Mortgage Performance 8. Risk & Compliance Overview 9. Technology Performance 10. Customer Experience 11. Key Achievements 12. Challenges & Risks 13. O"
+    },
+    {
+      "id": "FIN-048",
+      "question": "What related GTFS document is referenced?",
+      "expected_answer": "GTFS-FIN-001",
+      "expected_document": "GTFS-FIN-002_Quarterly_Financial_Report_Q1_FY2026.pdf",
+      "expected_page": 2,
+      "expected_chunks": [
+        1
+      ],
+      "category": "finance",
+      "difficulty": "hard",
+      "document_type": "financial_report",
+      "query_category": "cross_reference",
+      "tags": [
+        "financial_report",
+        "cross_reference"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-FIN-002_Quarterly_Financial_Report_Q1_FY2026.pdf"
+      ],
+      "notes": "7. Loan & Mortgage Performance 8. Risk & Compliance Overview 9. Technology Performance 10. Customer Experience 11. Key Achievements 12. Challenges & Risks 13. O"
+    },
+    {
+      "id": "FIN-049",
+      "question": "Which fiscal year is referenced in this document?",
+      "expected_answer": "FY2026",
+      "expected_document": "GTFS-FIN-003_Quarterly_Financial_Report_Q2_FY2026.pdf",
+      "expected_page": 1,
+      "expected_chunks": [
+        0
+      ],
+      "category": "finance",
+      "difficulty": "medium",
+      "document_type": "financial_report",
+      "query_category": "financial_data",
+      "tags": [
+        "financial_report",
+        "financial_data"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-FIN-003_Quarterly_Financial_Report_Q2_FY2026.pdf"
+      ],
+      "notes": "GlobalTrust Financial Services Quarterly Financial Report Q2 FY2026 GTFS Confidential | Classification: Confidential Document ID GTFS-FIN-003 Version 1.0 Classi"
+    },
+    {
+      "id": "FIN-050",
+      "question": "What related GTFS document is referenced?",
+      "expected_answer": "GTFS-FIN-003",
+      "expected_document": "GTFS-FIN-003_Quarterly_Financial_Report_Q2_FY2026.pdf",
+      "expected_page": 1,
+      "expected_chunks": [
+        0
+      ],
+      "category": "finance",
+      "difficulty": "hard",
+      "document_type": "financial_report",
+      "query_category": "cross_reference",
+      "tags": [
+        "financial_report",
+        "cross_reference"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-FIN-003_Quarterly_Financial_Report_Q2_FY2026.pdf"
+      ],
+      "notes": "GlobalTrust Financial Services Quarterly Financial Report Q2 FY2026 GTFS Confidential | Classification: Confidential Document ID GTFS-FIN-003 Version 1.0 Classi"
+    },
+    {
+      "id": "FIN-051",
+      "question": "What related GTFS document is referenced?",
+      "expected_answer": "GTFS-FIN-002",
+      "expected_document": "GTFS-FIN-003_Quarterly_Financial_Report_Q2_FY2026.pdf",
+      "expected_page": 1,
+      "expected_chunks": [
+        0
+      ],
+      "category": "finance",
+      "difficulty": "hard",
+      "document_type": "financial_report",
+      "query_category": "cross_reference",
+      "tags": [
+        "financial_report",
+        "cross_reference"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-FIN-003_Quarterly_Financial_Report_Q2_FY2026.pdf"
+      ],
+      "notes": "GlobalTrust Financial Services Quarterly Financial Report Q2 FY2026 GTFS Confidential | Classification: Confidential Document ID GTFS-FIN-003 Version 1.0 Classi"
+    },
+    {
+      "id": "FIN-052",
+      "question": "Which executive leader is named?",
+      "expected_answer": "Michael Rodriguez",
+      "expected_document": "GTFS-FIN-003_Quarterly_Financial_Report_Q2_FY2026.pdf",
+      "expected_page": 1,
+      "expected_chunks": [
+        0
+      ],
+      "category": "finance",
+      "difficulty": "easy",
+      "document_type": "financial_report",
+      "query_category": "factual_lookup",
+      "tags": [
+        "financial_report",
+        "factual_lookup"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-FIN-003_Quarterly_Financial_Report_Q2_FY2026.pdf"
+      ],
+      "notes": "GlobalTrust Financial Services Quarterly Financial Report Q2 FY2026 GTFS Confidential | Classification: Confidential Document ID GTFS-FIN-003 Version 1.0 Classi"
+    },
+    {
+      "id": "FIN-053",
+      "question": "What financial amount is stated?",
+      "expected_answer": "SGD 986 million",
+      "expected_document": "GTFS-FIN-003_Quarterly_Financial_Report_Q2_FY2026.pdf",
+      "expected_page": 2,
+      "expected_chunks": [
+        1
+      ],
+      "category": "finance",
+      "difficulty": "medium",
+      "document_type": "financial_report",
+      "query_category": "financial_data",
+      "tags": [
+        "financial_report",
+        "financial_data"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-FIN-003_Quarterly_Financial_Report_Q2_FY2026.pdf"
+      ],
+      "notes": "7. Loan & Mortgage Performance 8. Risk & Compliance Overview 9. Technology Performance 10. Customer Experience 11. Major Achievements 12. Challenges & Emerging "
+    },
+    {
+      "id": "FIN-054",
+      "question": "What financial amount is stated?",
+      "expected_answer": "SGD 935 million",
+      "expected_document": "GTFS-FIN-003_Quarterly_Financial_Report_Q2_FY2026.pdf",
+      "expected_page": 2,
+      "expected_chunks": [
+        1
+      ],
+      "category": "finance",
+      "difficulty": "medium",
+      "document_type": "financial_report",
+      "query_category": "financial_data",
+      "tags": [
+        "financial_report",
+        "financial_data"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-FIN-003_Quarterly_Financial_Report_Q2_FY2026.pdf"
+      ],
+      "notes": "7. Loan & Mortgage Performance 8. Risk & Compliance Overview 9. Technology Performance 10. Customer Experience 11. Major Achievements 12. Challenges & Emerging "
+    },
+    {
+      "id": "FIN-055",
+      "question": "What financial amount is stated?",
+      "expected_answer": "SGD 168 million",
+      "expected_document": "GTFS-FIN-003_Quarterly_Financial_Report_Q2_FY2026.pdf",
+      "expected_page": 2,
+      "expected_chunks": [
+        1
+      ],
+      "category": "finance",
+      "difficulty": "medium",
+      "document_type": "financial_report",
+      "query_category": "financial_data",
+      "tags": [
+        "financial_report",
+        "financial_data"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-FIN-003_Quarterly_Financial_Report_Q2_FY2026.pdf"
+      ],
+      "notes": "7. Loan & Mortgage Performance 8. Risk & Compliance Overview 9. Technology Performance 10. Customer Experience 11. Major Achievements 12. Challenges & Emerging "
+    },
+    {
+      "id": "FIN-056",
+      "question": "What related GTFS document is referenced?",
+      "expected_answer": "GTFS-FIN-001",
+      "expected_document": "GTFS-FIN-003_Quarterly_Financial_Report_Q2_FY2026.pdf",
+      "expected_page": 2,
+      "expected_chunks": [
+        1
+      ],
+      "category": "finance",
+      "difficulty": "hard",
+      "document_type": "financial_report",
+      "query_category": "cross_reference",
+      "tags": [
+        "financial_report",
+        "cross_reference"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-FIN-003_Quarterly_Financial_Report_Q2_FY2026.pdf"
+      ],
+      "notes": "7. Loan & Mortgage Performance 8. Risk & Compliance Overview 9. Technology Performance 10. Customer Experience 11. Major Achievements 12. Challenges & Emerging "
+    },
+    {
+      "id": "HR-057",
+      "question": "What related GTFS document is referenced?",
+      "expected_answer": "GTFS-HR-001",
+      "expected_document": "GTFS-HR-001_Employee_Handbook.pdf",
+      "expected_page": 1,
+      "expected_chunks": [
+        0
+      ],
+      "category": "hr",
+      "difficulty": "hard",
+      "document_type": "handbook",
+      "query_category": "cross_reference",
+      "tags": [
+        "handbook",
+        "cross_reference"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-HR-001_Employee_Handbook.pdf"
+      ],
+      "notes": "GlobalTrust Financial Services Employee Handbook GTFS Internal Use Only | Classification: Internal Document ID GTFS-HR-001 Version 2.1 Classification Internal O"
+    },
+    {
+      "id": "HR-058",
+      "question": "Where is GlobalTrust headquartered?",
+      "expected_answer": "Singapore",
+      "expected_document": "GTFS-HR-001_Employee_Handbook.pdf",
+      "expected_page": 3,
+      "expected_chunks": [
+        3
+      ],
+      "category": "hr",
+      "difficulty": "easy",
+      "document_type": "handbook",
+      "query_category": "factual_lookup",
+      "tags": [
+        "handbook",
+        "factual_lookup"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-HR-001_Employee_Handbook.pdf"
+      ],
+      "notes": "If you have questions, your HR Business Partner or the People Operations team is always available to assist. We are investing significantly in Project Phoenix, "
+    },
+    {
+      "id": "HR-059",
+      "question": "Which executive leader is named?",
+      "expected_answer": "Sarah Mitchell",
+      "expected_document": "GTFS-HR-001_Employee_Handbook.pdf",
+      "expected_page": 3,
+      "expected_chunks": [
+        3
+      ],
+      "category": "hr",
+      "difficulty": "easy",
+      "document_type": "handbook",
+      "query_category": "factual_lookup",
+      "tags": [
+        "handbook",
+        "factual_lookup"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-HR-001_Employee_Handbook.pdf"
+      ],
+      "notes": "If you have questions, your HR Business Partner or the People Operations team is always available to assist. We are investing significantly in Project Phoenix, "
+    },
+    {
+      "id": "HR-060",
+      "question": "What related GTFS document is referenced?",
+      "expected_answer": "GTFS-EXEC-001",
+      "expected_document": "GTFS-HR-001_Employee_Handbook.pdf",
+      "expected_page": 4,
+      "expected_chunks": [
+        5
+      ],
+      "category": "hr",
+      "difficulty": "hard",
+      "document_type": "handbook",
+      "query_category": "cross_reference",
+      "tags": [
+        "handbook",
+        "cross_reference"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-HR-001_Employee_Handbook.pdf"
+      ],
+      "notes": "transactions daily with industry-leading availability. Technology is central to our strategy, and initiatives such as Project Phoenix\u2014our enterprise AI knowledg"
+    },
+    {
+      "id": "HR-061",
+      "question": "How many employees are mentioned?",
+      "expected_answer": "4,850",
+      "expected_document": "GTFS-HR-001_Employee_Handbook.pdf",
+      "expected_page": 4,
+      "expected_chunks": [
+        6
+      ],
+      "category": "hr",
+      "difficulty": "easy",
+      "document_type": "handbook",
+      "query_category": "factual_lookup",
+      "tags": [
+        "handbook",
+        "factual_lookup"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-HR-001_Employee_Handbook.pdf"
+      ],
+      "notes": "Personal accounts, cards, mortgages Singapore, Mumbai Commercial Banking SME lending, trade finance Singapore, Dubai Corporate Banking Large corporate lending, "
+    },
+    {
+      "id": "HR-062",
+      "question": "What is the primary function of the Singapore office?",
+      "expected_answer": "Singapore (HQ)",
+      "expected_document": "GTFS-HR-001_Employee_Handbook.pdf",
+      "expected_page": 7,
+      "expected_chunks": [
+        12
+      ],
+      "category": "hr",
+      "difficulty": "medium",
+      "document_type": "handbook",
+      "query_category": "table_query",
+      "tags": [
+        "handbook",
+        "table_query"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-HR-001_Employee_Handbook.pdf"
+      ],
+      "notes": "Regional offices observe local statutory hours aligned with business needs. Office access hours for Singapore headquarters are 6:00 AM \u2013 10:00 PM for employees "
+    },
+    {
+      "id": "HR-063",
+      "question": "What related GTFS document is referenced?",
+      "expected_answer": "GTFS-HR-002",
+      "expected_document": "GTFS-HR-001_Employee_Handbook.pdf",
+      "expected_page": 7,
+      "expected_chunks": [
+        12
+      ],
+      "category": "hr",
+      "difficulty": "hard",
+      "document_type": "handbook",
+      "query_category": "cross_reference",
+      "tags": [
+        "handbook",
+        "cross_reference"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-HR-001_Employee_Handbook.pdf"
+      ],
+      "notes": "Regional offices observe local statutory hours aligned with business needs. Office access hours for Singapore headquarters are 6:00 AM \u2013 10:00 PM for employees "
+    },
+    {
+      "id": "HR-064",
+      "question": "What is a stated requirement in this document?",
+      "expected_answer": "treat colleagues, clients, and partners with courtesy and respect",
+      "expected_document": "GTFS-HR-001_Employee_Handbook.pdf",
+      "expected_page": 7,
+      "expected_chunks": [
+        13
+      ],
+      "category": "hr",
+      "difficulty": "medium",
+      "document_type": "handbook",
+      "query_category": "policy_rule",
+      "tags": [
+        "handbook",
+        "policy_rule"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-HR-001_Employee_Handbook.pdf"
+      ],
+      "notes": "Rotating schedules per roster; 12-hour rest between shifts Attendance recording Badge-in or digital check-in by 9:15 AM local time Regional Office Hours Office "
+    },
+    {
+      "id": "HR-065",
+      "question": "What related GTFS document is referenced?",
+      "expected_answer": "GTFS-HR-002",
+      "expected_document": "GTFS-HR-002_Remote_Work_Policy.pdf",
+      "expected_page": 1,
+      "expected_chunks": [
+        0
+      ],
+      "category": "hr",
+      "difficulty": "hard",
+      "document_type": "policy",
+      "query_category": "cross_reference",
+      "tags": [
+        "policy",
+        "cross_reference"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-HR-002_Remote_Work_Policy.pdf"
+      ],
+      "notes": "GlobalTrust Financial Services Remote Work Policy GTFS Internal Use Only | Classification: Internal Document ID GTFS-HR-002 Version 1.3 Classification Internal "
+    },
+    {
+      "id": "HR-066",
+      "question": "What is a stated requirement in this document?",
+      "expected_answer": "not compromise client service, team",
+      "expected_document": "GTFS-HR-002_Remote_Work_Policy.pdf",
+      "expected_page": 2,
+      "expected_chunks": [
+        1
+      ],
+      "category": "hr",
+      "difficulty": "medium",
+      "document_type": "policy",
+      "query_category": "policy_rule",
+      "tags": [
+        "policy",
+        "policy_rule"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-HR-002_Remote_Work_Policy.pdf"
+      ],
+      "notes": "10. Communication Guidelines 11. Expense Reimbursement 12. Health & Wellbeing 13. Compliance Requirements 14. Policy Violations 15. Frequently Asked Questions 1"
+    },
+    {
+      "id": "HR-067",
+      "question": "What is a stated requirement in this document?",
+      "expected_answer": "not compromise client service, team collaboration, or adherence to the Informati",
+      "expected_document": "GTFS-HR-002_Remote_Work_Policy.pdf",
+      "expected_page": 3,
+      "expected_chunks": [
+        2
+      ],
+      "category": "hr",
+      "difficulty": "medium",
+      "document_type": "policy",
+      "query_category": "policy_rule",
+      "tags": [
+        "policy",
+        "policy_rule"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-HR-002_Remote_Work_Policy.pdf"
+      ],
+      "notes": "eligible employees may perform duties outside GTFS offices while maintaining the standards of excellence, regulatory compliance, and information security requir"
+    },
+    {
+      "id": "HR-068",
+      "question": "What related GTFS document is referenced?",
+      "expected_answer": "GTFS-SEC-001",
+      "expected_document": "GTFS-HR-002_Remote_Work_Policy.pdf",
+      "expected_page": 3,
+      "expected_chunks": [
+        2
+      ],
+      "category": "hr",
+      "difficulty": "hard",
+      "document_type": "policy",
+      "query_category": "cross_reference",
+      "tags": [
+        "policy",
+        "cross_reference"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-HR-002_Remote_Work_Policy.pdf"
+      ],
+      "notes": "eligible employees may perform duties outside GTFS offices while maintaining the standards of excellence, regulatory compliance, and information security requir"
+    },
+    {
+      "id": "HR-069",
+      "question": "What related GTFS document is referenced?",
+      "expected_answer": "GTFS-RISK-001",
+      "expected_document": "GTFS-HR-002_Remote_Work_Policy.pdf",
+      "expected_page": 3,
+      "expected_chunks": [
+        2
+      ],
+      "category": "hr",
+      "difficulty": "hard",
+      "document_type": "policy",
+      "query_category": "cross_reference",
+      "tags": [
+        "policy",
+        "cross_reference"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-HR-002_Remote_Work_Policy.pdf"
+      ],
+      "notes": "eligible employees may perform duties outside GTFS offices while maintaining the standards of excellence, regulatory compliance, and information security requir"
+    },
+    {
+      "id": "HR-070",
+      "question": "What related GTFS document is referenced?",
+      "expected_answer": "GTFS-HR-001",
+      "expected_document": "GTFS-HR-002_Remote_Work_Policy.pdf",
+      "expected_page": 3,
+      "expected_chunks": [
+        2
+      ],
+      "category": "hr",
+      "difficulty": "hard",
+      "document_type": "policy",
+      "query_category": "cross_reference",
+      "tags": [
+        "policy",
+        "cross_reference"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-HR-002_Remote_Work_Policy.pdf"
+      ],
+      "notes": "eligible employees may perform duties outside GTFS offices while maintaining the standards of excellence, regulatory compliance, and information security requir"
+    },
+    {
+      "id": "HR-071",
+      "question": "What is a stated requirement in this document?",
+      "expected_answer": "comply when accessing GTFS systems remotely",
+      "expected_document": "GTFS-HR-002_Remote_Work_Policy.pdf",
+      "expected_page": 3,
+      "expected_chunks": [
+        3
+      ],
+      "category": "hr",
+      "difficulty": "medium",
+      "document_type": "policy",
+      "query_category": "policy_rule",
+      "tags": [
+        "policy",
+        "policy_rule"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-HR-002_Remote_Work_Policy.pdf"
+      ],
+      "notes": "conjunction with it. POLICY NOTE: Hybrid employees may work remotely up to 3 days per week, subject to manager approval and business requirements. Office attend"
+    },
+    {
+      "id": "HR-072",
+      "question": "What is a stated requirement in this document?",
+      "expected_answer": "be assessed before commencement",
+      "expected_document": "GTFS-HR-002_Remote_Work_Policy.pdf",
+      "expected_page": 4,
+      "expected_chunks": [
+        6
+      ],
+      "category": "hr",
+      "difficulty": "medium",
+      "document_type": "policy",
+      "query_category": "policy_rule",
+      "tags": [
+        "policy",
+        "policy_rule"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-HR-002_Remote_Work_Policy.pdf"
+      ],
+      "notes": "100% work from home; no regular office attendance CHRO + Dept Head Ongoing Hybrid Mix of office and remote; up to 3 days/week remote Line Manager Ongoing Office"
+    },
+    {
+      "id": "LEGAL-073",
+      "question": "What related GTFS document is referenced?",
+      "expected_answer": "GTFS-LEGAL-001",
+      "expected_document": "GTFS-LEGAL-001_Data_Retention_Policy.pdf",
+      "expected_page": 1,
+      "expected_chunks": [
+        0
+      ],
+      "category": "general",
+      "difficulty": "hard",
+      "document_type": "legal_policy",
+      "query_category": "cross_reference",
+      "tags": [
+        "legal_policy",
+        "cross_reference"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-LEGAL-001_Data_Retention_Policy.pdf"
+      ],
+      "notes": "GlobalTrust Financial Services Data Retention Policy Legal & Information Governance Department GTFS Internal Use Only | Classification: Internal Document ID GTF"
+    },
+    {
+      "id": "LEGAL-074",
+      "question": "What compliance topic is covered?",
+      "expected_answer": "AML",
+      "expected_document": "GTFS-LEGAL-001_Data_Retention_Policy.pdf",
+      "expected_page": 2,
+      "expected_chunks": [
+        1
+      ],
+      "category": "general",
+      "difficulty": "medium",
+      "document_type": "legal_policy",
+      "query_category": "compliance_rule",
+      "tags": [
+        "legal_policy",
+        "compliance_rule"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-LEGAL-001_Data_Retention_Policy.pdf"
+      ],
+      "notes": "8. Roles & Responsibilities 9. Audit & Compliance 10. Frequently Asked Questions 11. Appendices GlobalTrust Financial Services Data Retention Policy GTFS Intern"
+    },
+    {
+      "id": "LEGAL-075",
+      "question": "What related GTFS document is referenced?",
+      "expected_answer": "GTFS-SEC-001",
+      "expected_document": "GTFS-LEGAL-001_Data_Retention_Policy.pdf",
+      "expected_page": 3,
+      "expected_chunks": [
+        2
+      ],
+      "category": "general",
+      "difficulty": "hard",
+      "document_type": "legal_policy",
+      "query_category": "cross_reference",
+      "tags": [
+        "legal_policy",
+        "cross_reference"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-LEGAL-001_Data_Retention_Policy.pdf"
+      ],
+      "notes": "\u007f Regulatory compliance \u2014 Meet MAS, tax, employment, and AML record-keeping requirements. \u007f Legal obligations \u2014 Preserve records for litigation, audit, and regu"
+    },
+    {
+      "id": "LEGAL-076",
+      "question": "What related GTFS document is referenced?",
+      "expected_answer": "GTFS-RISK-001",
+      "expected_document": "GTFS-LEGAL-001_Data_Retention_Policy.pdf",
+      "expected_page": 3,
+      "expected_chunks": [
+        2
+      ],
+      "category": "general",
+      "difficulty": "hard",
+      "document_type": "legal_policy",
+      "query_category": "cross_reference",
+      "tags": [
+        "legal_policy",
+        "cross_reference"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-LEGAL-001_Data_Retention_Policy.pdf"
+      ],
+      "notes": "\u007f Regulatory compliance \u2014 Meet MAS, tax, employment, and AML record-keeping requirements. \u007f Legal obligations \u2014 Preserve records for litigation, audit, and regu"
+    },
+    {
+      "id": "LEGAL-077",
+      "question": "What compliance topic is covered?",
+      "expected_answer": "KYC",
+      "expected_document": "GTFS-LEGAL-001_Data_Retention_Policy.pdf",
+      "expected_page": 3,
+      "expected_chunks": [
+        4
+      ],
+      "category": "general",
+      "difficulty": "medium",
+      "document_type": "legal_policy",
+      "query_category": "compliance_rule",
+      "tags": [
+        "legal_policy",
+        "compliance_rule"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-LEGAL-001_Data_Retention_Policy.pdf"
+      ],
+      "notes": "Employee Records HR files, contracts, performance reviews Human Resources Restricted Legal Documents Contracts, litigation files, legal opinions Legal Restricte"
+    },
+    {
+      "id": "LEGAL-078",
+      "question": "What remote access method is described?",
+      "expected_answer": "VPN",
+      "expected_document": "GTFS-LEGAL-001_Data_Retention_Policy.pdf",
+      "expected_page": 3,
+      "expected_chunks": [
+        4
+      ],
+      "category": "general",
+      "difficulty": "medium",
+      "document_type": "legal_policy",
+      "query_category": "security_requirement",
+      "tags": [
+        "legal_policy",
+        "security_requirement"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-LEGAL-001_Data_Retention_Policy.pdf"
+      ],
+      "notes": "Employee Records HR files, contracts, performance reviews Human Resources Restricted Legal Documents Contracts, litigation files, legal opinions Legal Restricte"
+    },
+    {
+      "id": "LEGAL-079",
+      "question": "What retention rule is specified?",
+      "expected_answer": "Trigger Event Disposal Method Customer Account Records 7 years After account clo",
+      "expected_document": "GTFS-LEGAL-001_Data_Retention_Policy.pdf",
+      "expected_page": 4,
+      "expected_chunks": [
+        6
+      ],
+      "category": "general",
+      "difficulty": "hard",
+      "document_type": "legal_policy",
+      "query_category": "policy_rule",
+      "tags": [
+        "legal_policy",
+        "policy_rule"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-LEGAL-001_Data_Retention_Policy.pdf"
+      ],
+      "notes": "Retention Held for minimum period per retention schedule \u25bc Legal Hold Suspension of deletion if litigation or investigation pending \u25bc Secure Disposal Certified "
+    },
+    {
+      "id": "LEGAL-080",
+      "question": "What related GTFS document is referenced?",
+      "expected_answer": "GTFS-COMP-002",
+      "expected_document": "GTFS-LEGAL-001_Data_Retention_Policy.pdf",
+      "expected_page": 5,
+      "expected_chunks": [
+        7
+      ],
+      "category": "general",
+      "difficulty": "hard",
+      "document_type": "legal_policy",
+      "query_category": "cross_reference",
+      "tags": [
+        "legal_policy",
+        "cross_reference"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-LEGAL-001_Data_Retention_Policy.pdf"
+      ],
+      "notes": "7 years After final repayment Secure digital wipe Mortgage Files 15 years After loan closure Secure archive then wipe AML Investigation Records 7 years After ca"
+    },
+    {
+      "id": "OPS-081",
+      "question": "What related GTFS document is referenced?",
+      "expected_answer": "GTFS-OPS-001",
+      "expected_document": "GTFS-OPS-001_Loan_Approval_SOP.pdf",
+      "expected_page": 1,
+      "expected_chunks": [
+        0
+      ],
+      "category": "general",
+      "difficulty": "hard",
+      "document_type": "procedure",
+      "query_category": "cross_reference",
+      "tags": [
+        "procedure",
+        "cross_reference"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-OPS-001_Loan_Approval_SOP.pdf"
+      ],
+      "notes": "GlobalTrust Financial Services Loan Approval Standard Operating Procedure Banking Operations Department GTFS Internal Use Only | Classification: Internal Docume"
+    },
+    {
+      "id": "OPS-082",
+      "question": "Which executive leader is named?",
+      "expected_answer": "Daniel Carter",
+      "expected_document": "GTFS-OPS-001_Loan_Approval_SOP.pdf",
+      "expected_page": 1,
+      "expected_chunks": [
+        0
+      ],
+      "category": "general",
+      "difficulty": "easy",
+      "document_type": "procedure",
+      "query_category": "factual_lookup",
+      "tags": [
+        "procedure",
+        "factual_lookup"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-OPS-001_Loan_Approval_SOP.pdf"
+      ],
+      "notes": "GlobalTrust Financial Services Loan Approval Standard Operating Procedure Banking Operations Department GTFS Internal Use Only | Classification: Internal Docume"
+    },
+    {
+      "id": "OPS-083",
+      "question": "What related GTFS document is referenced?",
+      "expected_answer": "GTFS-OPS-002",
+      "expected_document": "GTFS-OPS-001_Loan_Approval_SOP.pdf",
+      "expected_page": 2,
+      "expected_chunks": [
+        1
+      ],
+      "category": "general",
+      "difficulty": "hard",
+      "document_type": "procedure",
+      "query_category": "cross_reference",
+      "tags": [
+        "procedure",
+        "cross_reference"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-OPS-001_Loan_Approval_SOP.pdf"
+      ],
+      "notes": "8. Credit Assessment 9. Underwriting Process 10. Approval Matrix 11. Loan Disbursement 12. Exception Handling 13. Quality Assurance 14. Frequently Asked Questio"
+    },
+    {
+      "id": "OPS-084",
+      "question": "What is a stated requirement in this document?",
+      "expected_answer": "be confirmed per GTFS-COMP-002 prior to any loan decision",
+      "expected_document": "GTFS-OPS-001_Loan_Approval_SOP.pdf",
+      "expected_page": 3,
+      "expected_chunks": [
+        2
+      ],
+      "category": "general",
+      "difficulty": "medium",
+      "document_type": "procedure",
+      "query_category": "policy_rule",
+      "tags": [
+        "procedure",
+        "policy_rule"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-OPS-001_Loan_Approval_SOP.pdf"
+      ],
+      "notes": "loans are governed separately by the Mortgage Processing Guide (GTFS-OPS-002). \u007f Customer experience \u2014 Standardised timelines; loan processing SLA of 5 business"
+    },
+    {
+      "id": "OPS-085",
+      "question": "What compliance topic is covered?",
+      "expected_answer": "KYC",
+      "expected_document": "GTFS-OPS-001_Loan_Approval_SOP.pdf",
+      "expected_page": 3,
+      "expected_chunks": [
+        2
+      ],
+      "category": "general",
+      "difficulty": "medium",
+      "document_type": "procedure",
+      "query_category": "compliance_rule",
+      "tags": [
+        "procedure",
+        "compliance_rule"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-OPS-001_Loan_Approval_SOP.pdf"
+      ],
+      "notes": "loans are governed separately by the Mortgage Processing Guide (GTFS-OPS-002). \u007f Customer experience \u2014 Standardised timelines; loan processing SLA of 5 business"
+    },
+    {
+      "id": "OPS-086",
+      "question": "What compliance topic is covered?",
+      "expected_answer": "AML",
+      "expected_document": "GTFS-OPS-001_Loan_Approval_SOP.pdf",
+      "expected_page": 3,
+      "expected_chunks": [
+        2
+      ],
+      "category": "general",
+      "difficulty": "medium",
+      "document_type": "procedure",
+      "query_category": "compliance_rule",
+      "tags": [
+        "procedure",
+        "compliance_rule"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-OPS-001_Loan_Approval_SOP.pdf"
+      ],
+      "notes": "loans are governed separately by the Mortgage Processing Guide (GTFS-OPS-002). \u007f Customer experience \u2014 Standardised timelines; loan processing SLA of 5 business"
+    },
+    {
+      "id": "OPS-087",
+      "question": "What related GTFS document is referenced?",
+      "expected_answer": "GTFS-COMP-002",
+      "expected_document": "GTFS-OPS-001_Loan_Approval_SOP.pdf",
+      "expected_page": 3,
+      "expected_chunks": [
+        2
+      ],
+      "category": "general",
+      "difficulty": "hard",
+      "document_type": "procedure",
+      "query_category": "cross_reference",
+      "tags": [
+        "procedure",
+        "cross_reference"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-OPS-001_Loan_Approval_SOP.pdf"
+      ],
+      "notes": "loans are governed separately by the Mortgage Processing Guide (GTFS-OPS-002). \u007f Customer experience \u2014 Standardised timelines; loan processing SLA of 5 business"
+    },
+    {
+      "id": "OPS-088",
+      "question": "What related GTFS document is referenced?",
+      "expected_answer": "GTFS-COMP-001",
+      "expected_document": "GTFS-OPS-001_Loan_Approval_SOP.pdf",
+      "expected_page": 3,
+      "expected_chunks": [
+        2
+      ],
+      "category": "general",
+      "difficulty": "hard",
+      "document_type": "procedure",
+      "query_category": "cross_reference",
+      "tags": [
+        "procedure",
+        "cross_reference"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-OPS-001_Loan_Approval_SOP.pdf"
+      ],
+      "notes": "loans are governed separately by the Mortgage Processing Guide (GTFS-OPS-002). \u007f Customer experience \u2014 Standardised timelines; loan processing SLA of 5 business"
+    },
+    {
+      "id": "OPS-089",
+      "question": "What related GTFS document is referenced?",
+      "expected_answer": "GTFS-OPS-002",
+      "expected_document": "GTFS-OPS-002_Mortgage_Processing_Guide.pdf",
+      "expected_page": 1,
+      "expected_chunks": [
+        0
+      ],
+      "category": "general",
+      "difficulty": "hard",
+      "document_type": "procedure",
+      "query_category": "cross_reference",
+      "tags": [
+        "procedure",
+        "cross_reference"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-OPS-002_Mortgage_Processing_Guide.pdf"
+      ],
+      "notes": "GlobalTrust Financial Services Mortgage Processing Guide Mortgage Operations Department GTFS Internal Use Only | Classification: Internal Document ID GTFS-OPS-0"
+    },
+    {
+      "id": "OPS-090",
+      "question": "Which executive leader is named?",
+      "expected_answer": "Daniel Carter",
+      "expected_document": "GTFS-OPS-002_Mortgage_Processing_Guide.pdf",
+      "expected_page": 1,
+      "expected_chunks": [
+        0
+      ],
+      "category": "general",
+      "difficulty": "easy",
+      "document_type": "procedure",
+      "query_category": "factual_lookup",
+      "tags": [
+        "procedure",
+        "factual_lookup"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-OPS-002_Mortgage_Processing_Guide.pdf"
+      ],
+      "notes": "GlobalTrust Financial Services Mortgage Processing Guide Mortgage Operations Department GTFS Internal Use Only | Classification: Internal Document ID GTFS-OPS-0"
+    },
+    {
+      "id": "OPS-091",
+      "question": "What related GTFS document is referenced?",
+      "expected_answer": "GTFS-OPS-001",
+      "expected_document": "GTFS-OPS-002_Mortgage_Processing_Guide.pdf",
+      "expected_page": 2,
+      "expected_chunks": [
+        1
+      ],
+      "category": "general",
+      "difficulty": "hard",
+      "document_type": "procedure",
+      "query_category": "cross_reference",
+      "tags": [
+        "procedure",
+        "cross_reference"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-OPS-002_Mortgage_Processing_Guide.pdf"
+      ],
+      "notes": "8. Required Documents 9. Property Valuation 10. Legal Verification 11. Credit & Risk Assessment 12. Mortgage Approval Matrix 13. Settlement & Disbursement 14. E"
+    },
+    {
+      "id": "OPS-092",
+      "question": "What related GTFS document is referenced?",
+      "expected_answer": "GTFS-RISK-001",
+      "expected_document": "GTFS-OPS-002_Mortgage_Processing_Guide.pdf",
+      "expected_page": 2,
+      "expected_chunks": [
+        1
+      ],
+      "category": "general",
+      "difficulty": "hard",
+      "document_type": "procedure",
+      "query_category": "cross_reference",
+      "tags": [
+        "procedure",
+        "cross_reference"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-OPS-002_Mortgage_Processing_Guide.pdf"
+      ],
+      "notes": "8. Required Documents 9. Property Valuation 10. Legal Verification 11. Credit & Risk Assessment 12. Mortgage Approval Matrix 13. Settlement & Disbursement 14. E"
+    },
+    {
+      "id": "OPS-093",
+      "question": "What compliance topic is covered?",
+      "expected_answer": "KYC",
+      "expected_document": "GTFS-OPS-002_Mortgage_Processing_Guide.pdf",
+      "expected_page": 3,
+      "expected_chunks": [
+        2
+      ],
+      "category": "general",
+      "difficulty": "medium",
+      "document_type": "procedure",
+      "query_category": "compliance_rule",
+      "tags": [
+        "procedure",
+        "compliance_rule"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-OPS-002_Mortgage_Processing_Guide.pdf"
+      ],
+      "notes": "Non-mortgage lending is governed by the Loan Approval SOP (GTFS-OPS-001). \u007f Customer experience \u2014 Transparent timelines; mortgage approval SLA of 7 business day"
+    },
+    {
+      "id": "OPS-094",
+      "question": "What compliance topic is covered?",
+      "expected_answer": "AML",
+      "expected_document": "GTFS-OPS-002_Mortgage_Processing_Guide.pdf",
+      "expected_page": 3,
+      "expected_chunks": [
+        2
+      ],
+      "category": "general",
+      "difficulty": "medium",
+      "document_type": "procedure",
+      "query_category": "compliance_rule",
+      "tags": [
+        "procedure",
+        "compliance_rule"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-OPS-002_Mortgage_Processing_Guide.pdf"
+      ],
+      "notes": "Non-mortgage lending is governed by the Loan Approval SOP (GTFS-OPS-001). \u007f Customer experience \u2014 Transparent timelines; mortgage approval SLA of 7 business day"
+    },
+    {
+      "id": "OPS-095",
+      "question": "What related GTFS document is referenced?",
+      "expected_answer": "GTFS-COMP-002",
+      "expected_document": "GTFS-OPS-002_Mortgage_Processing_Guide.pdf",
+      "expected_page": 3,
+      "expected_chunks": [
+        2
+      ],
+      "category": "general",
+      "difficulty": "hard",
+      "document_type": "procedure",
+      "query_category": "cross_reference",
+      "tags": [
+        "procedure",
+        "cross_reference"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-OPS-002_Mortgage_Processing_Guide.pdf"
+      ],
+      "notes": "Non-mortgage lending is governed by the Loan Approval SOP (GTFS-OPS-001). \u007f Customer experience \u2014 Transparent timelines; mortgage approval SLA of 7 business day"
+    },
+    {
+      "id": "OPS-096",
+      "question": "What related GTFS document is referenced?",
+      "expected_answer": "GTFS-COMP-001",
+      "expected_document": "GTFS-OPS-002_Mortgage_Processing_Guide.pdf",
+      "expected_page": 3,
+      "expected_chunks": [
+        2
+      ],
+      "category": "general",
+      "difficulty": "hard",
+      "document_type": "procedure",
+      "query_category": "cross_reference",
+      "tags": [
+        "procedure",
+        "cross_reference"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-OPS-002_Mortgage_Processing_Guide.pdf"
+      ],
+      "notes": "Non-mortgage lending is governed by the Loan Approval SOP (GTFS-OPS-001). \u007f Customer experience \u2014 Transparent timelines; mortgage approval SLA of 7 business day"
+    },
+    {
+      "id": "OPS-097",
+      "question": "What related GTFS document is referenced?",
+      "expected_answer": "GTFS-OPS-003",
+      "expected_document": "GTFS-OPS-003_Customer_Complaint_Handling_SOP.pdf",
+      "expected_page": 1,
+      "expected_chunks": [
+        0
+      ],
+      "category": "general",
+      "difficulty": "hard",
+      "document_type": "procedure",
+      "query_category": "cross_reference",
+      "tags": [
+        "procedure",
+        "cross_reference"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-OPS-003_Customer_Complaint_Handling_SOP.pdf"
+      ],
+      "notes": "GlobalTrust Financial Services Customer Complaint Handling Standard Operating Procedure Customer Experience Department GTFS Internal Use Only | Classification: "
+    },
+    {
+      "id": "OPS-098",
+      "question": "Which executive leader is named?",
+      "expected_answer": "Daniel Carter",
+      "expected_document": "GTFS-OPS-003_Customer_Complaint_Handling_SOP.pdf",
+      "expected_page": 1,
+      "expected_chunks": [
+        0
+      ],
+      "category": "general",
+      "difficulty": "easy",
+      "document_type": "procedure",
+      "query_category": "factual_lookup",
+      "tags": [
+        "procedure",
+        "factual_lookup"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-OPS-003_Customer_Complaint_Handling_SOP.pdf"
+      ],
+      "notes": "GlobalTrust Financial Services Customer Complaint Handling Standard Operating Procedure Customer Experience Department GTFS Internal Use Only | Classification: "
+    },
+    {
+      "id": "OPS-099",
+      "question": "What is a stated requirement in this document?",
+      "expected_answer": "be logged in the central Complaint Management System (CMS) before investigation",
+      "expected_document": "GTFS-OPS-003_Customer_Complaint_Handling_SOP.pdf",
+      "expected_page": 3,
+      "expected_chunks": [
+        2
+      ],
+      "category": "general",
+      "difficulty": "medium",
+      "document_type": "procedure",
+      "query_category": "policy_rule",
+      "tags": [
+        "procedure",
+        "policy_rule"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-OPS-003_Customer_Complaint_Handling_SOP.pdf"
+      ],
+      "notes": "Effective complaint handling supports our average customer satisfaction target of 95%. \u007f Customer trust \u2014 Timely acknowledgement and transparent resolution buil"
+    },
+    {
+      "id": "OPS-100",
+      "question": "What compliance topic is covered?",
+      "expected_answer": "AML",
+      "expected_document": "GTFS-OPS-003_Customer_Complaint_Handling_SOP.pdf",
+      "expected_page": 3,
+      "expected_chunks": [
+        4
+      ],
+      "category": "general",
+      "difficulty": "medium",
+      "document_type": "procedure",
+      "query_category": "compliance_rule",
+      "tags": [
+        "procedure",
+        "compliance_rule"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-OPS-003_Customer_Complaint_Handling_SOP.pdf"
+      ],
+      "notes": "Description Typical Owner Related SOP Service Quality Wait times, responsiveness, communication Branch / Call Center \u2014 Account Issues Incorrect balances, statem"
+    },
+    {
+      "id": "OPS-101",
+      "question": "What related GTFS document is referenced?",
+      "expected_answer": "GTFS-OPS-001",
+      "expected_document": "GTFS-OPS-003_Customer_Complaint_Handling_SOP.pdf",
+      "expected_page": 3,
+      "expected_chunks": [
+        4
+      ],
+      "category": "general",
+      "difficulty": "hard",
+      "document_type": "procedure",
+      "query_category": "cross_reference",
+      "tags": [
+        "procedure",
+        "cross_reference"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-OPS-003_Customer_Complaint_Handling_SOP.pdf"
+      ],
+      "notes": "Description Typical Owner Related SOP Service Quality Wait times, responsiveness, communication Branch / Call Center \u2014 Account Issues Incorrect balances, statem"
+    },
+    {
+      "id": "OPS-102",
+      "question": "What related GTFS document is referenced?",
+      "expected_answer": "GTFS-OPS-002",
+      "expected_document": "GTFS-OPS-003_Customer_Complaint_Handling_SOP.pdf",
+      "expected_page": 3,
+      "expected_chunks": [
+        4
+      ],
+      "category": "general",
+      "difficulty": "hard",
+      "document_type": "procedure",
+      "query_category": "cross_reference",
+      "tags": [
+        "procedure",
+        "cross_reference"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-OPS-003_Customer_Complaint_Handling_SOP.pdf"
+      ],
+      "notes": "Description Typical Owner Related SOP Service Quality Wait times, responsiveness, communication Branch / Call Center \u2014 Account Issues Incorrect balances, statem"
+    },
+    {
+      "id": "OPS-103",
+      "question": "What related GTFS document is referenced?",
+      "expected_answer": "GTFS-SEC-001",
+      "expected_document": "GTFS-OPS-003_Customer_Complaint_Handling_SOP.pdf",
+      "expected_page": 3,
+      "expected_chunks": [
+        4
+      ],
+      "category": "general",
+      "difficulty": "hard",
+      "document_type": "procedure",
+      "query_category": "cross_reference",
+      "tags": [
+        "procedure",
+        "cross_reference"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-OPS-003_Customer_Complaint_Handling_SOP.pdf"
+      ],
+      "notes": "Description Typical Owner Related SOP Service Quality Wait times, responsiveness, communication Branch / Call Center \u2014 Account Issues Incorrect balances, statem"
+    },
+    {
+      "id": "OPS-104",
+      "question": "What related GTFS document is referenced?",
+      "expected_answer": "GTFS-COMP-001",
+      "expected_document": "GTFS-OPS-003_Customer_Complaint_Handling_SOP.pdf",
+      "expected_page": 3,
+      "expected_chunks": [
+        4
+      ],
+      "category": "general",
+      "difficulty": "hard",
+      "document_type": "procedure",
+      "query_category": "cross_reference",
+      "tags": [
+        "procedure",
+        "cross_reference"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-OPS-003_Customer_Complaint_Handling_SOP.pdf"
+      ],
+      "notes": "Description Typical Owner Related SOP Service Quality Wait times, responsiveness, communication Branch / Call Center \u2014 Account Issues Incorrect balances, statem"
+    },
+    {
+      "id": "PROC-105",
+      "question": "What related GTFS document is referenced?",
+      "expected_answer": "GTFS-PROC-001",
+      "expected_document": "GTFS-PROC-001_Vendor_Procurement_Policy.pdf",
+      "expected_page": 1,
+      "expected_chunks": [
+        0
+      ],
+      "category": "general",
+      "difficulty": "hard",
+      "document_type": "procurement",
+      "query_category": "cross_reference",
+      "tags": [
+        "procurement",
+        "cross_reference"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-PROC-001_Vendor_Procurement_Policy.pdf"
+      ],
+      "notes": "GlobalTrust Financial Services Vendor Procurement Policy Procurement Department GTFS Internal Use Only | Classification: Internal Document ID GTFS-PROC-001 Vers"
+    },
+    {
+      "id": "PROC-106",
+      "question": "Which executive leader is named?",
+      "expected_answer": "Michael Rodriguez",
+      "expected_document": "GTFS-PROC-001_Vendor_Procurement_Policy.pdf",
+      "expected_page": 1,
+      "expected_chunks": [
+        0
+      ],
+      "category": "general",
+      "difficulty": "easy",
+      "document_type": "procurement",
+      "query_category": "factual_lookup",
+      "tags": [
+        "procurement",
+        "factual_lookup"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-PROC-001_Vendor_Procurement_Policy.pdf"
+      ],
+      "notes": "GlobalTrust Financial Services Vendor Procurement Policy Procurement Department GTFS Internal Use Only | Classification: Internal Document ID GTFS-PROC-001 Vers"
+    },
+    {
+      "id": "PROC-107",
+      "question": "Which executive leader is named?",
+      "expected_answer": "Daniel Carter",
+      "expected_document": "GTFS-PROC-001_Vendor_Procurement_Policy.pdf",
+      "expected_page": 1,
+      "expected_chunks": [
+        0
+      ],
+      "category": "general",
+      "difficulty": "easy",
+      "document_type": "procurement",
+      "query_category": "factual_lookup",
+      "tags": [
+        "procurement",
+        "factual_lookup"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-PROC-001_Vendor_Procurement_Policy.pdf"
+      ],
+      "notes": "GlobalTrust Financial Services Vendor Procurement Policy Procurement Department GTFS Internal Use Only | Classification: Internal Document ID GTFS-PROC-001 Vers"
+    },
+    {
+      "id": "PROC-108",
+      "question": "Which fiscal year is referenced in this document?",
+      "expected_answer": "FY2026",
+      "expected_document": "GTFS-PROC-001_Vendor_Procurement_Policy.pdf",
+      "expected_page": 2,
+      "expected_chunks": [
+        1
+      ],
+      "category": "general",
+      "difficulty": "medium",
+      "document_type": "procurement",
+      "query_category": "financial_data",
+      "tags": [
+        "procurement",
+        "financial_data"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-PROC-001_Vendor_Procurement_Policy.pdf"
+      ],
+      "notes": "7. Vendor Risk Assessment 8. Approval Matrix 9. Contract Management 10. Vendor Performance Management 11. Procurement Ethics 12. Exceptions 13. Frequently Asked"
+    },
+    {
+      "id": "PROC-109",
+      "question": "What is a stated requirement in this document?",
+      "expected_answer": "align with the Annual Budget FY2026 (GTFS-FIN-001) and the Enterprise Risk Manag",
+      "expected_document": "GTFS-PROC-001_Vendor_Procurement_Policy.pdf",
+      "expected_page": 2,
+      "expected_chunks": [
+        1
+      ],
+      "category": "general",
+      "difficulty": "medium",
+      "document_type": "procurement",
+      "query_category": "policy_rule",
+      "tags": [
+        "procurement",
+        "policy_rule"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-PROC-001_Vendor_Procurement_Policy.pdf"
+      ],
+      "notes": "7. Vendor Risk Assessment 8. Approval Matrix 9. Contract Management 10. Vendor Performance Management 11. Procurement Ethics 12. Exceptions 13. Frequently Asked"
+    },
+    {
+      "id": "PROC-110",
+      "question": "What related GTFS document is referenced?",
+      "expected_answer": "GTFS-FIN-001",
+      "expected_document": "GTFS-PROC-001_Vendor_Procurement_Policy.pdf",
+      "expected_page": 2,
+      "expected_chunks": [
+        1
+      ],
+      "category": "general",
+      "difficulty": "hard",
+      "document_type": "procurement",
+      "query_category": "cross_reference",
+      "tags": [
+        "procurement",
+        "cross_reference"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-PROC-001_Vendor_Procurement_Policy.pdf"
+      ],
+      "notes": "7. Vendor Risk Assessment 8. Approval Matrix 9. Contract Management 10. Vendor Performance Management 11. Procurement Ethics 12. Exceptions 13. Frequently Asked"
+    },
+    {
+      "id": "PROC-111",
+      "question": "What related GTFS document is referenced?",
+      "expected_answer": "GTFS-RISK-001",
+      "expected_document": "GTFS-PROC-001_Vendor_Procurement_Policy.pdf",
+      "expected_page": 2,
+      "expected_chunks": [
+        1
+      ],
+      "category": "general",
+      "difficulty": "hard",
+      "document_type": "procurement",
+      "query_category": "cross_reference",
+      "tags": [
+        "procurement",
+        "cross_reference"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-PROC-001_Vendor_Procurement_Policy.pdf"
+      ],
+      "notes": "7. Vendor Risk Assessment 8. Approval Matrix 9. Contract Management 10. Vendor Performance Management 11. Procurement Ethics 12. Exceptions 13. Frequently Asked"
+    },
+    {
+      "id": "PROC-112",
+      "question": "What is a stated requirement in this document?",
+      "expected_answer": "follow this policy regardless of funding source",
+      "expected_document": "GTFS-PROC-001_Vendor_Procurement_Policy.pdf",
+      "expected_page": 3,
+      "expected_chunks": [
+        2
+      ],
+      "category": "general",
+      "difficulty": "medium",
+      "document_type": "procurement",
+      "query_category": "policy_rule",
+      "tags": [
+        "procurement",
+        "policy_rule"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-PROC-001_Vendor_Procurement_Policy.pdf"
+      ],
+      "notes": "All procurement activities must align with the Annual Budget FY2026 (GTFS-FIN-001) and the Enterprise Risk Management Framework (GTFS-RISK-001). \u007f Financial con"
+    },
+    {
+      "id": "RISK-113",
+      "question": "What related GTFS document is referenced?",
+      "expected_answer": "GTFS-RISK-001",
+      "expected_document": "GTFS-RISK-001_Enterprise_Risk_Management_Framework.pdf",
+      "expected_page": 1,
+      "expected_chunks": [
+        0
+      ],
+      "category": "general",
+      "difficulty": "hard",
+      "document_type": "risk_framework",
+      "query_category": "cross_reference",
+      "tags": [
+        "risk_framework",
+        "cross_reference"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-RISK-001_Enterprise_Risk_Management_Framework.pdf"
+      ],
+      "notes": "GlobalTrust Financial Services Enterprise Risk Management Framework Enterprise Risk Management Office GTFS Confidential | Classification: Confidential Document "
+    },
+    {
+      "id": "RISK-114",
+      "question": "How many employees are mentioned?",
+      "expected_answer": "4,910",
+      "expected_document": "GTFS-RISK-001_Enterprise_Risk_Management_Framework.pdf",
+      "expected_page": 2,
+      "expected_chunks": [
+        1
+      ],
+      "category": "general",
+      "difficulty": "easy",
+      "document_type": "risk_framework",
+      "query_category": "factual_lookup",
+      "tags": [
+        "risk_framework",
+        "factual_lookup"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-RISK-001_Enterprise_Risk_Management_Framework.pdf"
+      ],
+      "notes": "5. Enterprise Risk Categories 6. Risk Assessment Methodology 7. Risk Register 8. Risk Treatment Strategies 9. Key Risk Indicators (KRIs) 10. Risk Reporting 11. "
+    },
+    {
+      "id": "RISK-115",
+      "question": "What related GTFS document is referenced?",
+      "expected_answer": "GTFS-FIN-001",
+      "expected_document": "GTFS-RISK-001_Enterprise_Risk_Management_Framework.pdf",
+      "expected_page": 3,
+      "expected_chunks": [
+        2
+      ],
+      "category": "general",
+      "difficulty": "hard",
+      "document_type": "risk_framework",
+      "query_category": "cross_reference",
+      "tags": [
+        "risk_framework",
+        "cross_reference"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-RISK-001_Enterprise_Risk_Management_Framework.pdf"
+      ],
+      "notes": "Framework aligned with ISO 31000 and COSO ERM principles. With 4,910 employees across Singapore, Dubai, Mumbai, and London, GTFS maintains a Moderate enterprise"
+    },
+    {
+      "id": "RISK-116",
+      "question": "What related GTFS document is referenced?",
+      "expected_answer": "GTFS-BCP-001",
+      "expected_document": "GTFS-RISK-001_Enterprise_Risk_Management_Framework.pdf",
+      "expected_page": 3,
+      "expected_chunks": [
+        2
+      ],
+      "category": "general",
+      "difficulty": "hard",
+      "document_type": "risk_framework",
+      "query_category": "cross_reference",
+      "tags": [
+        "risk_framework",
+        "cross_reference"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-RISK-001_Enterprise_Risk_Management_Framework.pdf"
+      ],
+      "notes": "Framework aligned with ISO 31000 and COSO ERM principles. With 4,910 employees across Singapore, Dubai, Mumbai, and London, GTFS maintains a Moderate enterprise"
+    },
+    {
+      "id": "RISK-117",
+      "question": "What compliance topic is covered?",
+      "expected_answer": "AML",
+      "expected_document": "GTFS-RISK-001_Enterprise_Risk_Management_Framework.pdf",
+      "expected_page": 3,
+      "expected_chunks": [
+        3
+      ],
+      "category": "general",
+      "difficulty": "medium",
+      "document_type": "risk_framework",
+      "query_category": "compliance_rule",
+      "tags": [
+        "risk_framework",
+        "compliance_rule"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-RISK-001_Enterprise_Risk_Management_Framework.pdf"
+      ],
+      "notes": "\u007f Risk appetite \u2014 Moderate tolerance; Critical risks require Board Risk Committee approval. \u007f Risk culture \u2014 Mandatory risk training annually (8 hours) for all "
+    },
+    {
+      "id": "RISK-118",
+      "question": "What compliance topic is covered?",
+      "expected_answer": "KYC",
+      "expected_document": "GTFS-RISK-001_Enterprise_Risk_Management_Framework.pdf",
+      "expected_page": 3,
+      "expected_chunks": [
+        3
+      ],
+      "category": "general",
+      "difficulty": "medium",
+      "document_type": "risk_framework",
+      "query_category": "compliance_rule",
+      "tags": [
+        "risk_framework",
+        "compliance_rule"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-RISK-001_Enterprise_Risk_Management_Framework.pdf"
+      ],
+      "notes": "\u007f Risk appetite \u2014 Moderate tolerance; Critical risks require Board Risk Committee approval. \u007f Risk culture \u2014 Mandatory risk training annually (8 hours) for all "
+    },
+    {
+      "id": "RISK-119",
+      "question": "What related GTFS document is referenced?",
+      "expected_answer": "GTFS-EXEC-001",
+      "expected_document": "GTFS-RISK-001_Enterprise_Risk_Management_Framework.pdf",
+      "expected_page": 3,
+      "expected_chunks": [
+        3
+      ],
+      "category": "general",
+      "difficulty": "hard",
+      "document_type": "risk_framework",
+      "query_category": "cross_reference",
+      "tags": [
+        "risk_framework",
+        "cross_reference"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-RISK-001_Enterprise_Risk_Management_Framework.pdf"
+      ],
+      "notes": "\u007f Risk appetite \u2014 Moderate tolerance; Critical risks require Board Risk Committee approval. \u007f Risk culture \u2014 Mandatory risk training annually (8 hours) for all "
+    },
+    {
+      "id": "RISK-120",
+      "question": "What related GTFS document is referenced?",
+      "expected_answer": "GTFS-COMP-001",
+      "expected_document": "GTFS-RISK-001_Enterprise_Risk_Management_Framework.pdf",
+      "expected_page": 3,
+      "expected_chunks": [
+        3
+      ],
+      "category": "general",
+      "difficulty": "hard",
+      "document_type": "risk_framework",
+      "query_category": "cross_reference",
+      "tags": [
+        "risk_framework",
+        "cross_reference"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-RISK-001_Enterprise_Risk_Management_Framework.pdf"
+      ],
+      "notes": "\u007f Risk appetite \u2014 Moderate tolerance; Critical risks require Board Risk Committee approval. \u007f Risk culture \u2014 Mandatory risk training annually (8 hours) for all "
+    },
+    {
+      "id": "SEC-121",
+      "question": "What related GTFS document is referenced?",
+      "expected_answer": "GTFS-SEC-001",
+      "expected_document": "GTFS-SEC-001_Information_Security_Policy.pdf",
+      "expected_page": 1,
+      "expected_chunks": [
+        0
+      ],
+      "category": "security",
+      "difficulty": "hard",
+      "document_type": "security_policy",
+      "query_category": "cross_reference",
+      "tags": [
+        "security_policy",
+        "cross_reference"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-SEC-001_Information_Security_Policy.pdf"
+      ],
+      "notes": "GlobalTrust Financial Services Information Security Policy GTFS Internal Use Only | Classification: Internal Document ID GTFS-SEC-001 Version 3.2 Classification"
+    },
+    {
+      "id": "SEC-122",
+      "question": "How many employees are mentioned?",
+      "expected_answer": "4,850",
+      "expected_document": "GTFS-SEC-001_Information_Security_Policy.pdf",
+      "expected_page": 2,
+      "expected_chunks": [
+        1
+      ],
+      "category": "security",
+      "difficulty": "easy",
+      "document_type": "security_policy",
+      "query_category": "factual_lookup",
+      "tags": [
+        "security_policy",
+        "factual_lookup"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-SEC-001_Information_Security_Policy.pdf"
+      ],
+      "notes": "Email Security 11. Cloud Security 12. Remote Work Security 13. Incident Response 14. Security Monitoring 15. Regulatory Compliance 16. Security Awareness 17. Po"
+    },
+    {
+      "id": "SEC-123",
+      "question": "What security control is mentioned?",
+      "expected_answer": "password",
+      "expected_document": "GTFS-SEC-001_Information_Security_Policy.pdf",
+      "expected_page": 3,
+      "expected_chunks": [
+        3
+      ],
+      "category": "security",
+      "difficulty": "medium",
+      "document_type": "security_policy",
+      "query_category": "security_requirement",
+      "tags": [
+        "security_policy",
+        "security_requirement"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-SEC-001_Information_Security_Policy.pdf"
+      ],
+      "notes": "Non-compliance carries significant penalties. Cybersecurity Threats \u2014 Ransomware, phishing, and advanced persistent threats target financial institutions daily."
+    },
+    {
+      "id": "SEC-124",
+      "question": "What security control is mentioned?",
+      "expected_answer": "MFA",
+      "expected_document": "GTFS-SEC-001_Information_Security_Policy.pdf",
+      "expected_page": 3,
+      "expected_chunks": [
+        3
+      ],
+      "category": "security",
+      "difficulty": "medium",
+      "document_type": "security_policy",
+      "query_category": "security_requirement",
+      "tags": [
+        "security_policy",
+        "security_requirement"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-SEC-001_Information_Security_Policy.pdf"
+      ],
+      "notes": "Non-compliance carries significant penalties. Cybersecurity Threats \u2014 Ransomware, phishing, and advanced persistent threats target financial institutions daily."
+    },
+    {
+      "id": "SEC-125",
+      "question": "What related GTFS document is referenced?",
+      "expected_answer": "GTFS-BCP-001",
+      "expected_document": "GTFS-SEC-001_Information_Security_Policy.pdf",
+      "expected_page": 3,
+      "expected_chunks": [
+        3
+      ],
+      "category": "security",
+      "difficulty": "hard",
+      "document_type": "security_policy",
+      "query_category": "cross_reference",
+      "tags": [
+        "security_policy",
+        "cross_reference"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-SEC-001_Information_Security_Policy.pdf"
+      ],
+      "notes": "Non-compliance carries significant penalties. Cybersecurity Threats \u2014 Ransomware, phishing, and advanced persistent threats target financial institutions daily."
+    },
+    {
+      "id": "SEC-126",
+      "question": "What related GTFS document is referenced?",
+      "expected_answer": "GTFS-RISK-001",
+      "expected_document": "GTFS-SEC-001_Information_Security_Policy.pdf",
+      "expected_page": 3,
+      "expected_chunks": [
+        3
+      ],
+      "category": "security",
+      "difficulty": "hard",
+      "document_type": "security_policy",
+      "query_category": "cross_reference",
+      "tags": [
+        "security_policy",
+        "cross_reference"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-SEC-001_Information_Security_Policy.pdf"
+      ],
+      "notes": "Non-compliance carries significant penalties. Cybersecurity Threats \u2014 Ransomware, phishing, and advanced persistent threats target financial institutions daily."
+    },
+    {
+      "id": "SEC-127",
+      "question": "What related GTFS document is referenced?",
+      "expected_answer": "GTFS-LEGAL-001",
+      "expected_document": "GTFS-SEC-001_Information_Security_Policy.pdf",
+      "expected_page": 3,
+      "expected_chunks": [
+        3
+      ],
+      "category": "security",
+      "difficulty": "hard",
+      "document_type": "security_policy",
+      "query_category": "cross_reference",
+      "tags": [
+        "security_policy",
+        "cross_reference"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-SEC-001_Information_Security_Policy.pdf"
+      ],
+      "notes": "Non-compliance carries significant penalties. Cybersecurity Threats \u2014 Ransomware, phishing, and advanced persistent threats target financial institutions daily."
+    },
+    {
+      "id": "SEC-128",
+      "question": "What related GTFS document is referenced?",
+      "expected_answer": "GTFS-SEC-002",
+      "expected_document": "GTFS-SEC-001_Information_Security_Policy.pdf",
+      "expected_page": 3,
+      "expected_chunks": [
+        3
+      ],
+      "category": "security",
+      "difficulty": "hard",
+      "document_type": "security_policy",
+      "query_category": "cross_reference",
+      "tags": [
+        "security_policy",
+        "cross_reference"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-SEC-001_Information_Security_Policy.pdf"
+      ],
+      "notes": "Non-compliance carries significant penalties. Cybersecurity Threats \u2014 Ransomware, phishing, and advanced persistent threats target financial institutions daily."
+    },
+    {
+      "id": "SEC-129",
+      "question": "What security control is mentioned?",
+      "expected_answer": "Password",
+      "expected_document": "GTFS-SEC-002_Password_MFA_Policy.pdf",
+      "expected_page": 1,
+      "expected_chunks": [
+        0
+      ],
+      "category": "security",
+      "difficulty": "medium",
+      "document_type": "security_policy",
+      "query_category": "security_requirement",
+      "tags": [
+        "security_policy",
+        "security_requirement"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-SEC-002_Password_MFA_Policy.pdf"
+      ],
+      "notes": "GlobalTrust Financial Services Password & Multi-Factor Authentication Policy GTFS Internal Use Only | Classification: Internal Document ID GTFS-SEC-002 Version "
+    },
+    {
+      "id": "SEC-130",
+      "question": "What security control is mentioned?",
+      "expected_answer": "Multi-Factor Authentication",
+      "expected_document": "GTFS-SEC-002_Password_MFA_Policy.pdf",
+      "expected_page": 1,
+      "expected_chunks": [
+        0
+      ],
+      "category": "security",
+      "difficulty": "medium",
+      "document_type": "security_policy",
+      "query_category": "security_requirement",
+      "tags": [
+        "security_policy",
+        "security_requirement"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-SEC-002_Password_MFA_Policy.pdf"
+      ],
+      "notes": "GlobalTrust Financial Services Password & Multi-Factor Authentication Policy GTFS Internal Use Only | Classification: Internal Document ID GTFS-SEC-002 Version "
+    },
+    {
+      "id": "SEC-131",
+      "question": "What security control is mentioned?",
+      "expected_answer": "MFA",
+      "expected_document": "GTFS-SEC-002_Password_MFA_Policy.pdf",
+      "expected_page": 1,
+      "expected_chunks": [
+        0
+      ],
+      "category": "security",
+      "difficulty": "medium",
+      "document_type": "security_policy",
+      "query_category": "security_requirement",
+      "tags": [
+        "security_policy",
+        "security_requirement"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-SEC-002_Password_MFA_Policy.pdf"
+      ],
+      "notes": "GlobalTrust Financial Services Password & Multi-Factor Authentication Policy GTFS Internal Use Only | Classification: Internal Document ID GTFS-SEC-002 Version "
+    },
+    {
+      "id": "SEC-132",
+      "question": "What related GTFS document is referenced?",
+      "expected_answer": "GTFS-SEC-002",
+      "expected_document": "GTFS-SEC-002_Password_MFA_Policy.pdf",
+      "expected_page": 1,
+      "expected_chunks": [
+        0
+      ],
+      "category": "security",
+      "difficulty": "hard",
+      "document_type": "security_policy",
+      "query_category": "cross_reference",
+      "tags": [
+        "security_policy",
+        "cross_reference"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-SEC-002_Password_MFA_Policy.pdf"
+      ],
+      "notes": "GlobalTrust Financial Services Password & Multi-Factor Authentication Policy GTFS Internal Use Only | Classification: Internal Document ID GTFS-SEC-002 Version "
+    },
+    {
+      "id": "SEC-133",
+      "question": "What related GTFS document is referenced?",
+      "expected_answer": "GTFS-SEC-001",
+      "expected_document": "GTFS-SEC-002_Password_MFA_Policy.pdf",
+      "expected_page": 2,
+      "expected_chunks": [
+        1
+      ],
+      "category": "security",
+      "difficulty": "hard",
+      "document_type": "security_policy",
+      "query_category": "cross_reference",
+      "tags": [
+        "security_policy",
+        "cross_reference"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-SEC-002_Password_MFA_Policy.pdf"
+      ],
+      "notes": "7. Privileged Accounts 8. Password Managers 9. Account Lockout Policy 10. Security Monitoring 11. Common Attack Scenarios 12. Frequently Asked Questions 13. App"
+    },
+    {
+      "id": "SEC-134",
+      "question": "What is a stated requirement in this document?",
+      "expected_answer": "also comply with the Remote Work Policy (GTFS-HR-002) and VPN Access Guide (GTFS",
+      "expected_document": "GTFS-SEC-002_Password_MFA_Policy.pdf",
+      "expected_page": 3,
+      "expected_chunks": [
+        2
+      ],
+      "category": "security",
+      "difficulty": "medium",
+      "document_type": "security_policy",
+      "query_category": "policy_rule",
+      "tags": [
+        "security_policy",
+        "policy_rule"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-SEC-002_Password_MFA_Policy.pdf"
+      ],
+      "notes": "password and multi-factor authentication standards to protect customer information, banking systems, financial transactions, and regulatory compliance. This doc"
+    },
+    {
+      "id": "SEC-135",
+      "question": "What related GTFS document is referenced?",
+      "expected_answer": "GTFS-HR-002",
+      "expected_document": "GTFS-SEC-002_Password_MFA_Policy.pdf",
+      "expected_page": 3,
+      "expected_chunks": [
+        2
+      ],
+      "category": "security",
+      "difficulty": "hard",
+      "document_type": "security_policy",
+      "query_category": "cross_reference",
+      "tags": [
+        "security_policy",
+        "cross_reference"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-SEC-002_Password_MFA_Policy.pdf"
+      ],
+      "notes": "password and multi-factor authentication standards to protect customer information, banking systems, financial transactions, and regulatory compliance. This doc"
+    },
+    {
+      "id": "SEC-136",
+      "question": "What related GTFS document is referenced?",
+      "expected_answer": "GTFS-SEC-003",
+      "expected_document": "GTFS-SEC-002_Password_MFA_Policy.pdf",
+      "expected_page": 3,
+      "expected_chunks": [
+        2
+      ],
+      "category": "security",
+      "difficulty": "hard",
+      "document_type": "security_policy",
+      "query_category": "cross_reference",
+      "tags": [
+        "security_policy",
+        "cross_reference"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-SEC-002_Password_MFA_Policy.pdf"
+      ],
+      "notes": "password and multi-factor authentication standards to protect customer information, banking systems, financial transactions, and regulatory compliance. This doc"
+    },
+    {
+      "id": "SEC-137",
+      "question": "What related GTFS document is referenced?",
+      "expected_answer": "GTFS-SEC-003",
+      "expected_document": "GTFS-SEC-003_VPN_Access_Guide.pdf",
+      "expected_page": 1,
+      "expected_chunks": [
+        0
+      ],
+      "category": "security",
+      "difficulty": "hard",
+      "document_type": "guide",
+      "query_category": "cross_reference",
+      "tags": [
+        "guide",
+        "cross_reference"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-SEC-003_VPN_Access_Guide.pdf"
+      ],
+      "notes": "GlobalTrust Financial Services VPN Access Guide GTFS Internal Use Only | Classification: Internal Document ID GTFS-SEC-003 Version 2.0 Classification Internal O"
+    },
+    {
+      "id": "SEC-138",
+      "question": "Which executive leader is named?",
+      "expected_answer": "David Chen",
+      "expected_document": "GTFS-SEC-003_VPN_Access_Guide.pdf",
+      "expected_page": 1,
+      "expected_chunks": [
+        0
+      ],
+      "category": "security",
+      "difficulty": "easy",
+      "document_type": "guide",
+      "query_category": "factual_lookup",
+      "tags": [
+        "guide",
+        "factual_lookup"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-SEC-003_VPN_Access_Guide.pdf"
+      ],
+      "notes": "GlobalTrust Financial Services VPN Access Guide GTFS Internal Use Only | Classification: Internal Document ID GTFS-SEC-003 Version 2.0 Classification Internal O"
+    },
+    {
+      "id": "SEC-139",
+      "question": "What remote access method is described?",
+      "expected_answer": "VPN",
+      "expected_document": "GTFS-SEC-003_VPN_Access_Guide.pdf",
+      "expected_page": 1,
+      "expected_chunks": [
+        0
+      ],
+      "category": "security",
+      "difficulty": "medium",
+      "document_type": "guide",
+      "query_category": "security_requirement",
+      "tags": [
+        "guide",
+        "security_requirement"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-SEC-003_VPN_Access_Guide.pdf"
+      ],
+      "notes": "GlobalTrust Financial Services VPN Access Guide GTFS Internal Use Only | Classification: Internal Document ID GTFS-SEC-003 Version 2.0 Classification Internal O"
+    },
+    {
+      "id": "SEC-140",
+      "question": "What is a stated requirement in this document?",
+      "expected_answer": "comply with the Information Security Policy (GTFS-SEC-001), Password & MFA Polic",
+      "expected_document": "GTFS-SEC-003_VPN_Access_Guide.pdf",
+      "expected_page": 2,
+      "expected_chunks": [
+        1
+      ],
+      "category": "security",
+      "difficulty": "medium",
+      "document_type": "guide",
+      "query_category": "policy_rule",
+      "tags": [
+        "guide",
+        "policy_rule"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-SEC-003_VPN_Access_Guide.pdf"
+      ],
+      "notes": "10. Network Resources Available 11. Troubleshooting 12. Security Best Practices 13. Frequently Asked Questions 14. Appendices GlobalTrust Financial Services VPN"
+    },
+    {
+      "id": "SEC-141",
+      "question": "What security control is mentioned?",
+      "expected_answer": "Password",
+      "expected_document": "GTFS-SEC-003_VPN_Access_Guide.pdf",
+      "expected_page": 2,
+      "expected_chunks": [
+        1
+      ],
+      "category": "security",
+      "difficulty": "medium",
+      "document_type": "guide",
+      "query_category": "security_requirement",
+      "tags": [
+        "guide",
+        "security_requirement"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-SEC-003_VPN_Access_Guide.pdf"
+      ],
+      "notes": "10. Network Resources Available 11. Troubleshooting 12. Security Best Practices 13. Frequently Asked Questions 14. Appendices GlobalTrust Financial Services VPN"
+    },
+    {
+      "id": "SEC-142",
+      "question": "What security control is mentioned?",
+      "expected_answer": "MFA",
+      "expected_document": "GTFS-SEC-003_VPN_Access_Guide.pdf",
+      "expected_page": 2,
+      "expected_chunks": [
+        1
+      ],
+      "category": "security",
+      "difficulty": "medium",
+      "document_type": "guide",
+      "query_category": "security_requirement",
+      "tags": [
+        "guide",
+        "security_requirement"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-SEC-003_VPN_Access_Guide.pdf"
+      ],
+      "notes": "10. Network Resources Available 11. Troubleshooting 12. Security Best Practices 13. Frequently Asked Questions 14. Appendices GlobalTrust Financial Services VPN"
+    },
+    {
+      "id": "SEC-143",
+      "question": "What related GTFS document is referenced?",
+      "expected_answer": "GTFS-SEC-001",
+      "expected_document": "GTFS-SEC-003_VPN_Access_Guide.pdf",
+      "expected_page": 2,
+      "expected_chunks": [
+        1
+      ],
+      "category": "security",
+      "difficulty": "hard",
+      "document_type": "guide",
+      "query_category": "cross_reference",
+      "tags": [
+        "guide",
+        "cross_reference"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-SEC-003_VPN_Access_Guide.pdf"
+      ],
+      "notes": "10. Network Resources Available 11. Troubleshooting 12. Security Best Practices 13. Frequently Asked Questions 14. Appendices GlobalTrust Financial Services VPN"
+    },
+    {
+      "id": "SEC-144",
+      "question": "What related GTFS document is referenced?",
+      "expected_answer": "GTFS-SEC-002",
+      "expected_document": "GTFS-SEC-003_VPN_Access_Guide.pdf",
+      "expected_page": 2,
+      "expected_chunks": [
+        1
+      ],
+      "category": "security",
+      "difficulty": "hard",
+      "document_type": "guide",
+      "query_category": "cross_reference",
+      "tags": [
+        "guide",
+        "cross_reference"
+      ],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": [
+        "GTFS-SEC-003_VPN_Access_Guide.pdf"
+      ],
+      "notes": "10. Network Resources Available 11. Troubleshooting 12. Security Best Practices 13. Frequently Asked Questions 14. Appendices GlobalTrust Financial Services VPN"
+    }
+  ]
+}

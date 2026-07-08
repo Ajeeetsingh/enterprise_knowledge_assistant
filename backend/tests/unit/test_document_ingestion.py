@@ -42,6 +42,7 @@ EXPECTED_STAGE_ORDER = [
     "chunking",
     "embedding",
     "indexing",
+    "index_validation",
     "metadata",
 ]
 

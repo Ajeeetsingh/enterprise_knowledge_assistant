@@ -28,8 +28,12 @@ from app.db.models import (  # noqa: F401
     user_roles,
 )
 from app.db.repositories.message_repository import MessageRepository
+from app.rag.answer_generator import UNAVAILABLE_MESSAGE
 from app.rag.types import Citation
-from app.services.conversation_chat_service import ConversationChatService
+from app.services.conversation_chat_service import (
+    ConversationChatService,
+    resolve_assistant_content,
+)
 from app.services.conversation_service import build_conversation_service
 
 
@@ -105,15 +109,47 @@ def _rag_response(
     *,
     answer: str = "16 weeks of paid leave.",
     confidence: float = 0.91,
+    message: str = "Answer generated from hr_policy.txt.",
+    citations: list[Citation] | None = None,
 ) -> SimpleNamespace:
     return SimpleNamespace(
         answer=answer,
         confidence_score=confidence,
-        citations=[
+        citations=citations
+        if citations is not None
+        else [
             Citation(source="hr_policy.txt", excerpt="Maternity leave: 16 weeks.", confidence=0.9)
         ],
-        message="Answer generated from hr_policy.txt.",
+        message=message,
     )
+
+
+class TestResolveAssistantContent:
+    def test_uses_answer_when_present(self) -> None:
+        response = _rag_response(answer="Direct answer.")
+
+        assert resolve_assistant_content(response) == "Direct answer."
+
+    def test_uses_message_when_answer_blank(self) -> None:
+        response = _rag_response(
+            answer="",
+            message="Access denied: role 'employee' cannot access 'finance' documents.",
+        )
+
+        assert (
+            resolve_assistant_content(response)
+            == "Access denied: role 'employee' cannot access 'finance' documents."
+        )
+
+    def test_uses_message_when_answer_whitespace_only(self) -> None:
+        response = _rag_response(answer="   ", message="No relevant documents found for this query.")
+
+        assert resolve_assistant_content(response) == "No relevant documents found for this query."
+
+    def test_falls_back_when_answer_and_message_blank(self) -> None:
+        response = _rag_response(answer="", message="")
+
+        assert resolve_assistant_content(response) == UNAVAILABLE_MESSAGE
 
 
 class TestConversationChatServiceAsk:
@@ -148,13 +184,14 @@ class TestConversationChatServiceAsk:
                 "source": "hr_policy.txt",
                 "excerpt": "Maternity leave: 16 weeks.",
                 "confidence": 0.9,
+                "page": None,
             }
         ]
         assert messages[1].confidence_score == 0.91
         assert result.answer == "16 weeks of paid leave."
         assert result.conversation_id == conversation.id
 
-    def test_passes_context_query_to_rag(
+    def test_passes_current_question_and_history_to_rag(
         self,
         chat_service: ConversationChatService,
         owner: User,
@@ -185,12 +222,12 @@ class TestConversationChatServiceAsk:
             frozenset(),
         )
 
-        context_query = rag.answer_question.call_args[0][0]
-        assert "What is our maternity leave policy?" in context_query
-        assert "16 weeks of paid leave." in context_query
-        assert context_query.endswith("Current question: What about adoptive parents?")
-        history_section = context_query.split("\n\nCurrent question:")[0]
-        assert "What about adoptive parents?" not in history_section
+        assert rag.answer_question.call_args[0][0] == "What about adoptive parents?"
+        conversation_history = rag.answer_question.call_args[1]["conversation_history"]
+        assert conversation_history is not None
+        assert "What is our maternity leave policy?" in conversation_history
+        assert "16 weeks of paid leave." in conversation_history
+        assert "What about adoptive parents?" not in conversation_history
 
     def test_rag_failure_leaves_user_message_without_assistant(
         self,
@@ -272,3 +309,94 @@ class TestConversationChatServiceAsk:
         )
 
         assert rag.answer_question.call_args[0][2] == authorized
+
+    def test_persists_rbac_denial_message_when_answer_blank(
+        self,
+        chat_service: ConversationChatService,
+        db_session: Session,
+        owner: User,
+        conversation,
+    ) -> None:
+        denial_message = (
+            "Access denied: role 'employee' cannot access 'finance' documents."
+        )
+        rag = MagicMock()
+        rag.answer_question.return_value = _rag_response(
+            answer="",
+            message=denial_message,
+            confidence=0.0,
+            citations=[],
+        )
+
+        result = chat_service.ask_question(
+            owner,
+            conversation.id,
+            "What is the expense reimbursement process?",
+            "Employee",
+            rag,
+            frozenset({"finance_report.txt"}),
+        )
+
+        messages = MessageRepository(db_session).list_for_conversation(conversation.id)
+        assert messages[1].role == MessageRole.ASSISTANT
+        assert messages[1].content == denial_message
+        assert messages[1].citations == []
+        assert messages[1].confidence_score == 0.0
+        assert result.answer == denial_message
+
+    def test_persists_fallback_when_rag_returns_blank_content(
+        self,
+        chat_service: ConversationChatService,
+        db_session: Session,
+        owner: User,
+        conversation,
+    ) -> None:
+        rag = MagicMock()
+        rag.answer_question.return_value = _rag_response(
+            answer="   ",
+            message="",
+            confidence=0.0,
+            citations=[],
+        )
+
+        result = chat_service.ask_question(
+            owner,
+            conversation.id,
+            "What is the quantum computing roadmap?",
+            "Employee",
+            rag,
+            None,
+        )
+
+        messages = MessageRepository(db_session).list_for_conversation(conversation.id)
+        assert messages[1].content == UNAVAILABLE_MESSAGE
+        assert result.answer == UNAVAILABLE_MESSAGE
+
+    def test_persists_no_retrieval_answer_from_rag(
+        self,
+        chat_service: ConversationChatService,
+        db_session: Session,
+        owner: User,
+        conversation,
+    ) -> None:
+        no_results_answer = "No relevant documents found for this query."
+        rag = MagicMock()
+        rag.answer_question.return_value = _rag_response(
+            answer=no_results_answer,
+            message="Search completed but no matching chunks were found.",
+            confidence=0.0,
+            citations=[],
+        )
+
+        result = chat_service.ask_question(
+            owner,
+            conversation.id,
+            "What is the quantum computing roadmap?",
+            "Employee",
+            rag,
+            None,
+        )
+
+        messages = MessageRepository(db_session).list_for_conversation(conversation.id)
+        assert messages[1].content == no_results_answer
+        assert result.answer == no_results_answer

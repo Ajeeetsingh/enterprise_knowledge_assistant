@@ -11,7 +11,11 @@ from app.api.router import api_v1_router, health_router
 from app.config import get_settings
 from app.core.exception_handlers import register_exception_handlers
 from app.core.logging import get_logger, log_with_fields, setup_logging
-from app.db.session import check_database_connection, engine
+from app.db.session import SessionLocal, check_database_connection, engine
+from app.embeddings.manager import get_embedding_manager
+from app.services.document_service import get_document_service
+from app.services.index_bootstrap_service import bootstrap_search_index
+from app.services.rag_service import get_rag_service
 
 logger = get_logger(__name__)
 
@@ -48,6 +52,37 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         "Database connectivity check",
         database="connected" if db_ok else "unavailable",
     )
+
+    embedding_manager = get_embedding_manager()
+    try:
+        embedding_manager.preload()
+        log_with_fields(
+            logger,
+            logging.INFO,
+            "Embedding model preloaded",
+            model=embedding_manager.model_name,
+            load_duration_ms=embedding_manager.load_duration_ms,
+        )
+    except Exception as exc:
+        log_with_fields(
+            logger,
+            logging.ERROR,
+            "Embedding model preload failed",
+            reason=type(exc).__name__,
+        )
+
+    if db_ok:
+        try:
+            with SessionLocal() as session:
+                bootstrap_search_index(session, get_document_service())
+            get_rag_service().initialize()
+        except Exception as exc:
+            log_with_fields(
+                logger,
+                logging.ERROR,
+                "Knowledge index bootstrap failed",
+                reason=type(exc).__name__,
+            )
 
     yield
 

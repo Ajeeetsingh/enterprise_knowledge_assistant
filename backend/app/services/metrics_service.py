@@ -33,6 +33,12 @@ class MetricsService:
             version=settings.app_version,
         )
 
+    def get_runtime_info(self) -> tuple[int, str]:
+        """Return process uptime and application version without infrastructure probes."""
+        settings = get_settings()
+        uptime = max(0, int(time.time() - _APP_STARTED_AT))
+        return uptime, settings.app_version
+
 
 def build_metrics_service() -> MetricsService:
     """Return a stateless metrics service instance."""

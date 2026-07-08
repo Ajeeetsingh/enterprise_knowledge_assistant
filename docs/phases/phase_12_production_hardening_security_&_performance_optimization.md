@@ -4,7 +4,7 @@
 
 **Phase:** 12
 
-**Status:** 🔄 Planned
+**Status:** 🔄 In Progress (RAG pipeline hardening complete; security/performance items ongoing)
 
 **Estimated Duration:** 10–14 Days
 
@@ -26,7 +26,21 @@
 
 ---
 
-# 1. Phase Overview
+## Implemented RAG pipeline sub-phases (documented separately)
+
+The following retrieval pipeline capabilities are **implemented** and documented in feature guides (not in this phase file):
+
+| Sub-phase | Documentation |
+|-----------|---------------|
+| 12.3 Normalization & structure | `docs/INGESTION_PIPELINE.md` |
+| 12.4 Semantic chunking | `docs/INGESTION_PIPELINE.md` |
+| 12.5 Metadata retrieval | `docs/RETRIEVAL_PIPELINE.md` |
+| 12.6 Retrieval evaluation | `docs/EVALUATION_FRAMEWORK.md` |
+| 12.7 Hybrid retrieval | `docs/RETRIEVAL_PIPELINE.md` |
+| 12.8 Cross-encoder reranking | `docs/RETRIEVAL_PIPELINE.md` |
+| 12.9 Query intelligence | `docs/RETRIEVAL_PIPELINE.md` |
+
+---
 
 At this point, every major product feature has been implemented.
 

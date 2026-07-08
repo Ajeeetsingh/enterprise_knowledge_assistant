@@ -1,0 +1,180 @@
+{
+  "version": "1.0.0",
+  "description": "Golden evaluation dataset for the Enterprise Knowledge Assistant GTFS corpus.",
+  "metadata": {
+    "corpus": "GTFS enterprise documents",
+    "primary_document": "GTFS-EXEC-001_Company_Overview.pdf",
+    "notes": "Chunk indices are document-relative (chunk_index field from ingestion). Ground truth verified against GTFS-EXEC-001_Company_Overview.pdf."
+  },
+  "cases": [
+    {
+      "id": "GTFS-001",
+      "question": "What is the company headquarters?",
+      "expected_answer": "Singapore",
+      "expected_document": "GTFS-EXEC-001_Company_Overview.pdf",
+      "expected_page": 9,
+      "expected_chunks": [21],
+      "category": "general",
+      "difficulty": "easy",
+      "document_type": "overview",
+      "tags": ["company", "hq", "location"],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": ["GTFS-EXEC-001_Company_Overview.pdf"],
+      "expected_citations": [
+        {
+          "source": "GTFS-EXEC-001_Company_Overview.pdf",
+          "page": 8
+        }
+      ],
+      "notes": "HQ table appears on PDF page 9; chunk metadata reports page 8."
+    },
+    {
+      "id": "GTFS-002",
+      "question": "Who is the Chief Executive Officer of GlobalTrust?",
+      "expected_answer": "Sarah Mitchell",
+      "expected_document": "GTFS-EXEC-001_Company_Overview.pdf",
+      "expected_page": 6,
+      "expected_chunks": [9, 10],
+      "category": "general",
+      "difficulty": "easy",
+      "document_type": "overview",
+      "tags": ["leadership", "ceo", "executive"],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": ["GTFS-EXEC-001_Company_Overview.pdf"],
+      "expected_citations": [
+        {
+          "source": "GTFS-EXEC-001_Company_Overview.pdf",
+          "page": 5
+        }
+      ]
+    },
+    {
+      "id": "GTFS-003",
+      "question": "When was GlobalTrust Financial Services founded?",
+      "expected_answer": "2012",
+      "expected_document": "GTFS-EXEC-001_Company_Overview.pdf",
+      "expected_page": 4,
+      "expected_chunks": [2],
+      "category": "general",
+      "difficulty": "easy",
+      "document_type": "overview",
+      "tags": ["history", "founded", "company"],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": ["GTFS-EXEC-001_Company_Overview.pdf"],
+      "expected_citations": [
+        {
+          "source": "GTFS-EXEC-001_Company_Overview.pdf",
+          "page": 4
+        }
+      ]
+    },
+    {
+      "id": "GTFS-004",
+      "question": "What is the full legal name of the company?",
+      "expected_answer": "GlobalTrust Financial Services",
+      "expected_document": "GTFS-EXEC-001_Company_Overview.pdf",
+      "expected_page": 1,
+      "expected_chunks": [0, 2],
+      "category": "general",
+      "difficulty": "easy",
+      "document_type": "overview",
+      "tags": ["company", "name", "identity"],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": ["GTFS-EXEC-001_Company_Overview.pdf"],
+      "expected_citations": [
+        {
+          "source": "GTFS-EXEC-001_Company_Overview.pdf",
+          "page": 1
+        }
+      ]
+    },
+    {
+      "id": "GTFS-005",
+      "question": "What regulatory body regulates GlobalTrust in Singapore?",
+      "expected_answer": "MAS",
+      "expected_document": "GTFS-EXEC-001_Company_Overview.pdf",
+      "expected_page": 9,
+      "expected_chunks": [21],
+      "category": "general",
+      "difficulty": "medium",
+      "document_type": "overview",
+      "tags": ["regulation", "singapore", "mas"],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": ["GTFS-EXEC-001_Company_Overview.pdf"],
+      "expected_citations": [
+        {
+          "source": "GTFS-EXEC-001_Company_Overview.pdf",
+          "page": 8
+        }
+      ]
+    },
+    {
+      "id": "GTFS-006",
+      "question": "How many strategic markets does GlobalTrust operate in?",
+      "expected_answer": "four",
+      "expected_document": "GTFS-EXEC-001_Company_Overview.pdf",
+      "expected_page": 4,
+      "expected_chunks": [2, 3],
+      "category": "general",
+      "difficulty": "medium",
+      "document_type": "overview",
+      "tags": ["geography", "operations", "markets"],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": ["GTFS-EXEC-001_Company_Overview.pdf"],
+      "expected_citations": [
+        {
+          "source": "GTFS-EXEC-001_Company_Overview.pdf",
+          "page": 4
+        }
+      ]
+    },
+    {
+      "id": "GTFS-007",
+      "question": "What is the document classification level?",
+      "expected_answer": "Internal",
+      "expected_document": "GTFS-EXEC-001_Company_Overview.pdf",
+      "expected_page": 1,
+      "expected_chunks": [0, 45],
+      "category": "general",
+      "difficulty": "medium",
+      "document_type": "overview",
+      "tags": ["classification", "metadata"],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": ["GTFS-EXEC-001_Company_Overview.pdf"],
+      "expected_citations": [
+        {
+          "source": "GTFS-EXEC-001_Company_Overview.pdf",
+          "page": 1
+        }
+      ]
+    },
+    {
+      "id": "GTFS-008",
+      "question": "What is the primary function of the Singapore office?",
+      "expected_answer": "Group headquarters",
+      "expected_document": "GTFS-EXEC-001_Company_Overview.pdf",
+      "expected_page": 9,
+      "expected_chunks": [21],
+      "category": "general",
+      "difficulty": "medium",
+      "document_type": "overview",
+      "tags": ["singapore", "hq", "function"],
+      "answer_match_mode": "contains",
+      "role": "admin",
+      "authorized_sources": ["GTFS-EXEC-001_Company_Overview.pdf"],
+      "expected_citations": [
+        {
+          "source": "GTFS-EXEC-001_Company_Overview.pdf",
+          "page": 8
+        }
+      ]
+    }
+  ]
+}

@@ -36,7 +36,7 @@ from app.auth.document_authorization import DocumentAuthorizationService
 from app.core.logging import get_logger
 from app.db.models.user import User
 from app.db.repositories.document_repository import DocumentRepository
-from app.rag.retriever import RetrievalResult
+from app.rag.types import RetrievalResult
 
 logger = get_logger(__name__)
 

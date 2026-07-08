@@ -18,10 +18,12 @@ def _patch_database_lifecycle_for_tests() -> None:
     """Bypass real PostgreSQL connectivity checks during test app startup."""
     import app.db.session as db_session
     import app.main as main
+    import app.services.index_bootstrap_service as bootstrap_module
 
     db_session.check_database_connection = lambda: True  # type: ignore[method-assign]
     main.check_database_connection = lambda: True  # type: ignore[method-assign]
     db_session.engine.dispose = lambda: None  # type: ignore[method-assign]
+    bootstrap_module.bootstrap_search_index = lambda *args, **kwargs: 0  # type: ignore[method-assign]
 
 
 def pytest_configure(config: pytest.Config) -> None:

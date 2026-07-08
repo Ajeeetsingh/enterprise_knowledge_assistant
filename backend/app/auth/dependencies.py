@@ -369,6 +369,12 @@ def require_document_access(
             from fastapi import HTTPException as _HTTPException
             raise _HTTPException(status_code=404, detail="Document not found.")
 
+        from app.documents.status import DocumentStatus
+
+        if document.status == DocumentStatus.DELETED.value and action != "delete":
+            from fastapi import HTTPException as _HTTPException
+            raise _HTTPException(status_code=404, detail="Document not found.")
+
         if action == "read":
             decision = DocumentAuthorizationService.can_read_document(
                 current_user, document

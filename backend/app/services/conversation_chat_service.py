@@ -5,8 +5,9 @@ RAG service without modifying retrieval, ranking, or authorization logic.
 
 Flow:
     1. Persist the user message.
-    2. Build a context-aware query via ``ContextBuilder``.
-    3. Call ``RagService.answer_question`` with the enriched query string.
+    2. Build conversation context via ``ContextBuilder``.
+    3. Call ``RagService.answer_question`` with ``current_question`` for retrieval
+       and formatted history for LLM prompt injection only.
     4. Persist the assistant message on success.
 
 If RAG fails after step 1, the user message remains stored and the error
@@ -23,7 +24,8 @@ from sqlalchemy.orm import Session
 
 from app.db.models.message import Message
 from app.db.models.user import User
-from app.rag.types import Citation
+from app.rag.answer_generator import UNAVAILABLE_MESSAGE
+from app.rag.types import Citation, QueryResponse
 from app.services.context_builder import (
     DEFAULT_CONTEXT_WINDOW,
     MAX_CONTEXT_CHARACTERS,
@@ -112,23 +114,25 @@ class ConversationChatService:
         )
 
         query_response = rag_service.answer_question(
-            context.context_query,
+            context.current_question,
             role_name,
             authorized_sources,
+            conversation_history=ContextBuilder.format_history(context.history_messages),
         )
 
+        assistant_content = resolve_assistant_content(query_response)
         citations = _serialize_citations(query_response.citations)
         self._conversation_service.add_assistant_message(
             user,
             conversation_id,
-            content=query_response.answer,
+            content=assistant_content,
             citations=citations,
             confidence_score=query_response.confidence_score,
         )
 
         return ConversationChatResult(
             conversation_id=conversation_id,
-            answer=query_response.answer,
+            answer=assistant_content,
             citations=citations,
             confidence_score=query_response.confidence_score,
             message=query_response.message,
@@ -162,6 +166,23 @@ class ConversationChatService:
         )
 
 
+def resolve_assistant_content(query_response: QueryResponse) -> str:
+    """Return non-blank assistant content suitable for conversation persistence.
+
+    The RAG engine may leave ``answer`` empty while providing a user-facing
+    explanation in ``message`` (for example category-level RBAC denials).
+    """
+    answer = query_response.answer.strip()
+    if answer:
+        return answer
+
+    message = query_response.message.strip()
+    if message:
+        return message
+
+    return UNAVAILABLE_MESSAGE
+
+
 def _history_excluding_stored_turn(
     recent_messages: list[Message],
     stored_user_message_id: uuid.UUID,
@@ -177,6 +198,7 @@ def _serialize_citations(citations: list[Citation]) -> list[dict[str, Any]]:
             "source": citation.source,
             "excerpt": citation.excerpt,
             "confidence": citation.confidence,
+            "page": getattr(citation, "page", None),
         }
         for citation in citations
     ]

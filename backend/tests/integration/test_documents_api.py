@@ -509,6 +509,54 @@ def test_delete_document_updates_metadata_status(
     assert persisted.status == "deleted"
 
 
+def test_list_documents_excludes_deleted_documents(
+    real_document_client: TestClient,
+    admin_user: User,
+) -> None:
+    token = access_token_for(admin_user)
+    upload_response = _upload_file(real_document_client, token, filename="keep.txt")
+    document_id = upload_response.json()["document_id"]
+
+    delete_response = real_document_client.delete(
+        f"{LIST_URL}/{document_id}",
+        headers=bearer_headers(token),
+    )
+    assert delete_response.status_code == 200
+
+    list_response = real_document_client.get(
+        LIST_URL,
+        headers=bearer_headers(token),
+    )
+
+    assert list_response.status_code == 200
+    data = list_response.json()
+    document_ids = {item["document_id"] for item in data["items"]}
+    assert document_id not in document_ids
+
+
+def test_get_deleted_document_returns_404(
+    real_document_client: TestClient,
+    admin_user: User,
+) -> None:
+    token = access_token_for(admin_user)
+    upload_response = _upload_file(real_document_client, token)
+    document_id = upload_response.json()["document_id"]
+
+    delete_response = real_document_client.delete(
+        f"{LIST_URL}/{document_id}",
+        headers=bearer_headers(token),
+    )
+    assert delete_response.status_code == 200
+
+    get_response = real_document_client.get(
+        f"{LIST_URL}/{document_id}",
+        headers=bearer_headers(token),
+    )
+
+    assert get_response.status_code == 404
+    assert get_response.json()["detail"] == "Document not found."
+
+
 def test_delete_document_is_idempotent(
     real_document_client: TestClient,
     admin_user: User,

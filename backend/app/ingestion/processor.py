@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
-import re
 from abc import ABC, abstractmethod
 
 from app.documents.types import IngestionContext
+from app.ingestion.normalization import CanonicalNormalizer
+from app.ingestion.normalization.config import NormalizationSettings
 from app.ingestion.parsers.factory import ParserFactory, build_default_factory
 
 
@@ -40,22 +41,41 @@ class DefaultDocumentProcessor(DocumentProcessor):
     normalises the returned text so downstream stages receive consistent input.
     """
 
-    def __init__(self, parser_factory: ParserFactory | None = None) -> None:
+    def __init__(
+        self,
+        parser_factory: ParserFactory | None = None,
+        normalizer: CanonicalNormalizer | None = None,
+    ) -> None:
         self._factory = parser_factory or build_default_factory()
+        self._normalizer = normalizer or CanonicalNormalizer(
+            settings=NormalizationSettings.from_settings()
+        )
 
     def process(self, context: IngestionContext) -> str:
         parser = self._factory.get(context.filename)
         raw_text = parser.parse(context.content, context.filename)
         return self._normalize(raw_text)
 
+    def _normalize(self, text: str) -> str:
+        """Run canonical normalization before chunking."""
+        return self._normalizer.normalize(text)
+
     @staticmethod
-    def _normalize(text: str) -> str:
-        """Collapse excess whitespace while preserving paragraph breaks."""
-        text = text.strip()
-        # Normalise line endings
-        text = text.replace("\r\n", "\n").replace("\r", "\n")
-        # Collapse runs of spaces/tabs on each line
-        text = "\n".join(" ".join(line.split()) for line in text.split("\n"))
-        # Collapse runs of more than two consecutive blank lines
-        text = re.sub(r"\n{3,}", "\n\n", text)
-        return text
+    def normalize_text(
+        text: str,
+        settings: NormalizationSettings | None = None,
+    ) -> str:
+        """Normalize text without parser extraction (scripts and evaluation helpers)."""
+        normalizer = CanonicalNormalizer(settings=settings or NormalizationSettings.from_settings())
+        return normalizer.normalize(text)
+
+    def extract_structure(
+        self,
+        text: str,
+        source: str,
+    ):
+        """Extract hierarchical document structure from normalized text."""
+        from app.ingestion.structure.extractor import StructureExtractor
+
+        extractor = StructureExtractor()
+        return extractor.extract(text, source)

@@ -88,10 +88,13 @@ class TestConversationAwareChatFlow:
         assert "16 weeks" in first.json()["answer"]
         assert "12 weeks" in second.json()["answer"]
 
-        context_query = mock_rag_service.answer_question.call_args_list[1][0][0]
-        assert "What is our maternity leave policy?" in context_query
-        assert "16 weeks of paid maternity leave." in context_query
-        assert "What about adoptive parents?" in context_query
+        second_call = mock_rag_service.answer_question.call_args_list[1]
+        assert second_call[0][0] == "What about adoptive parents?"
+        conversation_history = second_call[1]["conversation_history"]
+        assert conversation_history is not None
+        assert "What is our maternity leave policy?" in conversation_history
+        assert "16 weeks of paid maternity leave." in conversation_history
+        assert "What about adoptive parents?" not in conversation_history
         assert "context_query" not in second.json()
 
         messages = MessageRepository(db_session).list_for_conversation(

@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING
 
 from app.config import Settings, get_settings
 from app.core.exceptions import (
+    EmbeddingError,
     RagInitializationError,
     RagRetrievalError,
     RagServiceError,
@@ -16,17 +17,24 @@ from app.core.exceptions import (
 from app.core.logging import get_logger, log_with_fields
 
 if TYPE_CHECKING:
+    from app.ingestion.vector_store.faiss_store import FaissVectorStore
     from app.rag.engine import EnterpriseRAG
     from app.rag.types import QueryResponse
 
 logger = get_logger(__name__)
 
 
-def _create_engine(data_dir: str) -> tuple["EnterpriseRAG", int]:
-    """Construct and initialize the RAG engine (lazy import of heavy deps)."""
+def _create_engine(vector_store: "FaissVectorStore", settings: Settings) -> tuple["EnterpriseRAG", int]:
+    """Construct and initialize the RAG engine against the shared vector store."""
+    from app.llm.factory import create_llm_provider
     from app.rag.engine import EnterpriseRAG
 
-    engine = EnterpriseRAG(data_dir=data_dir)
+    llm_provider = create_llm_provider(settings)
+    engine = EnterpriseRAG(
+        vector_store=vector_store,
+        llm_provider=llm_provider,
+        llm_fallback_enabled=settings.llm_fallback_enabled,
+    )
     chunk_count = engine.initialize()
     return engine, chunk_count
 
@@ -47,7 +55,7 @@ class RagService:
         return self._initialized
 
     def initialize(self) -> int:
-        """Load documents and build the RAG index.
+        """Attach to the shared vector store used by document ingestion.
 
         Idempotent — subsequent calls return without re-initializing.
         Returns the number of indexed document chunks.
@@ -59,28 +67,19 @@ class RagService:
             if self._engine is not None and self._initialized:
                 return self._chunk_count
 
-            data_dir = self._settings.documents_path
+            from app.services.document_service import get_document_service
+
+            vector_store = get_document_service().vector_store
             log_with_fields(
                 logger,
                 logging.INFO,
                 "RAG initialization started",
-                data_dir=str(data_dir),
+                vector_store_size=vector_store.size,
                 indexes_path=str(self._settings.indexes_path),
             )
 
             try:
-                engine, chunk_count = _create_engine(str(data_dir))
-            except FileNotFoundError as exc:
-                log_with_fields(
-                    logger,
-                    logging.ERROR,
-                    "RAG initialization failed",
-                    reason="data_directory_missing",
-                    data_dir=str(data_dir),
-                )
-                raise RagInitializationError(
-                    "Knowledge base data directory is not available."
-                ) from exc
+                engine, chunk_count = _create_engine(vector_store, self._settings)
             except ValueError as exc:
                 message = str(exc).lower()
                 if "no document chunks" in message or "cannot build index" in message:
@@ -89,7 +88,6 @@ class RagService:
                         logging.ERROR,
                         "RAG initialization failed",
                         reason="empty_knowledge_base",
-                        data_dir=str(data_dir),
                     )
                     raise RagInitializationError(
                         "Knowledge base contains no indexable documents."
@@ -99,6 +97,16 @@ class RagService:
                     logging.ERROR,
                     "RAG initialization failed",
                     reason="invalid_configuration",
+                )
+                raise RagInitializationError(
+                    "Failed to initialize the knowledge retrieval engine."
+                ) from exc
+            except EmbeddingError as exc:
+                log_with_fields(
+                    logger,
+                    logging.ERROR,
+                    "RAG initialization failed",
+                    reason="embedding_provider_unavailable",
                 )
                 raise RagInitializationError(
                     "Failed to initialize the knowledge retrieval engine."
@@ -119,6 +127,7 @@ class RagService:
                 logging.INFO,
                 "RAG initialization succeeded",
                 chunk_count=chunk_count,
+                vector_store_size=vector_store.size,
             )
             self._engine = engine
             self._initialized = True
@@ -137,22 +146,10 @@ class RagService:
         question: str,
         role: str,
         authorized_sources: frozenset[str] | None = None,
+        *,
+        conversation_history: str | None = None,
     ) -> "QueryResponse":
-        """Run a natural-language query through the RAG engine.
-
-        Returns the native ``QueryResponse`` from the RAG engine.
-        ``role`` is required by the engine for category-level RBAC.
-
-        Args:
-            question: The user's natural-language question.
-            role: Primary role name used for category-based RBAC.
-            authorized_sources: Optional set of source filenames the user
-                may access (document-level authorization, Phase 5.5).
-                ``None`` means no additional source restriction is applied.
-
-        Returns:
-            ``QueryResponse`` containing the answer, citations, and metadata.
-        """
+        """Run a natural-language query through the RAG engine."""
         normalized_question = question.strip()
         if not normalized_question:
             raise ValueError("Question must not be empty.")
@@ -164,7 +161,12 @@ class RagService:
         engine = self._ensure_initialized()
 
         try:
-            return engine.query(normalized_question, normalized_role, authorized_sources)
+            return engine.query(
+                normalized_question,
+                normalized_role,
+                authorized_sources,
+                conversation_history=conversation_history,
+            )
         except RuntimeError as exc:
             message = str(exc).lower()
             if "index not built" in message or "not initialized" in message:

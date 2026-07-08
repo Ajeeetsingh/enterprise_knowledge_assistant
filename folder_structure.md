@@ -19,11 +19,12 @@ enterprise-knowledge-assistant/
 ├── .gitignore
 │
 ├── docs/
-│   ├── architecture.md                # System design and data flows
-│   ├── api.md                         # OpenAPI notes / conventions
-│   ├── rbac-matrix.md                 # Role and permission matrix
-│   └── adr/                           # Architecture decision records
-│       └── 001-monolith-mvp.md
+│   ├── 01_product_vision.md
+│   ├── 02_system_architecture.md
+│   ├── INGESTION_PIPELINE.md          # Ingestion, chunking, embedding, indexing
+│   ├── RETRIEVAL_PIPELINE.md          # Query, hybrid, metadata, reranking, LLM
+│   ├── EVALUATION_FRAMEWORK.md        # Benchmarks, metrics, golden datasets
+│   └── MANUAL_TESTING_GUIDE.md
 │
 ├── backend/
 │   ├── pyproject.toml                 # or requirements.txt
@@ -69,7 +70,12 @@ enterprise-knowledge-assistant/
 │   │   │   ├── answer_generator.py
 │   │   │   ├── rbac.py                # Category-level RBAC
 │   │   │   ├── types.py               # Citation, QueryResponse, RetrievalResult
-│   │   │   └── index_manager.py       # Build/rebuild/load FAISS index
+│   │   │   ├── engine.py              # RAG orchestrator (production path)
+│   │   │   ├── hybrid/                # Dense + BM25 + RRF
+│   │   │   ├── metadata_retrieval/    # Metadata-aware rescoring
+│   │   │   ├── reranking/             # Cross-encoder reranker
+│   │   │   ├── query_processing/      # Query intelligence (Phase 12.9)
+│   │   │   ├── retriever.py           # Legacy fixture retriever (demo/CLI path)
 │   │   │
 │   │   ├── ingestion/                 # Document processing pipeline
 │   │   │   ├── __init__.py
@@ -86,7 +92,8 @@ enterprise-knowledge-assistant/
 │   │   │   ├── roles.py               # Role enum + helpers
 │   │   │   └── security.py            # FastAPI auth dependencies
 │   │   │
-│   │   ├── rbac/                      # Authorization (beyond JWT role)
+│   │   ├── auth/                      # JWT authentication & API permissions
+│   │   ├── rag/rbac.py                # Category-level RAG access rules
 │   │   │   ├── __init__.py
 │   │   │   ├── permissions.py         # Document + category rules
 │   │   │   ├── policy.py              # can_access(user, resource)
@@ -206,9 +213,17 @@ enterprise-knowledge-assistant/
 │           └── tokenStorage.ts
 │
 ├── scripts/
-│   ├── seed_users.py                  # Dev admin/hr/finance/employee
-│   ├── seed_documents.py              # Load fixtures into DB + storage
-│   └── reindex_all.py                 # CLI reindex
+│   ├── seed_database.py               # Unified DB seeder (--roles, --admin, --demo, --all)
+│   ├── setup_manual_testing.py        # One-command manual test setup
+│   └── seeding/                       # Role, user, and demo data modules
+│
+├── backend/scripts/
+│   ├── benchmark.py                   # Unified benchmark runner
+│   ├── compare_benchmarks.py          # Compare benchmark JSON reports
+│   ├── measure_performance.py         # Unified performance profiler
+│   ├── forensic_rag_trace.py          # RAG retrieval trace
+│   ├── rag_quality_audit.py           # Corpus quality audit
+│   └── build_golden_dataset.py        # Regenerate golden dataset
 │
 └── results/                           # Test output (gitignored)
 ```
@@ -243,7 +258,8 @@ Python monolith. All server-side logic lives here.
 | `app/rag/` | RAG engine: routing, retrieval, answers, index |
 | `app/ingestion/` | Upload → parse → chunk → persist pipeline |
 | `app/auth/` | JWT, passwords, role helpers |
-| `app/rbac/` | Document and category authorization |
+| `app/auth/` | JWT authentication and API permission dependencies |
+| `app/rag/rbac.py` | Category-level RAG routing access rules |
 | `app/audit/` | Structured audit event logging |
 | `app/db/` | SQLAlchemy models, sessions, repositories |
 | `app/storage/` | File storage abstraction (local disk in MVP) |
@@ -296,7 +312,8 @@ Thin controllers: validate input → call service → return schema. No business
 | Module | Responsibility |
 |--------|----------------|
 | `engine.py` | Orchestrator (`EnterpriseRAG` from prototype) |
-| `index_manager.py` | Build, persist, reload FAISS index |
+| `engine.py` | Production RAG orchestrator (hybrid + metadata + reranking + query intelligence) |
+| `retriever.py` | Legacy fixture retriever for CLI/demo path |
 | `retriever.py` | Embeddings and vector search |
 | `router.py` | Keyword-based query routing |
 | `answer_generator.py` | Natural-language answer synthesis |
@@ -326,13 +343,13 @@ Upload → validate → store file → parse → categorize → chunk → save t
 | `roles.py` | `admin`, `hr`, `finance`, `employee` |
 | `security.py` | `get_current_user`, `require_role` dependencies |
 
-### RBAC module (`app/rbac/`)
+### RAG access control (`app/rag/rbac.py`)
 
 | Module | Responsibility |
 |--------|----------------|
-| `permissions.py` | Role → category/document rules |
-| `policy.py` | `can_access(user, resource)` |
-| `document_acl.py` | Per-document permissions in Postgres |
+| `rbac.py` | Category-level access rules for RAG routing (`admin`, `hr`, `finance`, `employee`) |
+
+Document-level authorization is enforced via `app/auth/` dependencies and `document_permission` models.
 
 ### Audit module (`app/audit/`)
 
@@ -419,7 +436,7 @@ React ChatPage
     → POST /api/v1/conversations/{id}/messages
     → chat_service.send_message()
     → rag_service.query(user, query)
-        → rbac/policy.py          (allowed categories + documents)
+        → rag/rbac.py             (allowed categories for routing)
         → rag/router.py           (route to category)
         → rag/rbac.py             (deny if category blocked)
         → rag/retriever.py        (FAISS search)
@@ -439,7 +456,7 @@ React DocumentsPage
         → storage/local.py        (save raw file)
         → db: insert document     (status = pending)
         → ingestion/pipeline.py   (parse, chunk, persist)
-        → rag/index_manager.py    (embed, update FAISS)
+        → services/index_bootstrap_service.py / document ingestion (embed, update FAISS + BM25)
         → db: status = indexed
     → audit: DOCUMENT_UPLOADED, DOCUMENT_INDEXED
 ```
@@ -459,13 +476,11 @@ Current prototype files at repository root → target locations:
 | `loader.py` (chunking) | `backend/app/ingestion/chunker.py` | Extract chunk size/overlap |
 | `retriever.py` | `backend/app/rag/retriever.py` | Index from `storage/indexes/` |
 | `router.py` | `backend/app/rag/router.py` | Unchanged logic initially |
-| `rbac.py` | `backend/app/rag/rbac.py` + `backend/app/rbac/policy.py` | Split category vs document ACL |
+| `rbac.py` | `backend/app/rag/rbac.py` | Category routing access rules |
 | `answer_generator.py` | `backend/app/rag/answer_generator.py` | Unchanged logic initially |
-| `data/` | `backend/tests/fixtures/sample_docs/` | Test seed data |
+| `data/` | `data/` (evaluation corpus) + `backend/tests/fixtures/sample_docs/` | GTFS PDFs + pytest fixtures |
 | `data/` (runtime) | `backend/storage/documents/` | Production uploads |
-| `test_pipeline.py` | `backend/tests/rag/test_pipeline.py` | Update imports |
-| `realistic_enterprise_test.py` | `backend/tests/rag/realistic_enterprise_test.py` | Update imports |
-| `results/` | `results/` (repo root) | Test output |
+| `results/` | `backend/evaluation_results/` | Benchmark reports |
 | `architecture.md` | `docs/architecture.md` | Expand for product |
 | `requirements.txt` | `backend/requirements.txt` | Add FastAPI, SQLAlchemy, Alembic, JWT |
 
@@ -473,8 +488,9 @@ Current prototype files at repository root → target locations:
 
 - `app/api/`, `app/schemas/`, `app/services/`
 - `app/db/`, `app/auth/`, `app/audit/`
-- `app/rag/index_manager.py`
-- `app/ingestion/pipeline.py`
+- `app/rag/hybrid/`, `app/rag/metadata_retrieval/`, `app/rag/reranking/`, `app/rag/query_processing/`
+- `app/evaluation/` (golden dataset benchmark framework)
+- `app/ingestion/pipeline.py`, `app/ingestion/semantic_chunking/`, `app/ingestion/normalization/`
 - Entire `frontend/`
 
 ---
@@ -528,7 +544,7 @@ Add `tenant_id` to: `users`, `documents`, `conversations`, `audit_logs`, `docume
 | 1. Foundation | Repo structure, Docker, Postgres, Alembic, health routes | Backend boots, DB migrates |
 | 2. Auth | User model, seed script, JWT login | Login via API |
 | 3. Migrate RAG | Move prototype to `rag/` + `ingestion/`, fix tests | RAG runs in new package |
-| 4. Documents | Upload/list/delete API, ingestion, index_manager | Docs in DB + FAISS |
+| 4. Documents | Upload/list/delete API, ingestion pipeline | Docs in DB + FAISS + BM25 |
 | 5. RBAC | Document permissions wired into RAG + API | Role-based access |
 | 6. Chat API | Conversations, messages, citations, confidence | Backend MVP complete |
 | 7. Audit | Audit model + logging on key actions | Admin audit endpoint |
@@ -549,5 +565,5 @@ Within each phase: **DB model → repository → service → API route → test 
 3. **RBAC split** — category rules (RAG) + document ACL (Postgres)
 4. **Integrations are adapters** — never duplicate RAG logic
 5. **`tenant_id` everywhere** — unused in MVP, ready for SaaS
-6. **FAISS on disk for MVP** — swap via `index_manager.py` without touching API layers
+6. **FAISS + BM25 on disk** — indexes managed via `document_service` / `HybridIndexStore` without touching API layers
 7. **No microservices, no agents** — simple monolith scalable to SaaS later

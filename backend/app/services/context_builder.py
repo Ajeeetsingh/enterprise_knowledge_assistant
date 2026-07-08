@@ -279,3 +279,18 @@ class ContextBuilder:
         lines.append("")  # blank separator line
         lines.append(f"{_CURRENT_QUESTION_PREFIX} {current_question}")
         return "\n".join(lines)
+
+    @staticmethod
+    def format_history(messages: list[Message]) -> str | None:
+        """Format prior conversation turns for LLM prompt injection only.
+
+        Retrieval must use ``current_question`` — not this formatted history.
+        """
+        if not messages:
+            return None
+
+        lines: list[str] = [_CONTEXT_HEADER]
+        for msg in messages:
+            label = _ROLE_LABELS.get(msg.role, _UNKNOWN_ROLE_LABEL)
+            lines.append(f"{label}: {msg.content}")
+        return "\n".join(lines)

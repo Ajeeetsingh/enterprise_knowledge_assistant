@@ -2,7 +2,7 @@
 
 from fastapi import APIRouter
 
-from app.api.v1 import audit, auth, chat, conversations, documents, health, monitoring, roles, user_roles, users
+from app.api.v1 import analytics_ai, analytics_errors, analytics_knowledge, analytics_monitoring, analytics_users, audit, auth, chat, conversations, documents, health, monitoring, reports, roles, user_roles, users
 
 # Liveness/readiness probes for Docker and orchestrators (no /api/v1 prefix).
 health_router = APIRouter()
@@ -26,6 +26,36 @@ api_v1_router.include_router(
     monitoring.router,
     prefix="/monitoring",
     tags=["monitoring"],
+)
+api_v1_router.include_router(
+    analytics_users.router,
+    prefix="/admin/analytics/users",
+    tags=["analytics"],
+)
+api_v1_router.include_router(
+    analytics_ai.router,
+    prefix="/admin/analytics/ai",
+    tags=["analytics"],
+)
+api_v1_router.include_router(
+    analytics_knowledge.router,
+    prefix="/admin/analytics/knowledge",
+    tags=["analytics"],
+)
+api_v1_router.include_router(
+    analytics_monitoring.router,
+    prefix="/admin/analytics/monitoring",
+    tags=["analytics"],
+)
+api_v1_router.include_router(
+    analytics_errors.router,
+    prefix="/admin/analytics/errors",
+    tags=["analytics"],
+)
+api_v1_router.include_router(
+    reports.router,
+    prefix="/admin/reports",
+    tags=["reports"],
 )
 
 # Alias kept for any existing imports.

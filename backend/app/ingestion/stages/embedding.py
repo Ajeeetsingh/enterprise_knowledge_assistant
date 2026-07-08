@@ -2,10 +2,15 @@
 
 from __future__ import annotations
 
-from app.core.exceptions import DocumentIngestionError
+import logging
+
+from app.core.exceptions import DocumentIngestionError, EmbeddingError
+from app.core.logging import get_logger, log_with_fields
 from app.documents.types import IngestionContext
 from app.ingestion.embedding.base import EmbeddingProvider
 from app.ingestion.stages.base import PipelineStage
+
+logger = get_logger(__name__)
 
 
 class EmbeddingStage(PipelineStage):
@@ -37,7 +42,34 @@ class EmbeddingStage(PipelineStage):
             return context
 
         texts = [chunk.content for chunk in context.chunks]
-        context.embeddings = self._provider.embed(texts)
+        try:
+            context.embeddings = self._provider.embed(texts)
+        except EmbeddingError:
+            raise
+        except Exception as exc:
+            raise EmbeddingError(
+                f"Embedding generation failed: {type(exc).__name__}"
+            ) from exc
+
         context.embedding_count = len(context.embeddings)
+        if context.embedding_count != len(context.chunks):
+            raise DocumentIngestionError(
+                "Embedding count does not match chunk count after generation."
+            )
+        if context.embeddings and not any(any(value for value in vector) for vector in context.embeddings):
+            raise EmbeddingError("Embedding generation produced empty vectors.")
+
+        dimension = len(context.embeddings[0]) if context.embeddings else 0
+        model_name = getattr(self._provider, "_model_name", type(self._provider).__name__)
+        log_with_fields(
+            logger,
+            logging.INFO,
+            "Embedding generation completed",
+            document_id=context.document_id,
+            filename=context.filename,
+            embedding_model=model_name,
+            embedding_dimension=dimension,
+            vectors_generated=context.embedding_count,
+        )
         context.stage_results[self.name] = f"embedded:{context.embedding_count}"
         return context

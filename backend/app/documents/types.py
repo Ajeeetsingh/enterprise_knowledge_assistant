@@ -9,6 +9,7 @@ from app.documents.metadata import DocumentMetadata
 
 if TYPE_CHECKING:
     from app.ingestion.chunker import DocumentChunk
+    from app.ingestion.structure.models import StructuredDocument
 
 
 @dataclass
@@ -28,6 +29,7 @@ class IngestionContext:
     metadata: DocumentMetadata | None = None
     tenant_id: str | None = None
     extracted_text: str | None = None
+    structured_document: "StructuredDocument | None" = None
     chunks: list[DocumentChunk] = field(default_factory=list)
     embeddings: list[list[float]] = field(default_factory=list)
     vector_ids: list[str] = field(default_factory=list)

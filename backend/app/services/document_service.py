@@ -13,6 +13,7 @@ from app.core.exceptions import (
     DocumentIntegrityError,
     DocumentNotFoundError,
     DocumentStorageError,
+    EmbeddingError,
     StorageError,
 )
 from app.core.logging import get_logger, log_with_fields
@@ -61,6 +62,19 @@ DEFAULT_LIST_LIMIT = 20
 MAX_LIST_LIMIT = 100
 
 logger = get_logger(__name__)
+
+
+def _failure_status_for_exception(exc: Exception) -> DocumentStatus:
+    """Map pipeline failures to explicit lifecycle states."""
+    if isinstance(exc, EmbeddingError):
+        return DocumentStatus.FAILED_EMBEDDING
+    if isinstance(exc, DocumentIngestionError):
+        message = str(exc).lower()
+        if "index validation" in message or "not retrievable" in message:
+            return DocumentStatus.FAILED_INDEXING
+        if "extraction" in message or "chunking" in message:
+            return DocumentStatus.FAILED_EXTRACTION
+    return DocumentStatus.FAILED
 
 
 def _resolve_embedding_provider(
@@ -281,6 +295,39 @@ class DocumentService:
                 return name
         return ordered[-1] if ordered else None
 
+    def _indexing_stage_names(self) -> frozenset[str]:
+        return frozenset(
+            {"extraction", "chunking", "embedding", "indexing", "index_validation"}
+        )
+
+    def reindex_document_vectors(
+        self,
+        *,
+        document_id: str,
+        filename: str,
+        content_type: str,
+        content: bytes,
+        checksum: str | None = None,
+        tenant_id: str | None = None,
+    ) -> IngestionContext:
+        """Run extraction through index validation for an existing stored document."""
+        settings = get_settings()
+        self._vector_store.remove_document(document_id)
+        context = IngestionContext(
+            filename=filename,
+            content_type=content_type,
+            content=content,
+            document_id=document_id,
+            checksum=checksum,
+            tenant_id=tenant_id or settings.tenant_id,
+        )
+        indexing_names = self._indexing_stage_names()
+        for stage in self._pipeline_stages():
+            if stage.name not in indexing_names:
+                continue
+            context = stage.process(context)
+        return context
+
     def ingest(
         self,
         filename: str,
@@ -406,8 +453,8 @@ class DocumentService:
                 user_id=user_id,
                 checksum=checksum,
             )
-        except Exception:
-            repository.update_status(document_id, DocumentStatus.FAILED)
+        except Exception as exc:
+            repository.update_status(document_id, _failure_status_for_exception(exc))
             raise
 
         result = outcome.result
@@ -488,8 +535,8 @@ class DocumentService:
                 user_id=user_id,
                 checksum=document.checksum,
             )
-        except Exception:
-            repository.update_status(document_id, DocumentStatus.FAILED)
+        except Exception as exc:
+            repository.update_status(document_id, _failure_status_for_exception(exc))
             raise
 
         result = outcome.result
@@ -634,9 +681,12 @@ class DocumentService:
         repository: DocumentRepository,
         document_id: uuid.UUID,
     ) -> Document:
-        """Return document metadata by ID."""
+        """Return document metadata by ID.
+
+        Soft-deleted documents are treated as not found for normal retrieval.
+        """
         document = repository.get_by_id(document_id)
-        if document is None:
+        if document is None or document.status == DocumentStatus.DELETED.value:
             raise DocumentNotFoundError(f"Document '{document_id}' not found.")
         return document
 
@@ -655,9 +705,26 @@ def get_document_service() -> DocumentService:
 
 
 def _create_default_vector_store() -> VectorStore:
+    from app.config import get_settings
+    from app.embeddings.manager import get_embedding_manager
     from app.ingestion.vector_store.faiss_store import FaissVectorStore
+    from app.rag.hybrid.bm25 import BM25Index
+    from app.rag.hybrid.config import HybridRetrievalSettings
+    from app.rag.hybrid.index_store import HybridIndexStore
 
-    return FaissVectorStore()
+    settings = get_settings()
+    faiss_store = FaissVectorStore(embedding_manager=get_embedding_manager())
+    if not settings.hybrid_enabled:
+        return faiss_store
+
+    settings.indexes_path.mkdir(parents=True, exist_ok=True)
+    hybrid_settings = HybridRetrievalSettings.from_settings(settings)
+    bm25_index = BM25Index(
+        settings=hybrid_settings,
+        persist_path=settings.indexes_path / "bm25_corpus.json",
+    )
+    bm25_index.load()
+    return HybridIndexStore(faiss_store, bm25_index)
 
 
 def build_document_service(

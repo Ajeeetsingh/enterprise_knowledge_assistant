@@ -52,6 +52,7 @@ def _fake_query_response() -> SimpleNamespace:
                 source="hr_policy.txt",
                 excerpt="Annual leave: 20 days per year.",
                 confidence=0.88,
+                page=None,
             )
         ],
         confidence_score=0.85,
@@ -106,6 +107,7 @@ def test_authenticated_request_returns_answer_response(
             "source": "hr_policy.txt",
             "excerpt": "Annual leave: 20 days per year.",
             "confidence": 0.88,
+            "page": None,
         }
     ]
     mock_rag_service.answer_question.assert_called_once()

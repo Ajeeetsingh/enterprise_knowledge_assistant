@@ -21,14 +21,15 @@ def _load_pdf(path: Path, category: str) -> list[DocumentChunk]:
     from pypdf import PdfReader
 
     reader = PdfReader(str(path))
-    pages: list[str] = []
+    page_blocks: list[str] = []
 
-    for page in reader.pages:
+    for page_number, page in enumerate(reader.pages, start=1):
         text = page.extract_text()
-        if text:
-            pages.append(text.strip())
+        if text and text.strip():
+            marker = f"<<<PAGE:{page_number}>>>"
+            page_blocks.append(f"{marker}\n{text.strip()}")
 
-    content = "\n".join(pages)
+    content = "\n".join(page_blocks)
     return chunk_text(content, path.name, category)
 
 

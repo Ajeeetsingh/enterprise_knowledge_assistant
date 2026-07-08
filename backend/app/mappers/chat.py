@@ -42,6 +42,7 @@ def map_to_answer_response(
                 source=citation.source,
                 excerpt=citation.excerpt,
                 confidence=citation.confidence,
+                page=getattr(citation, "page", None),
             )
             for citation in query_response.citations
         ],
@@ -60,6 +61,7 @@ def map_chat_result_to_answer_response(result: "ConversationChatResult") -> Answ
                 source=citation["source"],
                 excerpt=citation["excerpt"],
                 confidence=citation["confidence"],
+                page=citation.get("page"),
             )
             for citation in result.citations
         ],

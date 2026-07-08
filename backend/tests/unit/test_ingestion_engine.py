@@ -64,6 +64,7 @@ EXPECTED_STAGE_ORDER = [
     "chunking",
     "embedding",
     "indexing",
+    "index_validation",
     "metadata",
 ]
 
@@ -255,12 +256,10 @@ class TestDefaultDocumentProcessor:
         assert "\n\n\n" not in result
 
     def test_normalization_strips_whitespace(self):
-        processor = DefaultDocumentProcessor.__new__(DefaultDocumentProcessor)
-        assert processor._normalize("  hello  ") == "hello"
+        assert DefaultDocumentProcessor.normalize_text("  hello  ") == "hello"
 
     def test_normalization_collapses_blank_lines(self):
-        processor = DefaultDocumentProcessor.__new__(DefaultDocumentProcessor)
-        result = processor._normalize("line1\n\n\n\nline2")
+        result = DefaultDocumentProcessor.normalize_text("line1\n\n\n\nline2")
         assert result == "line1\n\nline2"
 
     def test_processor_raises_for_unknown_extension(self):
@@ -291,13 +290,16 @@ class TestEmbeddingProvider:
         assert isinstance(provider, EmbeddingProvider)
 
     def test_embed_delegates_to_model(self):
+        import numpy as np
+
         provider = SentenceTransformerEmbeddingProvider()
-        mock_model = MagicMock()
-        mock_model.encode.return_value = __import__("numpy").array([[0.1, 0.2]])
-        provider._model = mock_model
+        mock_manager = MagicMock()
+        mock_manager.encode.return_value = np.array([[0.1, 0.2]])
+        provider._embedding_manager = mock_manager
         result = provider.embed(["hello"])
         assert len(result) == 1
         assert len(result[0]) == 2
+        mock_manager.encode.assert_called_once()
 
     def test_embed_empty_returns_empty(self):
         provider = SentenceTransformerEmbeddingProvider()
@@ -305,9 +307,9 @@ class TestEmbeddingProvider:
 
     def test_embed_raises_embedding_error_on_failure(self):
         provider = SentenceTransformerEmbeddingProvider()
-        mock_model = MagicMock()
-        mock_model.encode.side_effect = RuntimeError("model broken")
-        provider._model = mock_model
+        mock_manager = MagicMock()
+        mock_manager.encode.side_effect = RuntimeError("model broken")
+        provider._embedding_manager = mock_manager
         with pytest.raises(EmbeddingError):
             provider.embed(["text"])
 
@@ -468,7 +470,7 @@ class TestExtractionStage:
         ctx = _txt_context()
         result = stage.process(ctx)
         assert result.extracted_text == "extracted text"
-        assert result.stage_results["extraction"] == "extracted"
+        assert result.stage_results["extraction"].startswith("extracted:14")
 
     def test_processor_is_called_with_context(self):
         proc = _mock_processor()
@@ -497,12 +499,12 @@ class TestChunkingStage:
         with pytest.raises(DocumentIngestionError, match="Extracted text"):
             stage.process(ctx)
 
-    def test_empty_text_yields_zero_chunks(self):
+    def test_empty_text_raises_ingestion_error(self):
         stage = ChunkingStage()
         ctx = _txt_context()
         ctx.extracted_text = "   "
-        result = stage.process(ctx)
-        assert result.chunk_count == 0
+        with pytest.raises(DocumentIngestionError, match="no searchable segments"):
+            stage.process(ctx)
 
 
 # ---------------------------------------------------------------------------

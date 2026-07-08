@@ -17,7 +17,7 @@ from app.db.models.document import Document
 from app.db.models.role import Role
 from app.db.models.user import User
 from app.documents.visibility import DocumentVisibility
-from app.rag.retriever import RetrievalResult
+from app.rag.types import RetrievalResult
 from tests.constants import TEST_PASSWORD_HASH
 
 

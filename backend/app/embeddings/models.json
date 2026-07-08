@@ -1,0 +1,48 @@
+{
+  "version": "1.0.0",
+  "description": "Embedding model registry for evaluation and production configuration.",
+  "models": [
+    {
+      "id": "minilm-l6-v2",
+      "label": "MiniLM L6 v2",
+      "model_name": "sentence-transformers/all-MiniLM-L6-v2",
+      "is_baseline": true,
+      "provider": "sentence_transformers"
+    },
+    {
+      "id": "bge-small-en-v1.5",
+      "label": "BGE Small EN v1.5",
+      "model_name": "BAAI/bge-small-en-v1.5",
+      "is_baseline": false,
+      "provider": "sentence_transformers"
+    },
+    {
+      "id": "bge-base-en-v1.5",
+      "label": "BGE Base EN v1.5",
+      "model_name": "BAAI/bge-base-en-v1.5",
+      "is_baseline": false,
+      "provider": "sentence_transformers"
+    },
+    {
+      "id": "bge-large-en-v1.5",
+      "label": "BGE Large EN v1.5",
+      "model_name": "BAAI/bge-large-en-v1.5",
+      "is_baseline": false,
+      "provider": "sentence_transformers"
+    },
+    {
+      "id": "e5-base-v2",
+      "label": "E5 Base v2",
+      "model_name": "intfloat/e5-base-v2",
+      "is_baseline": false,
+      "provider": "sentence_transformers"
+    },
+    {
+      "id": "e5-large-v2",
+      "label": "E5 Large v2",
+      "model_name": "intfloat/e5-large-v2",
+      "is_baseline": false,
+      "provider": "sentence_transformers"
+    }
+  ]
+}
