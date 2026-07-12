@@ -1,4 +1,11 @@
 import EmptyState from '@/components/ui/EmptyState'
+import DataTable, {
+  DataTableBody,
+  DataTableCell,
+  DataTableHead,
+  DataTableHeaderCell,
+  DataTableRow,
+} from '@/components/ui/DataTable'
 
 import type { ErrorFrequencyItem } from '../../types'
 
@@ -26,38 +33,25 @@ export default function ErrorFailureAnalysisTable({
   }
 
   return (
-    <div className="overflow-x-auto">
-      <table className="min-w-full divide-y divide-neutral-200 dark:divide-neutral-700">
-        <caption className="sr-only">Failure analysis</caption>
-        <thead>
-          <tr className="text-left text-sm text-neutral-500 dark:text-neutral-400">
-            <th scope="col" className="px-4 py-3 font-medium">
-              Section
-            </th>
-            <th scope="col" className="px-4 py-3 font-medium">
-              Detail
-            </th>
-            <th scope="col" className="px-4 py-3 font-medium">
-              Category
-            </th>
-            <th scope="col" className="px-4 py-3 font-medium">
-              Count
-            </th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-neutral-200 dark:divide-neutral-700">
-          {rows.map((item) => (
-            <tr key={`${item.section}-${item.label}-${item.category}`}>
-              <td className="px-4 py-3 text-neutral-700 dark:text-neutral-300">{item.section}</td>
-              <td className="px-4 py-3 text-neutral-900 dark:text-neutral-50">{item.label}</td>
-              <td className="px-4 py-3 text-neutral-700 dark:text-neutral-300">{item.category}</td>
-              <td className="px-4 py-3 tabular-nums text-neutral-900 dark:text-neutral-50">
-                {item.count}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+    <DataTable caption="Failure analysis">
+      <DataTableHead>
+        <DataTableRow interactive={false}>
+          <DataTableHeaderCell>Section</DataTableHeaderCell>
+          <DataTableHeaderCell>Detail</DataTableHeaderCell>
+          <DataTableHeaderCell>Category</DataTableHeaderCell>
+          <DataTableHeaderCell>Count</DataTableHeaderCell>
+        </DataTableRow>
+      </DataTableHead>
+      <DataTableBody>
+        {rows.map((item) => (
+          <DataTableRow key={`${item.section}-${item.label}-${item.category}`}>
+            <DataTableCell muted>{item.section}</DataTableCell>
+            <DataTableCell>{item.label}</DataTableCell>
+            <DataTableCell muted>{item.category}</DataTableCell>
+            <DataTableCell className="tabular-nums">{item.count}</DataTableCell>
+          </DataTableRow>
+        ))}
+      </DataTableBody>
+    </DataTable>
   )
 }

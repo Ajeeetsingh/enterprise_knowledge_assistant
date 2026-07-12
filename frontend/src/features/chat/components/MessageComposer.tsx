@@ -1,6 +1,7 @@
-import { type KeyboardEvent, useRef } from 'react'
+import { type KeyboardEvent, useCallback, useId, useLayoutEffect, useRef } from 'react'
 
-import Button from '@/components/ui/Button'
+import { ArrowUpIcon } from '@/components/layout/NavIcons'
+import Spinner from '@/components/ui/Spinner'
 
 export interface MessageComposerProps {
   value: string
@@ -11,6 +12,10 @@ export interface MessageComposerProps {
   error?: string | null
 }
 
+const MAX_LINES = 7
+const LINE_HEIGHT_PX = 24
+const MAX_TEXTAREA_HEIGHT_PX = LINE_HEIGHT_PX * MAX_LINES
+
 export default function MessageComposer({
   value,
   onChange,
@@ -20,59 +25,90 @@ export default function MessageComposer({
   error = null,
 }: MessageComposerProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const hintId = useId()
   const isDisabled = disabled || isSending
+  const canSend = !isDisabled && value.trim().length > 0
+
+  const resizeTextarea = useCallback(() => {
+    const element = textareaRef.current
+    if (!element) return
+
+    element.style.height = 'auto'
+    element.style.height = `${Math.min(element.scrollHeight, MAX_TEXTAREA_HEIGHT_PX)}px`
+  }, [])
+
+  useLayoutEffect(() => {
+    resizeTextarea()
+  }, [value, resizeTextarea])
+
+  function handleChange(nextValue: string) {
+    onChange(nextValue)
+    resizeTextarea()
+  }
 
   function handleKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
     if (event.key === 'Enter' && !event.shiftKey) {
       event.preventDefault()
-      if (!isDisabled && value.trim()) {
+      if (canSend) {
         onSend()
       }
     }
   }
 
   function handleSend() {
-    if (!isDisabled && value.trim()) {
+    if (canSend) {
       onSend()
       textareaRef.current?.focus()
     }
   }
 
   return (
-    <div className="border-t border-neutral-200 bg-white p-4 dark:border-neutral-700 dark:bg-neutral-900">
+    <div className="chat-composer">
+      <div className="chat-input-fade" aria-hidden />
+
       {error && (
-        <p role="alert" className="mb-3 text-sm text-error-500 dark:text-error-400">
+        <p role="alert" className="mb-3 text-sm text-error-500">
           {error}
         </p>
       )}
 
-      <div className="flex items-end gap-3">
+      <div className="chat-input-bar">
         <label htmlFor="chat-message" className="sr-only">
           Message
         </label>
         <textarea
           ref={textareaRef}
           id="chat-message"
-          rows={3}
+          rows={1}
           value={value}
           disabled={isDisabled}
+          aria-describedby={hintId}
           placeholder="Ask a question about your organisation's knowledge…"
-          className="block w-full resize-none rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:cursor-not-allowed disabled:opacity-50 dark:border-neutral-600 dark:bg-neutral-800 dark:text-neutral-50"
-          onChange={(event) => onChange(event.target.value)}
+          className="chat-input-field scrollbar-thin"
+          style={{
+            maxHeight: MAX_TEXTAREA_HEIGHT_PX,
+            lineHeight: `${LINE_HEIGHT_PX}px`,
+          }}
+          onChange={(event) => handleChange(event.target.value)}
           onKeyDown={handleKeyDown}
         />
 
-        <Button
+        <button
           type="button"
-          disabled={isDisabled || !value.trim()}
-          isLoading={isSending}
+          className="chat-send-button"
+          disabled={!canSend}
+          aria-label="Send message"
           onClick={handleSend}
         >
-          Send
-        </Button>
+          {isSending ? (
+            <Spinner size="sm" label="Sending message" />
+          ) : (
+            <ArrowUpIcon />
+          )}
+        </button>
       </div>
 
-      <p className="mt-2 text-xs text-neutral-500 dark:text-neutral-400">
+      <p id={hintId} className="mt-2 px-1 text-[11px] text-subtle">
         Press Enter to send, Shift+Enter for a new line.
       </p>
     </div>

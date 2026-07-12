@@ -51,7 +51,9 @@ describe('uploadDocument', () => {
     const file = new File(['Annual leave policy'], 'policy.txt', { type: 'text/plain' })
     await uploadDocument(file)
 
-    expect(post).toHaveBeenCalledWith('/documents/upload', expect.any(FormData))
+    expect(post).toHaveBeenCalledWith('/documents/upload', expect.any(FormData), {
+      timeout: 300000,
+    })
     const formData = post.mock.calls[0]?.[1] as FormData
     expect(formData.get('file')).toBe(file)
 

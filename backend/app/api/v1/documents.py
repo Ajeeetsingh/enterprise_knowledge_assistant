@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import logging
+import time
 import uuid
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, File, Query, Request, UploadFile
+from fastapi import APIRouter, Depends, File, Query, Request, Response, UploadFile
 
 from app.audit.service import AuditService
 from app.auth.dependencies import require_document_access, require_permission
@@ -39,6 +41,8 @@ from app.services.audit_service import AuditService as PersistedAuditService
 from app.services import document_audit_integration
 
 router = APIRouter()
+
+logger = logging.getLogger(__name__)
 
 _DOCUMENT_ERROR_RESPONSES: dict[int, dict[str, object]] = {
     401: {
@@ -169,6 +173,50 @@ def get_document(
     return map_to_detail_response(document)
 
 
+@router.get(
+    "/{document_id}/file",
+    summary="Download or preview document file",
+    description=(
+        "Return the stored document bytes for in-app preview or download. "
+        "Requires document read permission and document-level access. "
+        "Use ``download=true`` to suggest a file download instead of inline preview."
+    ),
+    responses={
+        **_DOCUMENT_ERROR_RESPONSES,
+        200: {
+            "content": {"application/octet-stream": {}},
+            "description": "Raw document file bytes.",
+        },
+    },
+)
+def get_document_file(
+    document_id: uuid.UUID,
+    download: bool = Query(
+        False,
+        description="When true, Content-Disposition is attachment instead of inline.",
+    ),
+    current_user: User = Depends(require_permission(Permission.DOCUMENT_READ)),
+    document: Document = Depends(require_document_access("read")),
+    document_service: DocumentService = Depends(get_document_service_dep),
+) -> Response:
+    """Stream the stored document file for preview or download."""
+    user_id = str(current_user.id)
+    content, content_type, filename = document_service.read_document_file(document)
+
+    disposition = "attachment" if download else "inline"
+    AuditService.record(
+        AuditService.document_read(user_id=user_id, document_id=str(document_id))
+    )
+    return Response(
+        content=content,
+        media_type=content_type,
+        headers={
+            "Content-Disposition": f'{disposition}; filename="{filename}"',
+            "Cache-Control": "private, max-age=300",
+        },
+    )
+
+
 @router.delete(
     "/{document_id}",
     response_model=DocumentLifecycleResponse,
@@ -239,6 +287,14 @@ def upload_document(
     filename = file.filename or ""
     content = file.file.read()
     content_type = _resolve_content_type(filename, file.content_type)
+    started_at = time.perf_counter()
+
+    logger.info(
+        "upload_lifecycle state=Uploading filename=%s bytes=%d user_id=%s",
+        filename,
+        len(content),
+        user_id,
+    )
 
     result = document_service.upload_document(
         repository,
@@ -246,6 +302,16 @@ def upload_document(
         content_type=content_type,
         content=content,
         uploaded_by=current_user.id,
+    )
+
+    elapsed_s = time.perf_counter() - started_at
+    logger.info(
+        "upload_lifecycle state=%s document_id=%s filename=%s elapsed_s=%.2f message=%s",
+        result.status.value,
+        result.document_id,
+        result.filename,
+        elapsed_s,
+        result.message,
     )
 
     AuditService.record(

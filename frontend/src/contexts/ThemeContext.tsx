@@ -27,6 +27,8 @@ function resolveInitialTheme(): Theme {
 
 function applyTheme(theme: Theme): void {
   const root = document.documentElement
+  root.setAttribute('data-theme', theme)
+
   if (theme === 'dark') {
     root.classList.add('dark')
   } else {
@@ -36,8 +38,7 @@ function applyTheme(theme: Theme): void {
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setTheme] = useState<Theme>(() => {
-    // SSR-safe: fall back to 'light' if window is unavailable
-    if (typeof window === 'undefined') return 'light'
+    if (typeof window === 'undefined') return 'dark'
     return resolveInitialTheme()
   })
 

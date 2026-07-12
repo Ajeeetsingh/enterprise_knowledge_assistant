@@ -1,19 +1,34 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 
 import CitationList from './CitationList'
 import type { Citation } from '../types'
 
-vi.mock('../services/citationService', () => ({
-  CitationDetailsError: class CitationDetailsError extends Error {},
-  resolveCitationDetails: vi.fn(async (citation: Citation) => ({
-    source: citation.source,
-    excerpt: citation.excerpt?.trim() ? citation.excerpt.trim() : null,
-    confidence: citation.confidence,
-    page: citation.page ?? null,
-    metadata: citation.metadata,
-  })),
+const navigate = vi.fn()
+
+vi.mock('@/contexts/ToastContext', () => ({
+  useToast: () => ({
+    showSuccess: vi.fn(),
+    showError: vi.fn(),
+    showInfo: vi.fn(),
+    showWarning: vi.fn(),
+  }),
+}))
+
+vi.mock('react-router-dom', async () => {
+  const actual = await vi.importActual<typeof import('react-router-dom')>('react-router-dom')
+  return {
+    ...actual,
+    useNavigate: () => navigate,
+  }
+})
+
+vi.mock('@/features/document-viewer', () => ({
+  buildDocumentViewerUrl: (documentId: string) => `/documents/${documentId}?page=14`,
+  buildCitationViewerParams: (citation: Citation) =>
+    typeof citation.page === 'number' ? { page: citation.page } : {},
+  resolveCitationDocumentId: vi.fn(async () => 'doc-123'),
 }))
 
 const citations: Citation[] = [
@@ -26,41 +41,16 @@ const citations: Citation[] = [
 ]
 
 describe('CitationList', () => {
-  it('opens the citation modal when a card is clicked', async () => {
+  it('navigates to the document viewer when Open Source is clicked', async () => {
     const user = userEvent.setup()
+    navigate.mockClear()
 
     render(<CitationList citations={citations} />)
 
     await user.click(
-      screen.getByRole('button', { name: /view citation details for employee handbook\.pdf/i }),
+      screen.getByRole('button', { name: /open source document for employee handbook\.pdf/i }),
     )
 
-    await waitFor(() => {
-      expect(screen.getByRole('dialog', { name: /citation details/i })).toBeInTheDocument()
-    })
-
-    expect(
-      screen.getByText('Employees are entitled to 20 days of annual leave.'),
-    ).toBeInTheDocument()
-  })
-
-  it('closes the citation modal', async () => {
-    const user = userEvent.setup()
-
-    render(<CitationList citations={citations} />)
-
-    await user.click(
-      screen.getByRole('button', { name: /view citation details for employee handbook\.pdf/i }),
-    )
-
-    await waitFor(() => {
-      expect(screen.getByRole('dialog', { name: /citation details/i })).toBeInTheDocument()
-    })
-
-    await user.click(screen.getByRole('button', { name: 'Close citation details' }))
-
-    await waitFor(() => {
-      expect(screen.queryByRole('dialog', { name: /citation details/i })).not.toBeInTheDocument()
-    })
+    expect(navigate).toHaveBeenCalledWith('/documents/doc-123?page=14')
   })
 })

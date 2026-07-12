@@ -1,4 +1,5 @@
 import { BaseBarChart } from '@/components/charts'
+import PlaceholderState from '@/components/ui/PlaceholderState'
 
 import type { ResourceMetrics } from '../../types'
 import { formatBytes } from '../../types'
@@ -19,13 +20,18 @@ export default function ResourceUsageChart({ resources }: ResourceUsageChartProp
   return (
     <AnalyticsChartCard
       title="Resource Usage"
-      description={`Storage usage: ${formatBytes(resources.storage_usage_bytes)}${
-        resources.vector_index_size_bytes === null
-          ? ' · Vector index size not instrumented'
-          : ` · Vector index: ${formatBytes(resources.vector_index_size_bytes)}`
-      }`}
+      description={`Storage usage: ${formatBytes(resources.storage_usage_bytes)}`}
     >
       <BaseBarChart data={data} ariaLabel="Resource usage chart" valueLabel="Count" />
+      {resources.vector_index_size_bytes === null ? (
+        <PlaceholderState className="mt-3">
+          Background workers and vector index size are not instrumented in this release.
+        </PlaceholderState>
+      ) : (
+        <p className="mt-3 text-xs text-muted">
+          Vector index: {formatBytes(resources.vector_index_size_bytes)}
+        </p>
+      )}
     </AnalyticsChartCard>
   )
 }

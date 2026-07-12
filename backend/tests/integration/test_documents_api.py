@@ -343,6 +343,24 @@ def test_upload_persists_metadata_in_database(
     assert persisted.storage_path
 
 
+def test_get_document_file_returns_stored_bytes(
+    real_document_client: TestClient,
+    admin_user: User,
+) -> None:
+    token = access_token_for(admin_user)
+    upload_response = _upload_file(real_document_client, token, filename="policy.txt")
+    document_id = upload_response.json()["document_id"]
+
+    response = real_document_client.get(
+        f"/api/v1/documents/{document_id}/file",
+        headers=bearer_headers(token),
+    )
+
+    assert response.status_code == 200
+    assert response.content
+    assert "inline" in response.headers.get("content-disposition", "")
+
+
 def test_list_documents_returns_paginated_metadata(
     real_document_client: TestClient,
     admin_user: User,

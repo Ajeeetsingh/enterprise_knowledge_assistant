@@ -1,4 +1,11 @@
 import EmptyState from '@/components/ui/EmptyState'
+import DataTable, {
+  DataTableBody,
+  DataTableCell,
+  DataTableHead,
+  DataTableHeaderCell,
+  DataTableRow,
+} from '@/components/ui/DataTable'
 
 import type { FreshnessItem } from '../../types'
 
@@ -30,50 +37,29 @@ export default function FreshnessTable({
   }
 
   return (
-    <div className="overflow-x-auto">
-      <table className="min-w-full divide-y divide-neutral-200 dark:divide-neutral-700">
-        <caption className="sr-only">Content freshness</caption>
-        <thead>
-          <tr className="text-left text-sm text-neutral-500 dark:text-neutral-400">
-            <th scope="col" className="px-4 py-3 font-medium">
-              Section
-            </th>
-            <th scope="col" className="px-4 py-3 font-medium">
-              Document
-            </th>
-            <th scope="col" className="px-4 py-3 font-medium">
-              Collection
-            </th>
-            <th scope="col" className="px-4 py-3 font-medium">
-              Uploaded
-            </th>
-            <th scope="col" className="px-4 py-3 font-medium">
-              Updated
-            </th>
-            <th scope="col" className="px-4 py-3 font-medium">
-              Days Inactive
-            </th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-neutral-200 dark:divide-neutral-700">
-          {rows.map((item) => (
-            <tr key={`${item.section}-${item.document_id}`}>
-              <td className="px-4 py-3 text-neutral-700 dark:text-neutral-300">{item.section}</td>
-              <td className="px-4 py-3 text-neutral-900 dark:text-neutral-50">{item.filename}</td>
-              <td className="px-4 py-3 text-neutral-700 dark:text-neutral-300">{item.collection}</td>
-              <td className="px-4 py-3 text-neutral-700 dark:text-neutral-300">
-                {formatDate(item.uploaded_at)}
-              </td>
-              <td className="px-4 py-3 text-neutral-700 dark:text-neutral-300">
-                {formatDate(item.updated_at)}
-              </td>
-              <td className="px-4 py-3 tabular-nums text-neutral-900 dark:text-neutral-50">
-                {item.days_inactive}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+    <DataTable caption="Content freshness">
+      <DataTableHead>
+        <DataTableRow interactive={false}>
+          <DataTableHeaderCell>Section</DataTableHeaderCell>
+          <DataTableHeaderCell>Document</DataTableHeaderCell>
+          <DataTableHeaderCell>Collection</DataTableHeaderCell>
+          <DataTableHeaderCell>Uploaded</DataTableHeaderCell>
+          <DataTableHeaderCell>Updated</DataTableHeaderCell>
+          <DataTableHeaderCell>Days Inactive</DataTableHeaderCell>
+        </DataTableRow>
+      </DataTableHead>
+      <DataTableBody>
+        {rows.map((item) => (
+          <DataTableRow key={`${item.section}-${item.document_id}`}>
+            <DataTableCell muted>{item.section}</DataTableCell>
+            <DataTableCell>{item.filename}</DataTableCell>
+            <DataTableCell muted>{item.collection}</DataTableCell>
+            <DataTableCell muted>{formatDate(item.uploaded_at)}</DataTableCell>
+            <DataTableCell muted>{formatDate(item.updated_at)}</DataTableCell>
+            <DataTableCell className="tabular-nums">{item.days_inactive}</DataTableCell>
+          </DataTableRow>
+        ))}
+      </DataTableBody>
+    </DataTable>
   )
 }

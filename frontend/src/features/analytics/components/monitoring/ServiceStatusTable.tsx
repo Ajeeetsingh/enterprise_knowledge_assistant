@@ -1,5 +1,5 @@
 import EmptyState from '@/components/ui/EmptyState'
-import clsx from 'clsx'
+import StatusBadge, { type StatusBadgeTone } from '@/components/ui/StatusBadge'
 
 import type { ServiceHealthStatus, ServiceStatusItem } from '../../types'
 
@@ -7,10 +7,10 @@ export interface ServiceStatusTableProps {
   items: ServiceStatusItem[]
 }
 
-const STATUS_STYLES: Record<ServiceHealthStatus, string> = {
-  healthy: 'text-green-700 dark:text-green-300',
-  degraded: 'text-amber-700 dark:text-amber-300',
-  unavailable: 'text-red-700 dark:text-red-300',
+function statusTone(status: ServiceHealthStatus): StatusBadgeTone {
+  if (status === 'healthy') return 'good'
+  if (status === 'degraded') return 'warn'
+  return 'bad'
 }
 
 const SERVICE_LABELS: Record<string, string> = {
@@ -32,37 +32,26 @@ export default function ServiceStatusTable({ items }: ServiceStatusTableProps) {
   }
 
   return (
-    <div className="overflow-x-auto">
-      <table className="min-w-full divide-y divide-neutral-200 dark:divide-neutral-700">
+    <div className="data-table-shell">
+      <table className="data-table">
         <caption className="sr-only">Platform service status</caption>
         <thead>
-          <tr className="text-left text-sm text-neutral-500 dark:text-neutral-400">
-            <th scope="col" className="px-4 py-3 font-medium">
-              Service
-            </th>
-            <th scope="col" className="px-4 py-3 font-medium">
-              Status
-            </th>
-            <th scope="col" className="px-4 py-3 font-medium">
-              Detail
-            </th>
+          <tr>
+            <th scope="col">Service</th>
+            <th scope="col">Status</th>
+            <th scope="col">Detail</th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-neutral-200 dark:divide-neutral-700">
+        <tbody>
           {items.map((item) => (
-            <tr key={item.service}>
-              <td className="px-4 py-3 text-neutral-900 dark:text-neutral-50">
-                {SERVICE_LABELS[item.service] ?? item.service}
+            <tr key={item.service} className="interactive-row">
+              <td className="font-medium">{SERVICE_LABELS[item.service] ?? item.service}</td>
+              <td>
+                <StatusBadge tone={statusTone(item.status)} className="capitalize">
+                  {item.status}
+                </StatusBadge>
               </td>
-              <td
-                className={clsx(
-                  'px-4 py-3 font-medium capitalize',
-                  STATUS_STYLES[item.status],
-                )}
-              >
-                {item.status}
-              </td>
-              <td className="px-4 py-3 text-neutral-700 dark:text-neutral-300">{item.detail}</td>
+              <td className="text-muted">{item.detail}</td>
             </tr>
           ))}
         </tbody>

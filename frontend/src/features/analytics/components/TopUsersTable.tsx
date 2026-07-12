@@ -1,4 +1,11 @@
 import EmptyState from '@/components/ui/EmptyState'
+import DataTable, {
+  DataTableBody,
+  DataTableCell,
+  DataTableHead,
+  DataTableHeaderCell,
+  DataTableRow,
+} from '@/components/ui/DataTable'
 
 import type { UserActivityItem } from '../types'
 
@@ -17,41 +24,26 @@ export default function TopUsersTable({ users }: TopUsersTableProps) {
   }
 
   return (
-    <div className="overflow-x-auto">
-      <table className="min-w-full divide-y divide-neutral-200 dark:divide-neutral-700">
-        <caption className="sr-only">Top active users</caption>
-        <thead>
-          <tr className="text-left text-sm text-neutral-500 dark:text-neutral-400">
-            <th scope="col" className="px-4 py-3 font-medium">
-              User
-            </th>
-            <th scope="col" className="px-4 py-3 font-medium">
-              Questions
-            </th>
-            <th scope="col" className="px-4 py-3 font-medium">
-              Conversations
-            </th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-neutral-200 dark:divide-neutral-700">
-          {users.map((user) => (
-            <tr key={user.user_id}>
-              <td className="px-4 py-3">
-                <div className="font-medium text-neutral-900 dark:text-neutral-50">
-                  {user.full_name}
-                </div>
-                <div className="text-sm text-neutral-500 dark:text-neutral-400">{user.email}</div>
-              </td>
-              <td className="px-4 py-3 tabular-nums text-neutral-900 dark:text-neutral-50">
-                {user.question_count}
-              </td>
-              <td className="px-4 py-3 tabular-nums text-neutral-900 dark:text-neutral-50">
-                {user.conversation_count}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+    <DataTable caption="Top active users">
+      <DataTableHead>
+        <DataTableRow interactive={false}>
+          <DataTableHeaderCell>User</DataTableHeaderCell>
+          <DataTableHeaderCell>Questions</DataTableHeaderCell>
+          <DataTableHeaderCell>Conversations</DataTableHeaderCell>
+        </DataTableRow>
+      </DataTableHead>
+      <DataTableBody>
+        {users.map((user) => (
+          <DataTableRow key={user.user_id}>
+            <DataTableCell>
+              <div className="font-medium">{user.full_name}</div>
+              <div className="text-sm text-muted">{user.email}</div>
+            </DataTableCell>
+            <DataTableCell className="tabular-nums">{user.question_count}</DataTableCell>
+            <DataTableCell className="tabular-nums">{user.conversation_count}</DataTableCell>
+          </DataTableRow>
+        ))}
+      </DataTableBody>
+    </DataTable>
   )
 }

@@ -1,10 +1,10 @@
 import { useState } from 'react'
 
 import StreamingMessage from '@/components/chat/StreamingMessage'
-import { cn } from '@/utils/cn'
 
 import type { ActiveStream } from '../types/streaming'
-import CitationList from './CitationList'
+import AiMessageLayout from './AiMessageLayout'
+import AssistantMessagePresentation from './AssistantMessagePresentation'
 
 export interface StreamingAssistantBubbleProps {
   stream: ActiveStream
@@ -16,6 +16,7 @@ export default function StreamingAssistantBubble({
   onComplete,
 }: StreamingAssistantBubbleProps) {
   const [streamingComplete, setStreamingComplete] = useState(false)
+  const [completedAt] = useState(() => new Date().toISOString())
 
   function handleStreamComplete() {
     setStreamingComplete(true)
@@ -23,29 +24,22 @@ export default function StreamingAssistantBubble({
   }
 
   return (
-    <article className="flex w-full justify-start" aria-label="Assistant message">
-      <div
-        className={cn(
-          'max-w-[85%] rounded-lg border border-neutral-200 bg-white px-4 py-3 text-sm shadow-sm',
-          'text-neutral-900 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-50',
-        )}
-      >
-        <StreamingMessage
-          content={stream.content}
-          isStreaming
-          onComplete={handleStreamComplete}
-        />
-
-        {streamingComplete && stream.confidence_score != null && (
-          <p className="mt-2 text-xs text-neutral-500 dark:text-neutral-400">
-            Confidence: {Math.round(stream.confidence_score * 100)}%
-          </p>
-        )}
-
-        {streamingComplete && stream.citations.length > 0 && (
-          <CitationList citations={stream.citations} />
-        )}
-      </div>
-    </article>
+    <AiMessageLayout>
+      <AssistantMessagePresentation
+        content={
+          <StreamingMessage
+            content={stream.content}
+            isStreaming
+            onComplete={handleStreamComplete}
+          />
+        }
+        timestamp={streamingComplete ? completedAt : null}
+        metadata={{
+          confidence_score: stream.confidence_score,
+          citations: stream.citations,
+        }}
+        showMeta={streamingComplete}
+      />
+    </AiMessageLayout>
   )
 }

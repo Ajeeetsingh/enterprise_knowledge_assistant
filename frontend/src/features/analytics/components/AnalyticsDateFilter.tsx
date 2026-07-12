@@ -1,3 +1,4 @@
+import { FilterBar, FilterLabel, FilterSelect } from '@/components/ui/FilterControl'
 import Input from '@/components/ui/Input'
 
 import { DATE_RANGE_PRESET_OPTIONS } from '../constants'
@@ -13,65 +14,62 @@ export default function AnalyticsDateFilter({ filters, onChange }: AnalyticsDate
   const isCustom = preset === 'custom'
 
   return (
-    <div className="flex flex-col gap-4 rounded-xl border border-neutral-200 bg-white p-4 dark:border-neutral-700 dark:bg-neutral-900">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-        <label className="flex flex-col gap-1 text-sm">
-          <span className="font-medium text-neutral-700 dark:text-neutral-200">Date range</span>
-          <select
-            className="rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 dark:border-neutral-600 dark:bg-neutral-950 dark:text-neutral-50"
-            value={preset}
-            onChange={(event) =>
-              onChange({
-                ...filters,
-                range_preset: event.target.value as DateRangePreset,
-              })
-            }
-          >
-            {DATE_RANGE_PRESET_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        {isCustom ? (
-          <>
-            <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium text-neutral-700 dark:text-neutral-200">Start date</span>
-              <Input
-                type="date"
-                value={filters.start_date?.slice(0, 10) ?? ''}
-                onChange={(event) => {
-                  const nextFilters = { ...filters }
-                  if (event.target.value) {
-                    nextFilters.start_date = `${event.target.value}T00:00:00Z`
-                  } else {
-                    delete nextFilters.start_date
-                  }
-                  onChange(nextFilters)
-                }}
-              />
-            </label>
-            <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium text-neutral-700 dark:text-neutral-200">End date</span>
-              <Input
-                type="date"
-                value={filters.end_date?.slice(0, 10) ?? ''}
-                onChange={(event) => {
-                  const nextFilters = { ...filters }
-                  if (event.target.value) {
-                    nextFilters.end_date = `${event.target.value}T23:59:59Z`
-                  } else {
-                    delete nextFilters.end_date
-                  }
-                  onChange(nextFilters)
-                }}
-              />
-            </label>
-          </>
-        ) : null}
+    <FilterBar aria-label="Date range filter">
+      <div className="min-w-[200px]">
+        <FilterSelect
+          id="analytics-date-range"
+          label="Date range"
+          value={preset}
+          options={DATE_RANGE_PRESET_OPTIONS}
+          onChange={(event) =>
+            onChange({
+              ...filters,
+              range_preset: event.target.value as DateRangePreset,
+            })
+          }
+        />
       </div>
-    </div>
+
+      {isCustom ? (
+        <>
+          <div className="min-w-[180px]">
+            <FilterLabel htmlFor="analytics-start-date">Start date</FilterLabel>
+            <Input
+              id="analytics-start-date"
+              type="date"
+              className="filter-control"
+              value={filters.start_date?.slice(0, 10) ?? ''}
+              onChange={(event) => {
+                const nextFilters = { ...filters }
+                if (event.target.value) {
+                  nextFilters.start_date = `${event.target.value}T00:00:00Z`
+                } else {
+                  delete nextFilters.start_date
+                }
+                onChange(nextFilters)
+              }}
+            />
+          </div>
+          <div className="min-w-[180px]">
+            <FilterLabel htmlFor="analytics-end-date">End date</FilterLabel>
+            <Input
+              id="analytics-end-date"
+              type="date"
+              className="filter-control"
+              value={filters.end_date?.slice(0, 10) ?? ''}
+              onChange={(event) => {
+                const nextFilters = { ...filters }
+                if (event.target.value) {
+                  nextFilters.end_date = `${event.target.value}T23:59:59Z`
+                } else {
+                  delete nextFilters.end_date
+                }
+                onChange(nextFilters)
+              }}
+            />
+          </div>
+        </>
+      ) : null}
+    </FilterBar>
   )
 }

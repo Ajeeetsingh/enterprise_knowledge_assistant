@@ -3,10 +3,15 @@ import { cn } from '@/utils/cn'
 
 export interface CitationCardProps {
   citation: Citation
-  onSelect: (citation: Citation) => void
+  onOpenSource: (citation: Citation) => void
+  isOpeningSource?: boolean
 }
 
-export default function CitationCard({ citation, onSelect }: CitationCardProps) {
+export default function CitationCard({
+  citation,
+  onOpenSource,
+  isOpeningSource = false,
+}: CitationCardProps) {
   const pageLabel =
     typeof citation.page === 'number' ? `Page ${citation.page}` : 'Page unavailable'
 
@@ -20,8 +25,9 @@ export default function CitationCard({ citation, onSelect }: CitationCardProps) 
         'dark:border-neutral-700 dark:bg-neutral-800/60 dark:hover:border-primary-600 dark:hover:bg-primary-900/20',
         'dark:focus-visible:ring-offset-neutral-900',
       )}
-      aria-label={`View citation details for ${citation.source}`}
-      onClick={() => onSelect(citation)}
+      aria-label={`Open source document for ${citation.source}`}
+      onClick={() => onOpenSource(citation)}
+      disabled={isOpeningSource}
     >
       <p className="font-medium text-neutral-900 dark:text-neutral-100">{citation.source}</p>
       <p className="mt-1 text-xs text-neutral-600 dark:text-neutral-400">{pageLabel}</p>
@@ -29,7 +35,7 @@ export default function CitationCard({ citation, onSelect }: CitationCardProps) 
         Confidence: {formatCitationConfidence(citation.confidence)}
       </p>
       <p className="mt-2 text-xs font-medium text-primary-600 dark:text-primary-400">
-        View source details
+        Open Source
       </p>
     </button>
   )

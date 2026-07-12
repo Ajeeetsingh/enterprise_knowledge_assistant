@@ -1,18 +1,25 @@
-import { useState } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { useNavigate, useOutletContext, useSearchParams } from 'react-router-dom'
 
 import ChatArea from '@/features/chat/components/ChatArea'
 import ConversationList from '@/features/chat/components/ConversationList'
 import DeleteConversationDialog from '@/features/chat/components/DeleteConversationDialog'
 import RenameConversationModal from '@/features/chat/components/RenameConversationModal'
+import ChatLayout from '@/features/chat/layouts/ChatLayout'
 import { useConversations } from '@/features/chat/hooks/useConversations'
 import { useCreateConversation } from '@/features/chat/hooks/useCreateConversation'
 import { useDeleteConversation } from '@/features/chat/hooks/useDeleteConversation'
 import { useRenameConversation } from '@/features/chat/hooks/useRenameConversation'
 import type { Conversation } from '@/features/chat/types'
+import { useLayoutContext } from '@/contexts/LayoutContext'
 import { useToast } from '@/contexts/ToastContext'
 import { getApiErrorMessage } from '@/services/errorHandler'
 import type { ApiError } from '@/types'
+
+interface ChatOutletContext {
+  sidebarWidth: number
+  sidebarCollapsed: boolean
+}
 
 function resolveErrorMessage(error: unknown): string {
   if (error && typeof error === 'object' && 'message' in error) {
@@ -24,6 +31,8 @@ function resolveErrorMessage(error: unknown): string {
 export default function ChatPage() {
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
+  const { sidebarWidth, sidebarCollapsed } = useOutletContext<ChatOutletContext>()
+  const { setChatRouteActive, closeConversationDrawer, setMobileChatPanel } = useLayoutContext()
   const selectedConversationId = searchParams.get('conversation')
   const { showSuccess, showError } = useToast()
 
@@ -39,8 +48,14 @@ export default function ChatPage() {
 
   const conversations = data?.items ?? []
 
+  useEffect(() => {
+    setChatRouteActive(true)
+    return () => setChatRouteActive(false)
+  }, [setChatRouteActive])
+
   function handleSelectConversation(conversationId: string) {
     setSearchParams({ conversation: conversationId })
+    closeConversationDrawer()
   }
 
   function clearSelectedConversation() {
@@ -56,6 +71,24 @@ export default function ChatPage() {
       showError(getApiErrorMessage(mutationError))
     }
   }
+
+  useEffect(() => {
+    setMobileChatPanel({
+      conversations,
+      selectedId: selectedConversationId,
+      isLoading,
+      isCreating: createConversation.isPending,
+      onSelect: handleSelectConversation,
+      onCreate: () => void handleCreateConversation(),
+    })
+    return () => setMobileChatPanel(null)
+  }, [
+    conversations,
+    selectedConversationId,
+    isLoading,
+    createConversation.isPending,
+    setMobileChatPanel,
+  ])
 
   function openRename(conversation: Conversation) {
     setRenameError(null)
@@ -118,21 +151,24 @@ export default function ChatPage() {
 
   return (
     <>
-      <div className="-mx-4 -my-6 flex h-[calc(100dvh-3.5rem-3rem)] min-h-[28rem] flex-col overflow-hidden border border-neutral-200 dark:border-neutral-700 sm:-mx-6 lg:-mx-8 lg:flex-row">
-        <ConversationList
-          conversations={conversations}
-          selectedId={selectedConversationId}
-          isLoading={isLoading}
-          isCreating={createConversation.isPending}
-          error={isError ? resolveErrorMessage(error) : null}
-          onSelect={handleSelectConversation}
-          onCreate={() => void handleCreateConversation()}
-          onRename={openRename}
-          onDelete={openDelete}
-        />
-
-        <ChatArea conversationId={selectedConversationId} />
-      </div>
+      <ChatLayout
+        sidebarWidth={sidebarWidth}
+        sidebarCollapsed={sidebarCollapsed}
+        conversationList={
+          <ConversationList
+            conversations={conversations}
+            selectedId={selectedConversationId}
+            isLoading={isLoading}
+            isCreating={createConversation.isPending}
+            error={isError ? resolveErrorMessage(error) : null}
+            onSelect={handleSelectConversation}
+            onCreate={() => void handleCreateConversation()}
+            onRename={openRename}
+            onDelete={openDelete}
+          />
+        }
+        chatArea={<ChatArea conversationId={selectedConversationId} />}
+      />
 
       <RenameConversationModal
         conversation={renameTarget}

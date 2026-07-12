@@ -1,4 +1,4 @@
-import Button from '@/components/ui/Button'
+import ActionButton from '@/components/ui/ActionButton'
 import EmptyState from '@/components/ui/EmptyState'
 import DocumentStatusBadge from '@/features/documents/components/DocumentStatusBadge'
 import { formatUploadedAt } from '@/features/documents/types'
@@ -25,7 +25,7 @@ export default function DocumentsTable({
         {Array.from({ length: 5 }).map((_, index) => (
           <div
             key={index}
-            className="h-12 animate-pulse rounded-md bg-neutral-200 dark:bg-neutral-800"
+            className="h-12 animate-pulse rounded-md bg-overlay"
           />
         ))}
       </div>
@@ -42,75 +42,37 @@ export default function DocumentsTable({
   }
 
   return (
-    <div className="overflow-x-auto rounded-lg border border-neutral-200 dark:border-neutral-700">
-      <table className="min-w-full divide-y divide-neutral-200 dark:divide-neutral-700">
+    <div className="data-table-shell">
+      <table className="data-table">
         <caption className="sr-only">Enterprise documents</caption>
-        <thead className="bg-neutral-50 dark:bg-neutral-900/60">
+        <thead>
           <tr>
-            <th
-              scope="col"
-              className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400"
-            >
-              Name
-            </th>
-            <th
-              scope="col"
-              className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400"
-            >
-              Type
-            </th>
-            <th
-              scope="col"
-              className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400"
-            >
-              Status
-            </th>
-            <th
-              scope="col"
-              className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400"
-            >
-              Visibility
-            </th>
-            <th
-              scope="col"
-              className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400"
-            >
-              Created Date
-            </th>
-            <th
-              scope="col"
-              className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400"
-            >
+            <th scope="col">Name</th>
+            <th scope="col">Type</th>
+            <th scope="col">Status</th>
+            <th scope="col">Visibility</th>
+            <th scope="col">Created Date</th>
+            <th scope="col" className="text-right">
               Actions
             </th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-neutral-200 bg-white dark:divide-neutral-700 dark:bg-neutral-900">
+        <tbody>
           {documents.map((document) => (
-            <tr key={document.document_id} className="hover:bg-neutral-50 dark:hover:bg-neutral-800/40">
-              <td className="px-4 py-3 text-sm font-medium text-neutral-900 dark:text-neutral-100">
-                {document.filename}
-              </td>
-              <td className="px-4 py-3 text-sm text-neutral-600 dark:text-neutral-300">
-                {getDocumentType(document.filename)}
-              </td>
-              <td className="px-4 py-3">
+            <tr key={document.document_id} className="interactive-row">
+              <td className="font-medium">{document.filename}</td>
+              <td className="text-muted">{getDocumentType(document.filename)}</td>
+              <td>
                 <DocumentStatusBadge status={document.status} />
               </td>
-              <td className="px-4 py-3 text-sm text-neutral-600 dark:text-neutral-300">
-                {mapVisibilityDisplay(document.visibility)}
-              </td>
-              <td className="px-4 py-3 text-sm text-neutral-600 dark:text-neutral-300">
-                {formatUploadedAt(document.uploaded_at)}
-              </td>
-              <td className="px-4 py-3">
+              <td className="text-muted">{mapVisibilityDisplay(document.visibility)}</td>
+              <td className="text-muted">{formatUploadedAt(document.uploaded_at)}</td>
+              <td>
                 <div className="flex justify-end gap-2">
-                  <Button variant="secondary" size="sm" onClick={() => onView(document)}>
-                    View
-                  </Button>
-                  <Button variant="danger" size="sm" onClick={() => onDelete(document)}>
+                  <ActionButton onClick={() => onView(document)}>View</ActionButton>
+                  <ActionButton destructive onClick={() => onDelete(document)}>
                     Delete
-                  </Button>
+                  </ActionButton>
                 </div>
               </td>
             </tr>

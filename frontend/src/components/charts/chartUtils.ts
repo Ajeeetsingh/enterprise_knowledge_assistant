@@ -1,12 +1,13 @@
-/** Shared chart color tokens for analytics dashboards. */
+/** Shared chart color tokens — reference CSS variables from global.css. */
 
 export const CHART_COLORS = {
-  primary: '#2563eb',
-  secondary: '#7c3aed',
-  success: '#16a34a',
-  warning: '#d97706',
-  danger: '#dc2626',
-  muted: '#94a3b8',
+  primary: 'var(--chart-primary)',
+  secondary: 'var(--chart-secondary)',
+  tertiary: 'var(--chart-tertiary)',
+  success: 'var(--status-good)',
+  warning: 'var(--status-warn)',
+  danger: 'var(--status-bad)',
+  muted: 'var(--text-tertiary)',
 } as const
 
 export interface ChartPoint {
@@ -26,4 +27,8 @@ export function formatChartDateLabel(label: string): string {
     return label
   }
   return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+}
+
+export function hasInsufficientChartData(data: ChartPoint[]): boolean {
+  return data.length <= 1
 }

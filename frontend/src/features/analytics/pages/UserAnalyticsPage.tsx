@@ -119,34 +119,56 @@ export default function UserAnalyticsPage() {
               User analytics KPIs
             </h3>
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-              <AnalyticsKPICard label="Total Users" value={overviewQuery.data.total_users} />
-              <AnalyticsKPICard label="New Users" value={overviewQuery.data.new_users} />
+              <AnalyticsKPICard
+                label="Total Users"
+                value={overviewQuery.data.total_users}
+                icon="users"
+                size="primary"
+              />
+              <AnalyticsKPICard
+                label="New Users"
+                value={overviewQuery.data.new_users}
+                icon="users"
+                size="primary"
+              />
               <AnalyticsKPICard
                 label="Daily Active Users"
                 value={overviewQuery.data.daily_active_users}
+                icon="users"
+                size="primary"
               />
               <AnalyticsKPICard
                 label="Weekly Active Users"
                 value={overviewQuery.data.weekly_active_users}
+                icon="users"
+                size="primary"
               />
               <AnalyticsKPICard
                 label="Monthly Active Users"
                 value={overviewQuery.data.monthly_active_users}
+                icon="users"
+                size="secondary"
               />
               <AnalyticsKPICard
                 label="Active User %"
                 value={overviewQuery.data.active_user_percentage}
                 format="percent"
+                icon="success"
+                size="secondary"
               />
               <AnalyticsKPICard
                 label="Avg Conversations / User"
                 value={overviewQuery.data.average_conversations_per_user}
                 format="decimal"
+                icon="ai"
+                size="secondary"
               />
               <AnalyticsKPICard
                 label="Avg Questions / User"
                 value={overviewQuery.data.average_questions_per_user}
                 format="decimal"
+                icon="ai"
+                size="secondary"
               />
             </div>
           </section>

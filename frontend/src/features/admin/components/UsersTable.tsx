@@ -1,6 +1,6 @@
-import Button from '@/components/ui/Button'
+import ActionButton from '@/components/ui/ActionButton'
 import EmptyState from '@/components/ui/EmptyState'
-import Badge from '@/components/ui/Badge'
+import StatusBadge from '@/components/ui/StatusBadge'
 import { formatCreatedAt, formatUserRoles, type User } from '@/features/users/types'
 
 import { getDisableBlockReason, getPrimaryRole } from '../utils/userFilters'
@@ -16,10 +16,10 @@ export interface UsersTableProps {
 
 function AdminUserStatusBadge({ isActive }: { isActive: boolean }) {
   if (isActive) {
-    return <Badge variant="success">Active</Badge>
+    return <StatusBadge tone="good">Active</StatusBadge>
   }
 
-  return <Badge variant="error">Disabled</Badge>
+  return <StatusBadge tone="bad">Disabled</StatusBadge>
 }
 
 export default function UsersTable({
@@ -36,7 +36,7 @@ export default function UsersTable({
         {Array.from({ length: 5 }).map((_, index) => (
           <div
             key={index}
-            className="h-12 animate-pulse rounded-md bg-neutral-200 dark:bg-neutral-800"
+            className="h-12 animate-pulse rounded-md bg-overlay"
           />
         ))}
       </div>
@@ -53,70 +53,49 @@ export default function UsersTable({
   }
 
   return (
-    <div className="overflow-x-auto rounded-lg border border-neutral-200 dark:border-neutral-700">
-      <table className="min-w-full divide-y divide-neutral-200 dark:divide-neutral-700">
+    <div className="data-table-shell">
+      <table className="data-table">
         <caption className="sr-only">Platform users</caption>
-        <thead className="bg-neutral-50 dark:bg-neutral-900/60">
+        <thead>
           <tr>
-            <th scope="col" className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
-              Name
-            </th>
-            <th scope="col" className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
-              Email
-            </th>
-            <th scope="col" className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
-              Role
-            </th>
-            <th scope="col" className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
-              Status
-            </th>
-            <th scope="col" className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
-              Created Date
-            </th>
-            <th scope="col" className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
+            <th scope="col">Name</th>
+            <th scope="col">Email</th>
+            <th scope="col">Role</th>
+            <th scope="col">Status</th>
+            <th scope="col">Created Date</th>
+            <th scope="col" className="text-right">
               Actions
             </th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-neutral-200 bg-white dark:divide-neutral-700 dark:bg-neutral-900">
+        <tbody>
           {users.map((user) => {
             const disableReason = getDisableBlockReason(user, currentUserId)
             const statusActionLabel = user.is_active ? 'Disable' : 'Enable'
 
             return (
-              <tr key={user.id} className="hover:bg-neutral-50 dark:hover:bg-neutral-800/40">
-                <td className="px-4 py-3 text-sm font-medium text-neutral-900 dark:text-neutral-100">
-                  {user.full_name}
-                </td>
-                <td className="px-4 py-3 text-sm text-neutral-600 dark:text-neutral-300">
-                  {user.email}
-                </td>
-                <td className="px-4 py-3 text-sm text-neutral-600 dark:text-neutral-300">
+              <tr key={user.id} className="interactive-row">
+                <td className="font-medium">{user.full_name}</td>
+                <td className="text-muted">{user.email}</td>
+                <td className="text-muted">
                   {formatUserRoles(user.roles) || getPrimaryRole(user.roles)}
                 </td>
-                <td className="px-4 py-3">
+                <td>
                   <AdminUserStatusBadge isActive={user.is_active} />
                 </td>
-                <td className="px-4 py-3 text-sm text-neutral-600 dark:text-neutral-300">
-                  {formatCreatedAt(user.created_at)}
-                </td>
-                <td className="px-4 py-3">
+                <td className="text-muted">{formatCreatedAt(user.created_at)}</td>
+                <td>
                   <div className="flex justify-end gap-2">
-                    <Button variant="secondary" size="sm" onClick={() => onView(user)}>
-                      View
-                    </Button>
-                    <Button variant="secondary" size="sm" onClick={() => onManageRole(user)}>
-                      Role
-                    </Button>
-                    <Button
-                      variant={user.is_active ? 'danger' : 'primary'}
-                      size="sm"
+                    <ActionButton onClick={() => onView(user)}>View</ActionButton>
+                    <ActionButton onClick={() => onManageRole(user)}>Role</ActionButton>
+                    <ActionButton
+                      destructive={user.is_active}
                       disabled={Boolean(user.is_active && disableReason)}
                       title={disableReason}
                       onClick={() => onToggleStatus(user)}
                     >
                       {statusActionLabel}
-                    </Button>
+                    </ActionButton>
                   </div>
                 </td>
               </tr>

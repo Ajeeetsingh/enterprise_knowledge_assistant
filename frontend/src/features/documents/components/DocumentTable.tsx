@@ -1,3 +1,6 @@
+import { useNavigate } from 'react-router-dom'
+
+import ActionButton from '@/components/ui/ActionButton'
 import Button from '@/components/ui/Button'
 
 import { VISIBILITY_NOT_IN_LIST_API } from '../constants'
@@ -7,10 +10,28 @@ import DocumentStatusBadge from './DocumentStatusBadge'
 export interface DocumentTableProps {
   documents: Document[]
   isLoading: boolean
+  onView?: (document: Document) => void
+  onDownload?: (document: Document) => void
   onDelete: (document: Document) => void
 }
 
-export default function DocumentTable({ documents, isLoading, onDelete }: DocumentTableProps) {
+export default function DocumentTable({
+  documents,
+  isLoading,
+  onView,
+  onDownload,
+  onDelete,
+}: DocumentTableProps) {
+  const navigate = useNavigate()
+
+  function handleView(document: Document) {
+    if (onView) {
+      onView(document)
+      return
+    }
+    navigate(`/documents/${document.document_id}`)
+  }
+
   if (isLoading) {
     return (
       <div className="space-y-3" aria-busy="true" aria-label="Loading documents">
@@ -82,13 +103,15 @@ export default function DocumentTable({ documents, isLoading, onDelete }: Docume
                 {new Date(document.uploaded_at).toLocaleString()}
               </td>
               <td className="px-4 py-3 text-right">
-                <Button
-                  variant="danger"
-                  size="sm"
-                  onClick={() => onDelete(document)}
-                >
-                  Delete
-                </Button>
+                <div className="flex justify-end gap-2">
+                  <ActionButton onClick={() => handleView(document)}>View</ActionButton>
+                  {onDownload && (
+                    <ActionButton onClick={() => onDownload(document)}>Download</ActionButton>
+                  )}
+                  <Button variant="danger" size="sm" onClick={() => onDelete(document)}>
+                    Delete
+                  </Button>
+                </div>
               </td>
             </tr>
           ))}

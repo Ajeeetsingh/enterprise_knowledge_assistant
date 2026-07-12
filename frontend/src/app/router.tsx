@@ -10,6 +10,7 @@ import {
   AdminUsersPage,
 } from '@/features/admin'
 import { AIAnalyticsPage, ErrorAnalyticsPage, KnowledgeAnalyticsPage, SystemMonitoringPage, UserAnalyticsPage } from '@/features/analytics'
+import DocumentViewerPage from '@/features/document-viewer/pages/DocumentViewerPage'
 import { ReportsPage } from '@/features/reports'
 import AppLayout from '@/layouts/AppLayout'
 import AuthLayout from '@/layouts/AuthLayout'
@@ -58,6 +59,7 @@ const router = createBrowserRouter([
         children: [
           { path: 'dashboard', element: <DashboardPage /> },
           { path: 'chat', element: <ChatPage /> },
+          { path: 'documents/:documentId', element: <DocumentViewerPage /> },
           { path: 'documents', element: <DocumentsPage /> },
           { path: 'profile', element: <ProfilePage /> },
           {

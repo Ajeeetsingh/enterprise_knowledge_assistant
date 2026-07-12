@@ -4,9 +4,22 @@
 # Python
 __pycache__/
 *.pyc
+.pytest_cache/
+
+# Node
+node_modules/
+dist/
+
+# Vite
+node_modules/.vite/
 
 # IDE
 .idea/
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
 
 # Environment Variables
 .env
@@ -28,3 +41,18 @@ build/
 
 # Results
 results/
+
+# Runtime uploads
+backend/storage/documents/*
+!backend/storage/documents/.gitkeep
+
+# Search indexes
+backend/storage/indexes/*
+!backend/storage/indexes/.gitkeep
+
+# Evaluation datasets
+data/
+
+# Node
+node_modules/
+dist/

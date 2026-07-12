@@ -1,11 +1,12 @@
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts'
 
-import { CHART_COLORS, type ChartPoint } from './chartUtils'
+import ChartEmptyState from './ChartEmptyState'
+import { CHART_COLORS, hasInsufficientChartData, type ChartPoint } from './chartUtils'
 
 const PIE_COLORS = [
   CHART_COLORS.primary,
   CHART_COLORS.secondary,
-  CHART_COLORS.success,
+  CHART_COLORS.tertiary,
   CHART_COLORS.warning,
   CHART_COLORS.danger,
   CHART_COLORS.muted,
@@ -22,15 +23,13 @@ export default function BasePieChart({
   ariaLabel,
   valueLabel = 'Count',
 }: BasePieChartProps) {
-  if (data.length === 0) {
+  if (hasInsufficientChartData(data)) {
     return (
-      <div
-        className="flex h-64 items-center justify-center text-sm text-neutral-500 dark:text-neutral-400"
-        role="img"
-        aria-label={`${ariaLabel}: no data`}
-      >
-        No data for the selected period.
-      </div>
+      <ChartEmptyState
+        message={
+          data.length === 0 ? 'No data for the selected period' : 'No activity in this range'
+        }
+      />
     )
   }
 

@@ -10,21 +10,19 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   isLoading?: boolean
 }
 
+const focusRing =
+  'focus-visible:outline-none focus-visible:shadow-[0_0_0_3px_var(--accent-muted)]'
+
 const variantClasses: Record<ButtonVariant, string> = {
   primary:
-    'bg-primary-600 text-white hover:bg-primary-700 active:bg-primary-800 ' +
-    'focus-visible:ring-primary-500 dark:bg-primary-500 dark:hover:bg-primary-400',
+    'bg-accent text-white shadow-elevation-sm hover:bg-accent-hover active:bg-accent-pressed active:scale-[0.97]',
   secondary:
-    'bg-white text-neutral-700 border border-neutral-300 hover:bg-neutral-50 ' +
-    'active:bg-neutral-100 focus-visible:ring-neutral-400 ' +
-    'dark:bg-neutral-800 dark:text-neutral-200 dark:border-neutral-600 dark:hover:bg-neutral-700',
+    'border border-border-default bg-surface-raised text-foreground shadow-elevation-sm ' +
+    'hover:bg-overlay active:scale-[0.97]',
   danger:
-    'bg-error-500 text-white hover:bg-error-700 active:bg-error-700 ' +
-    'focus-visible:ring-error-500',
+    'bg-error-500 text-white shadow-elevation-sm hover:bg-error-700 active:scale-[0.97]',
   ghost:
-    'bg-transparent text-neutral-700 hover:bg-neutral-100 active:bg-neutral-200 ' +
-    'focus-visible:ring-neutral-400 ' +
-    'dark:text-neutral-300 dark:hover:bg-neutral-800',
+    'bg-transparent text-muted hover:bg-overlay hover:text-foreground active:scale-[0.97]',
 }
 
 const sizeClasses: Record<ButtonSize, string> = {
@@ -56,8 +54,8 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         aria-busy={isLoading}
         className={cn(
           'inline-flex items-center justify-center rounded-md font-medium',
-          'transition-colors duration-150',
-          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2',
+          'transition-all duration-150 ease-out',
+          focusRing,
           'disabled:pointer-events-none disabled:opacity-50',
           variantClasses[variant],
           sizeClasses[size],

@@ -8,7 +8,11 @@ import { cn } from '@/utils/cn'
 
 const MENU_ITEM_SELECTOR = '[role="menuitem"]'
 
-export default function UserMenu() {
+export interface UserMenuProps {
+  compact?: boolean
+}
+
+export default function UserMenu({ compact = false }: UserMenuProps) {
   const menuId = useId()
   const containerRef = useRef<HTMLDivElement>(null)
   const menuRef = useRef<HTMLDivElement>(null)
@@ -105,28 +109,29 @@ export default function UserMenu() {
         aria-controls={menuId}
         aria-label={`User menu for ${displayName}`}
         className={cn(
-          'flex items-center gap-2 rounded-md border border-neutral-200 px-2 py-1.5 sm:px-3',
-          'text-left transition-colors',
-          'hover:bg-neutral-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2',
-          'dark:border-neutral-700 dark:hover:bg-neutral-800 dark:focus-visible:ring-offset-neutral-900',
-          open && 'bg-neutral-50 dark:bg-neutral-800',
+          'text-left transition-colors duration-150',
+          'hover:bg-overlay focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-canvas',
+          compact
+            ? 'flex size-9 items-center justify-center rounded-full border border-border-subtle'
+            : cn(
+                'flex items-center gap-2 rounded-md border border-border-subtle px-2 py-1.5 sm:px-3',
+              ),
+          open && 'bg-overlay',
         )}
         onClick={() => setOpen((prev) => !prev)}
       >
         <span
           aria-hidden
-          className="flex size-7 shrink-0 items-center justify-center rounded-full bg-primary-100 text-xs font-semibold text-primary-700 dark:bg-primary-900/40 dark:text-primary-300"
+          className="flex size-7 shrink-0 items-center justify-center rounded-full bg-accent-muted text-xs font-semibold text-accent"
         >
           {initials}
         </span>
-        <span className="hidden min-w-0 flex-col sm:flex">
-          <span className="truncate text-sm font-medium text-neutral-900 dark:text-neutral-50">
-            {displayName}
+        {!compact && (
+          <span className="hidden min-w-0 flex-col sm:flex">
+            <span className="truncate text-sm font-medium text-foreground">{displayName}</span>
+            <span className="truncate text-xs text-muted">{displayEmail}</span>
           </span>
-          <span className="truncate text-xs text-neutral-500 dark:text-neutral-400">
-            {displayEmail}
-          </span>
-        </span>
+        )}
       </button>
 
       {open && (
@@ -136,17 +141,12 @@ export default function UserMenu() {
           role="menu"
           aria-label="User account menu"
           className={cn(
-            'absolute right-0 top-full z-50 mt-2 w-64 max-w-[calc(100vw-2rem)] rounded-md border border-neutral-200 bg-white py-1 shadow-lg',
-            'dark:border-neutral-700 dark:bg-neutral-900',
+            'absolute right-0 top-full z-50 mt-2 w-64 max-w-[calc(100vw-2rem)] rounded-md border border-border-default bg-surface-raised py-1 shadow-elevation-md',
           )}
         >
-          <div className="border-b border-neutral-200 px-4 py-3 dark:border-neutral-700">
-            <p className="truncate text-sm font-semibold text-neutral-900 dark:text-neutral-50">
-              {displayName}
-            </p>
-            <p className="mt-0.5 truncate text-xs text-neutral-500 dark:text-neutral-400">
-              {displayEmail}
-            </p>
+          <div className="border-b border-border-subtle px-4 py-3">
+            <p className="truncate text-sm font-semibold text-foreground">{displayName}</p>
+            <p className="mt-0.5 truncate text-xs text-muted">{displayEmail}</p>
             <div className="mt-2">
               <Badge variant="info">{roleLabel}</Badge>
             </div>
@@ -155,7 +155,7 @@ export default function UserMenu() {
           <button
             type="button"
             role="menuitem"
-            className="block w-full px-4 py-2.5 text-left text-sm text-neutral-700 hover:bg-neutral-100 focus-visible:bg-neutral-100 focus-visible:outline-none dark:text-neutral-200 dark:hover:bg-neutral-800"
+            className="block w-full px-4 py-2.5 text-left text-sm text-foreground hover:bg-overlay focus-visible:bg-overlay focus-visible:outline-none"
             onClick={handleProfile}
           >
             My Profile
@@ -164,7 +164,7 @@ export default function UserMenu() {
           <button
             type="button"
             role="menuitem"
-            className="block w-full px-4 py-2.5 text-left text-sm text-error-700 hover:bg-error-50 focus-visible:bg-error-50 focus-visible:outline-none dark:text-error-400 dark:hover:bg-error-700/10"
+            className="block w-full px-4 py-2.5 text-left text-sm text-error-500 hover:bg-error-50 focus-visible:bg-error-50 focus-visible:outline-none dark:hover:bg-error-700/10"
             onClick={() => void handleLogout()}
           >
             Logout

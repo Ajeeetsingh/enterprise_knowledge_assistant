@@ -5,13 +5,21 @@ import Card from '@/components/ui/Card'
 import EmptyState from '@/components/ui/EmptyState'
 import { useToast } from '@/contexts/ToastContext'
 import {
+  fetchDocumentFileBlob,
+  triggerBlobDownload,
+} from '@/features/document-viewer/services/documentFileApi'
+import {
   DeleteDocumentDialog,
   DocumentTable,
   DocumentUploadDialog,
 } from '@/features/documents/components'
 import { useDeleteDocument } from '@/features/documents/hooks/useDeleteDocument'
-import { useDocuments } from '@/features/documents/hooks/useDocuments'
 import { useUploadDocument } from '@/features/documents/hooks/useUploadDocument'
+import { useDocuments } from '@/features/documents/hooks/useDocuments'
+import {
+  lifecycleStateFromUploadResponse,
+  logUploadTransition,
+} from '@/features/documents/utils/uploadLifecycleDebug'
 import type { Document } from '@/features/documents/types'
 import { getApiErrorMessage } from '@/services/errorHandler'
 import type { ApiError } from '@/types'
@@ -50,12 +58,23 @@ export default function DocumentsPage() {
 
   async function handleUpload(file: File) {
     setUploadError(null)
+    logUploadTransition('DocumentsPage', 'Uploading', { filename: file.name, sizeBytes: file.size })
+
     try {
-      await uploadDocument.mutateAsync(file)
+      const result = await uploadDocument.mutateAsync(file)
+      logUploadTransition('DocumentsPage', lifecycleStateFromUploadResponse(result), {
+        filename: file.name,
+        documentId: result.document_id,
+        backendStatus: result.status,
+      })
       setUploadOpen(false)
       showSuccess('Document uploaded successfully.')
     } catch (uploadFailure) {
       const message = getApiErrorMessage(uploadFailure)
+      logUploadTransition('DocumentsPage', 'Failed', {
+        filename: file.name,
+        errorMessage: message,
+      })
       setUploadError(message)
       showError(message)
     }
@@ -83,6 +102,15 @@ export default function DocumentsPage() {
       const message = getApiErrorMessage(deleteFailure)
       setDeleteError(message)
       showError(message)
+    }
+  }
+
+  async function handleDownload(document: Document) {
+    try {
+      const blob = await fetchDocumentFileBlob(document.document_id, { download: true })
+      triggerBlobDownload(blob, document.filename)
+    } catch (downloadFailure) {
+      showError(getApiErrorMessage(downloadFailure))
     }
   }
 
@@ -128,6 +156,7 @@ export default function DocumentsPage() {
         <DocumentTable
           documents={documents}
           isLoading={isLoading}
+          onDownload={(document) => void handleDownload(document)}
           onDelete={openDelete}
         />
       )}

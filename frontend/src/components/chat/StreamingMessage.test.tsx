@@ -25,7 +25,7 @@ describe('StreamingMessage', () => {
       />,
     )
 
-    expect(screen.getByText(/Assistant is typing/i)).toBeInTheDocument()
+    expect(screen.getByRole('status', { name: /thinking/i })).toBeInTheDocument()
     expect(screen.queryByRole('heading')).not.toBeInTheDocument()
   })
 
@@ -43,6 +43,7 @@ describe('StreamingMessage', () => {
       vi.advanceTimersByTime(20)
     })
     expect(screen.getByText('Hello')).toBeInTheDocument()
+    expect(screen.queryByRole('status', { name: /thinking/i })).not.toBeInTheDocument()
 
     act(() => {
       vi.advanceTimersByTime(20)
@@ -64,7 +65,7 @@ describe('StreamingMessage', () => {
       vi.advanceTimersByTime(10_000)
     })
 
-    expect(screen.queryByText(/Assistant is typing/i)).not.toBeInTheDocument()
+    expect(screen.queryByRole('status', { name: /thinking/i })).not.toBeInTheDocument()
     expect(screen.getByText(SAMPLE_TEXT)).toBeInTheDocument()
   })
 
@@ -128,6 +129,12 @@ describe('StreamingMessage', () => {
     expect(screen.getByText('Item one')).toBeInTheDocument()
   })
 
+  it('shows thinking dots while waiting for first content chunk', () => {
+    render(<StreamingMessage content="" isStreaming />)
+
+    expect(screen.getByRole('status', { name: /thinking/i })).toBeInTheDocument()
+  })
+
   it('falls back to full markdown immediately when not streaming', () => {
     const onComplete = vi.fn()
 
@@ -140,7 +147,7 @@ describe('StreamingMessage', () => {
     )
 
     expect(screen.getByRole('heading', { level: 1, name: 'Heading' })).toBeInTheDocument()
-    expect(screen.queryByText(/Assistant is typing/i)).not.toBeInTheDocument()
+    expect(screen.queryByRole('status', { name: /thinking/i })).not.toBeInTheDocument()
     expect(onComplete).toHaveBeenCalledTimes(1)
   })
 })

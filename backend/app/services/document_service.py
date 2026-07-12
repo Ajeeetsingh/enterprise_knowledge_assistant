@@ -595,6 +595,26 @@ class DocumentService:
             replaced_by=replaced_by,
         )
 
+    def read_document_file(self, document: Document) -> tuple[bytes, str, str]:
+        """Return stored file bytes, MIME type, and filename for download/preview."""
+        if document.status == DocumentStatus.DELETED.value:
+            raise DocumentNotFoundError(f"Document '{document.id}' not found.")
+
+        storage_path = document.storage_path
+        if not storage_path or storage_path.startswith("pending/"):
+            raise DocumentStorageError(
+                f"Stored content unavailable for document '{document.id}'."
+            )
+
+        try:
+            content = self._storage.resolve(storage_path).read_bytes()
+        except StorageError as exc:
+            raise DocumentStorageError(
+                f"Failed to read stored file for document '{document.id}'."
+            ) from exc
+
+        return content, document.content_type, document.filename
+
     def delete_document(
         self,
         repository: DocumentRepository,

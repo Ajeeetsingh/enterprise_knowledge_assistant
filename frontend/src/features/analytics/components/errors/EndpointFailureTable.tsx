@@ -1,4 +1,11 @@
 import EmptyState from '@/components/ui/EmptyState'
+import DataTable, {
+  DataTableBody,
+  DataTableCell,
+  DataTableHead,
+  DataTableHeaderCell,
+  DataTableRow,
+} from '@/components/ui/DataTable'
 
 import type { EndpointFailureItem } from '../../types'
 
@@ -17,34 +24,23 @@ export default function EndpointFailureTable({ items }: EndpointFailureTableProp
   }
 
   return (
-    <div className="overflow-x-auto">
-      <table className="min-w-full divide-y divide-neutral-200 dark:divide-neutral-700">
-        <caption className="sr-only">Endpoint failure analysis</caption>
-        <thead>
-          <tr className="text-left text-sm text-neutral-500 dark:text-neutral-400">
-            <th scope="col" className="px-4 py-3 font-medium">
-              Endpoint
-            </th>
-            <th scope="col" className="px-4 py-3 font-medium">
-              Service
-            </th>
-            <th scope="col" className="px-4 py-3 font-medium">
-              Count
-            </th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-neutral-200 dark:divide-neutral-700">
-          {items.map((item) => (
-            <tr key={`${item.service}-${item.endpoint}`}>
-              <td className="px-4 py-3 text-neutral-900 dark:text-neutral-50">{item.endpoint}</td>
-              <td className="px-4 py-3 text-neutral-700 dark:text-neutral-300">{item.service}</td>
-              <td className="px-4 py-3 tabular-nums text-neutral-900 dark:text-neutral-50">
-                {item.count}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+    <DataTable caption="Endpoint failure analysis">
+      <DataTableHead>
+        <DataTableRow interactive={false}>
+          <DataTableHeaderCell>Endpoint</DataTableHeaderCell>
+          <DataTableHeaderCell>Service</DataTableHeaderCell>
+          <DataTableHeaderCell>Count</DataTableHeaderCell>
+        </DataTableRow>
+      </DataTableHead>
+      <DataTableBody>
+        {items.map((item) => (
+          <DataTableRow key={`${item.service}-${item.endpoint}`}>
+            <DataTableCell>{item.endpoint}</DataTableCell>
+            <DataTableCell muted>{item.service}</DataTableCell>
+            <DataTableCell className="tabular-nums">{item.count}</DataTableCell>
+          </DataTableRow>
+        ))}
+      </DataTableBody>
+    </DataTable>
   )
 }

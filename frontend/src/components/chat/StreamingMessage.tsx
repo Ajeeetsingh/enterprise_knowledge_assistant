@@ -14,20 +14,18 @@ export interface StreamingMessageProps {
   className?: string
 }
 
-function TypingIndicator() {
+function ThinkingIndicator() {
   return (
-    <p
-      className="mt-2 flex items-center gap-1 text-xs text-neutral-500 dark:text-neutral-400"
+    <div
+      className="flex items-center gap-1.5 py-1"
       role="status"
       aria-live="polite"
+      aria-label="Assistant is thinking"
     >
-      <span>Assistant is typing</span>
-      <span className="inline-flex gap-0.5" aria-hidden="true">
-        <span className="animate-pulse">.</span>
-        <span className="animate-pulse [animation-delay:150ms]">.</span>
-        <span className="animate-pulse [animation-delay:300ms]">.</span>
-      </span>
-    </p>
+      <span className="thinking-dot size-2 rounded-full" />
+      <span className="thinking-dot size-2 rounded-full" />
+      <span className="thinking-dot size-2 rounded-full" />
+    </div>
   )
 }
 
@@ -55,8 +53,7 @@ function StreamingMessage({
 
     if (!content) {
       setStreamedContent('')
-      setStreamingComplete(true)
-      onCompleteRef.current?.()
+      setStreamingComplete(false)
       return
     }
 
@@ -88,10 +85,13 @@ function StreamingMessage({
     )
   }
 
+  if (!streamedContent) {
+    return <ThinkingIndicator />
+  }
+
   return (
     <div className={cn(className)}>
       <p className="whitespace-pre-wrap break-words text-sm leading-relaxed">{streamedContent}</p>
-      <TypingIndicator />
     </div>
   )
 }

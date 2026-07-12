@@ -13,6 +13,9 @@ export type { EmptyStateProps } from './EmptyState'
 export { default as Input } from './Input'
 export type { InputProps } from './Input'
 
+export { default as Skeleton } from './Skeleton'
+export type { SkeletonProps } from './Skeleton'
+
 export { default as Spinner } from './Spinner'
 export type { SpinnerProps, SpinnerSize } from './Spinner'
 

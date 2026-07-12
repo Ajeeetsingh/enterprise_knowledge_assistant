@@ -7,37 +7,36 @@ import type { Citation } from '@/features/chat/types'
 
 const sampleCitation: Citation = {
   source: 'Employee Handbook.pdf',
-  excerpt: 'Employees are entitled to 20 days of annual leave.',
-  confidence: 0.92,
-  page: 14,
+  excerpt: 'Remote work policy applies to all full-time employees.',
+  confidence: 0.91,
+  page: 13,
 }
 
 describe('CitationCard', () => {
-  it('calls onSelect when clicked', async () => {
+  it('calls onOpenSource when clicked', async () => {
     const user = userEvent.setup()
-    const onSelect = vi.fn()
+    const onOpenSource = vi.fn()
 
-    render(<CitationCard citation={sampleCitation} onSelect={onSelect} />)
+    render(<CitationCard citation={sampleCitation} onOpenSource={onOpenSource} />)
 
     await user.click(
-      screen.getByRole('button', { name: /view citation details for employee handbook\.pdf/i }),
+      screen.getByRole('button', { name: 'Open source document for Employee Handbook.pdf' }),
     )
 
-    expect(onSelect).toHaveBeenCalledWith(sampleCitation)
+    expect(onOpenSource).toHaveBeenCalledWith(sampleCitation)
   })
 
-  it('is keyboard accessible', async () => {
+  it('shows Open Source label', async () => {
     const user = userEvent.setup()
-    const onSelect = vi.fn()
+    const onOpenSource = vi.fn()
 
-    render(<CitationCard citation={sampleCitation} onSelect={onSelect} />)
+    render(<CitationCard citation={sampleCitation} onOpenSource={onOpenSource} />)
 
-    const button = screen.getByRole('button', {
-      name: /view citation details for employee handbook\.pdf/i,
-    })
-    button.focus()
-    await user.keyboard('{Enter}')
+    expect(screen.getByText('Open Source')).toBeInTheDocument()
 
-    expect(onSelect).toHaveBeenCalledWith(sampleCitation)
+    await user.click(
+      screen.getByRole('button', { name: 'Open source document for Employee Handbook.pdf' }),
+    )
+    expect(onOpenSource).toHaveBeenCalledWith(sampleCitation)
   })
 })
