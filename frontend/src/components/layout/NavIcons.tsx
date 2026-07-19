@@ -68,6 +68,7 @@ export const NAV_ICON_BY_PATH: Record<string, NavIconName> = {
   '/chat': 'chat',
   '/documents': 'documents',
   '/admin': 'admin',
+  '/admin/users': 'users',
   '/users': 'users',
   '/monitoring': 'monitoring',
   '/profile': 'profile',

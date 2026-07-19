@@ -5,7 +5,7 @@ from __future__ import annotations
 import hashlib
 import re
 
-from app.ingestion.structure.models import BlockType, DocumentBlock
+from app.ingestion.structure.models import DocumentBlock
 
 _SAFE_ID_RE = re.compile(r"[^a-zA-Z0-9._-]+")
 

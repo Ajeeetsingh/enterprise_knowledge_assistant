@@ -1,5 +1,5 @@
 import { type FormEvent, useState } from 'react'
-import { useLocation, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 
 import { Badge, Button, Card, Input } from '@/components/ui'
 import { useAuth } from '@/contexts/AuthContext'
@@ -8,6 +8,7 @@ import { toApiError } from '@/utils/apiError'
 
 interface LoginLocationState {
   from?: string
+  registrationSuccess?: string
 }
 
 interface FieldErrors {
@@ -74,10 +75,10 @@ export default function LoginPage() {
   const { login } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
+  const locationState = location.state as LoginLocationState | null
 
-  const redirectPath = resolveRedirectPath(
-    (location.state as LoginLocationState | null)?.from,
-  )
+  const redirectPath = resolveRedirectPath(locationState?.from)
+  const registrationSuccess = locationState?.registrationSuccess
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -111,7 +112,15 @@ export default function LoginPage() {
   return (
     <div className="flex flex-col gap-4">
       <Card title="Sign In">
-        <form className="flex flex-col gap-4" onSubmit={(event) => void handleSubmit(event)} noValidate>
+        {registrationSuccess && (
+          <div
+            role="status"
+            className="mb-4 rounded-[var(--radius-sm)] border border-[color-mix(in_srgb,var(--status-good)_35%,transparent)] bg-[var(--status-good-muted)] px-3 py-2 text-sm text-status-good"
+          >
+            {registrationSuccess}
+          </div>
+        )}
+        <form className="flex flex-col gap-5" onSubmit={(event) => void handleSubmit(event)} noValidate>
           <Input
             label="Email address"
             name="email"
@@ -157,41 +166,52 @@ export default function LoginPage() {
           {submitError && (
             <div
               role="alert"
-              className="rounded-md border border-error-500/30 bg-error-50 px-3 py-2 text-sm text-error-700 dark:bg-error-700/10 dark:text-error-400"
+              className="rounded-[var(--radius-sm)] border border-[color-mix(in_srgb,var(--status-bad)_35%,transparent)] bg-[var(--status-bad-muted)] px-3 py-2 text-sm text-status-bad"
             >
               {submitError}
             </div>
           )}
 
-          <Button type="submit" className="w-full" isLoading={isSubmitting} disabled={isSubmitting}>
+          <Button
+            type="submit"
+            size="lg"
+            className="w-full font-semibold hover:bg-accent-pressed active:scale-[0.98]"
+            isLoading={isSubmitting}
+            disabled={isSubmitting}
+          >
             Sign in
           </Button>
         </form>
       </Card>
 
+      <p className="text-center text-sm text-muted">
+        New here?{' '}
+        <Link
+          to="/register"
+          className="font-medium text-accent transition-colors hover:text-accent-hover hover:underline"
+        >
+          Create an account
+        </Link>
+      </p>
+
       {showTestUsers && testUserLabel && testUserEmail && (
         <Card title="Development Only">
-          <div className="flex flex-col gap-2 text-sm text-neutral-600 dark:text-neutral-400">
+          <div className="flex flex-col gap-2 text-sm text-muted">
             <div className="flex items-center gap-2">
               <Badge variant="warning">Dev</Badge>
               <span>Example test account</span>
             </div>
             <p>
-              <span className="font-medium text-neutral-800 dark:text-neutral-200">
-                {testUserLabel}:
-              </span>{' '}
+              <span className="font-medium text-foreground">{testUserLabel}:</span>{' '}
               <a
                 href={`mailto:${testUserEmail}`}
-                className="text-primary-600 hover:underline dark:text-primary-400"
+                className="text-accent transition-colors hover:text-accent-hover hover:underline"
               >
                 {testUserEmail}
               </a>
             </p>
             <p>
-              <span className="font-medium text-neutral-800 dark:text-neutral-200">
-                Password:
-              </span>{' '}
-              ——
+              <span className="font-medium text-foreground">Password:</span> ——
             </p>
           </div>
         </Card>

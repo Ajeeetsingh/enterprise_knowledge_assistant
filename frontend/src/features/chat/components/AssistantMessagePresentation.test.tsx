@@ -1,11 +1,22 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import AssistantMessagePresentation from './AssistantMessagePresentation'
 import type { Citation } from '../types'
 
-const navigate = vi.fn()
+const openDocumentInNewTab = vi.fn()
+const storeCitationHighlight = vi.fn(() => 'cite-key-1')
+const resolveCitationDocumentId = vi.fn(async () => 'doc-123')
+const buildDocumentViewerUrl = vi.fn(
+  (documentId: string, params: { page?: number; citeKey?: string } = {}) => {
+    const search = new URLSearchParams()
+    if (params.page) search.set('page', String(params.page))
+    if (params.citeKey) search.set('citeKey', params.citeKey)
+    const query = search.toString()
+    return `/documents/${documentId}${query ? `?${query}` : ''}`
+  },
+)
 
 vi.mock('@/contexts/ToastContext', () => ({
   useToast: () => ({
@@ -16,19 +27,16 @@ vi.mock('@/contexts/ToastContext', () => ({
   }),
 }))
 
-vi.mock('react-router-dom', async () => {
-  const actual = await vi.importActual<typeof import('react-router-dom')>('react-router-dom')
-  return {
-    ...actual,
-    useNavigate: () => navigate,
-  }
-})
-
 vi.mock('@/features/document-viewer', () => ({
-  buildDocumentViewerUrl: (documentId: string) => `/documents/${documentId}?page=14`,
+  buildDocumentViewerUrl: (...args: unknown[]) =>
+    buildDocumentViewerUrl(...(args as [string, { page?: number; citeKey?: string }?])),
   buildCitationViewerParams: (citation: Citation) =>
     typeof citation.page === 'number' ? { page: citation.page } : {},
-  resolveCitationDocumentId: vi.fn(async () => 'doc-123'),
+  resolveCitationDocumentId: (...args: unknown[]) =>
+    resolveCitationDocumentId(...(args as [Citation])),
+  storeCitationHighlight: (...args: unknown[]) =>
+    storeCitationHighlight(...(args as [{ excerpt: string; page?: number }])),
+  openDocumentInNewTab: (...args: unknown[]) => openDocumentInNewTab(...(args as [string])),
 }))
 
 vi.mock('@/hooks/useMinWidthMediaQuery', () => ({
@@ -45,6 +53,13 @@ const citations: Citation[] = [
 ]
 
 describe('AssistantMessagePresentation', () => {
+  beforeEach(() => {
+    openDocumentInNewTab.mockClear()
+    storeCitationHighlight.mockClear()
+    resolveCitationDocumentId.mockClear()
+    buildDocumentViewerUrl.mockClear()
+  })
+
   it('shows only the answer and timestamp by default', () => {
     render(
       <AssistantMessagePresentation
@@ -80,9 +95,8 @@ describe('AssistantMessagePresentation', () => {
     expect(screen.getByText('Page 14')).toBeInTheDocument()
   })
 
-  it('navigates to the document viewer when Open Source is clicked', async () => {
+  it('opens the source document in a new tab with page and citation context', async () => {
     const user = userEvent.setup()
-    navigate.mockClear()
 
     render(
       <AssistantMessagePresentation
@@ -95,7 +109,18 @@ describe('AssistantMessagePresentation', () => {
     await user.click(screen.getByRole('button', { name: 'Details' }))
     await user.click(screen.getByRole('button', { name: 'Open Source' }))
 
-    expect(navigate).toHaveBeenCalledWith('/documents/doc-123?page=14')
+    expect(resolveCitationDocumentId).toHaveBeenCalledWith(citations[0])
+    expect(storeCitationHighlight).toHaveBeenCalledWith({
+      excerpt: 'Employees are entitled to 20 days of annual leave.',
+      page: 14,
+    })
+    expect(buildDocumentViewerUrl).toHaveBeenCalledWith('doc-123', {
+      page: 14,
+      citeKey: 'cite-key-1',
+    })
+    expect(openDocumentInNewTab).toHaveBeenCalledWith(
+      '/documents/doc-123?page=14&citeKey=cite-key-1',
+    )
   })
 
   it('hides metadata controls while streaming', () => {

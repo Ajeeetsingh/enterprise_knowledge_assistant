@@ -1,4 +1,4 @@
-import { createBrowserRouter } from 'react-router-dom'
+import { createBrowserRouter, Navigate } from 'react-router-dom'
 
 import { ProtectedRoute, PublicRoute, AdminRoute } from '@/components/auth'
 import {
@@ -24,11 +24,11 @@ import HomePage from '@/pages/HomePage'
 import LayoutPreviewPage from '@/pages/LayoutPreviewPage'
 import ProfilePage from '@/pages/ProfilePage'
 import LoginPage from '@/pages/LoginPage'
+import RegisterPage from '@/pages/RegisterPage'
 import MonitoringPage from '@/pages/MonitoringPage'
 import NotFoundPage from '@/pages/NotFoundPage'
 import NotificationsDemoPage from '@/pages/NotificationsDemoPage'
 import UnauthorizedPage from '@/pages/UnauthorizedPage'
-import UsersPage from '@/pages/UsersPage'
 
 const router = createBrowserRouter([
   {
@@ -36,7 +36,9 @@ const router = createBrowserRouter([
     element: <RootLayout />,
     children: [
       { index: true, element: <HomePage /> },
-      { path: 'design-system', element: <DesignSystemPage /> },
+      ...(import.meta.env.DEV
+        ? [{ path: 'design-system', element: <DesignSystemPage /> }]
+        : []),
       {
         element: <AuthLayout />,
         children: [
@@ -45,6 +47,14 @@ const router = createBrowserRouter([
             element: (
               <PublicRoute>
                 <LoginPage />
+              </PublicRoute>
+            ),
+          },
+          {
+            path: 'register',
+            element: (
+              <PublicRoute>
+                <RegisterPage />
               </PublicRoute>
             ),
           },
@@ -66,7 +76,7 @@ const router = createBrowserRouter([
             path: 'users',
             element: (
               <AdminRoute>
-                <UsersPage />
+                <Navigate to="/admin/users" replace />
               </AdminRoute>
             ),
           },
@@ -78,9 +88,13 @@ const router = createBrowserRouter([
               </AdminRoute>
             ),
           },
-          { path: 'layout-preview', element: <LayoutPreviewPage /> },
-          { path: 'auth-debug', element: <AuthDebugPage /> },
-          { path: 'notifications-demo', element: <NotificationsDemoPage /> },
+          ...(import.meta.env.DEV
+            ? [
+                { path: 'layout-preview', element: <LayoutPreviewPage /> },
+                { path: 'auth-debug', element: <AuthDebugPage /> },
+                { path: 'notifications-demo', element: <NotificationsDemoPage /> },
+              ]
+            : []),
           { path: 'unauthorized', element: <UnauthorizedPage /> },
         ],
       },

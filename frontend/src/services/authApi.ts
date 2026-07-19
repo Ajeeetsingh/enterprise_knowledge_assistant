@@ -8,11 +8,22 @@ import type {
   LogoutResponse,
   RefreshRequest,
   RefreshResponse,
+  RegisterRequest,
+  RegisterResponse,
   User,
 } from '@/types/auth'
 import { toApiError } from '@/utils/apiError'
 
 import apiClient from './api'
+
+export async function register(body: RegisterRequest): Promise<RegisterResponse> {
+  try {
+    const { data } = await apiClient.post<RegisterResponse>('/auth/register', body)
+    return data
+  } catch (error) {
+    throw toApiError(error)
+  }
+}
 
 export async function login(credentials: LoginRequest): Promise<LoginResponse> {
   try {

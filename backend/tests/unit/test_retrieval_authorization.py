@@ -144,15 +144,14 @@ class TestGetAuthorizedSources:
         )
         assert "my_private.txt" in result
 
-    def test_filesystem_only_sources_pass_through(self) -> None:
-        """Files without a DB record are not filtered (legacy filesystem docs)."""
+    def test_filesystem_only_sources_are_denied(self) -> None:
+        """Orphan index sources without a DB record are fail-closed (denied)."""
         user = _make_user("Employee")
         repo = _mock_repository([])  # No DB records at all
         result = RetrievalAuthorizationService.get_authorized_sources(
             user, frozenset({"filesystem_doc.txt", "another_legacy.txt"}), repo
         )
-        # Both should pass through since they have no DB records.
-        assert result == frozenset({"filesystem_doc.txt", "another_legacy.txt"})
+        assert result == frozenset()
 
     def test_single_batch_query_used(self) -> None:
         """Verifies no N+1 DB calls — exactly one find_by_filenames call."""

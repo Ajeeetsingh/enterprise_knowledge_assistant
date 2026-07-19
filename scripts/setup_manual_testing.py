@@ -7,7 +7,7 @@ Usage:
 Runs ``seed_database.py --all`` (roles, admin, demo users, demo data).
 
 Does not start Docker, run migrations, or launch servers — see
-docs/MANUAL_TESTING_GUIDE.md for the full workflow.
+docs/TESTING.md and docs/DEVELOPMENT.md for the full workflow.
 """
 
 from __future__ import annotations
@@ -47,7 +47,7 @@ def main() -> int:
         return result.returncode
 
     print("\nManual testing setup complete.")
-    print("Next: start backend + frontend and follow docs/MANUAL_TESTING_GUIDE.md")
+    print("Next: start backend + frontend and follow docs/DEVELOPMENT.md / docs/TESTING.md")
     return 0
 
 

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 
 from app.rag.engine import EnterpriseRAG
 from app.rag.rbac import RBACError
@@ -88,6 +89,43 @@ def interactive_mode() -> None:
             print(json.dumps(response.to_dict(), indent=2))
         except (RBACError, ValueError) as exc:
             print(f"Error: {exc}")
+
+
+def debug_query(query: str, *, data_dir: str | Path | None = None, top_k: int = 5) -> None:
+    """Print a full retrieval diagnostics trace for one query (DEBUG mode).
+
+    Builds a temporary FAISS + BM25 index from the fixture corpus (or
+    ``data_dir`` when provided), then prints the BM25 top-K, dense top-K,
+    hybrid merge, reranker top-K, and final-context stages side by side —
+    each entry annotated with document, page, heading, score, and source
+    (dense/BM25/both). See ``app.rag.diagnostics.explain_query``.
+    """
+    from app.ingestion.loader import load_documents
+    from app.ingestion.embedding.sentence_transformer import SentenceTransformerEmbeddingProvider
+    from app.ingestion.vector_store.faiss_store import FaissVectorStore
+    from app.rag.diagnostics import explain_query
+    from app.rag.engine import DEFAULT_DATA_DIR
+    from app.rag.hybrid.bm25 import BM25Index
+    from app.rag.hybrid.config import HybridRetrievalSettings
+
+    source_dir = Path(data_dir) if data_dir else DEFAULT_DATA_DIR
+    chunks = load_documents(source_dir)
+    if not chunks:
+        print(f"No chunks found under {source_dir}.")
+        return
+
+    provider = SentenceTransformerEmbeddingProvider()
+    embeddings = provider.embed([chunk.content for chunk in chunks])
+
+    store = FaissVectorStore()
+    store.add_chunks(chunks, embeddings, document_id="cli-debug")
+
+    hybrid_settings = HybridRetrievalSettings.from_settings()
+    bm25 = BM25Index(settings=hybrid_settings)
+    bm25.rebuild_from_chunks(chunks)
+
+    trace = explain_query(query, vector_store=store, bm25_index=bm25, top_k=top_k)
+    print(trace.render())
 
 
 def main() -> None:

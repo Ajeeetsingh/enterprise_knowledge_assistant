@@ -67,7 +67,7 @@ export function FilterSearch({ label, id, className, ...props }: FilterSearchPro
 
 export interface FilterSelectProps extends SelectHTMLAttributes<HTMLSelectElement> {
   label: string
-  options: Array<{ value: string; label: string }>
+  options: ReadonlyArray<{ value: string; label: string }>
 }
 
 export function FilterSelect({ label, id, options, className, ...props }: FilterSelectProps) {

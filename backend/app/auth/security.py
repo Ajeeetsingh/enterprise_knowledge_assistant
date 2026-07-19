@@ -6,6 +6,7 @@ from fastapi import Depends, HTTPException, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
+from app.core.request_utils import client_ip as _client_ip
 from app.db.models import User
 from app.db.session import get_db
 from app.services.audit_dependencies import get_audit_service
@@ -14,15 +15,6 @@ from app.services.audit_service import AuditService as PersistedAuditService
 from app.services import auth_service
 
 bearer_scheme = HTTPBearer(auto_error=False)
-
-
-def _client_ip(request: Request) -> str | None:
-    forwarded_for = request.headers.get("X-Forwarded-For")
-    if forwarded_for:
-        return forwarded_for.split(",")[0].strip()
-    if request.client:
-        return request.client.host
-    return None
 
 
 def get_current_user(

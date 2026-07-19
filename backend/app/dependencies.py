@@ -21,6 +21,10 @@ from app.services.conversation_service import (
 )
 from app.services.document_service import DocumentService, get_document_service as _get_document_service
 from app.services.rag_service import RagService, get_rag_service as _get_rag_service
+from app.services.suggested_questions import (
+    SuggestedQuestionService,
+    get_suggested_question_service as _get_suggested_question_service,
+)
 
 # Re-export database session dependency
 get_db = _get_db
@@ -34,6 +38,11 @@ def get_rag_service_dep() -> RagService:
 def get_document_service_dep() -> DocumentService:
     """Return the cached document service for route injection."""
     return _get_document_service()
+
+
+def get_suggested_question_service_dep() -> SuggestedQuestionService:
+    """Return the cached suggested-question service for route injection."""
+    return _get_suggested_question_service()
 
 
 def get_document_repository(db: Session = Depends(get_db)) -> DocumentRepository:
@@ -64,5 +73,6 @@ __all__ = [
     "get_metrics_service",
     "get_monitoring_service",
     "get_rag_service_dep",
+    "get_suggested_question_service_dep",
     "parse_audit_search_request",
 ]

@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 import Button from '@/components/ui/Button'
 import Card from '@/components/ui/Card'
 import EmptyState from '@/components/ui/EmptyState'
+import { useAuth } from '@/contexts/AuthContext'
 import { useToast } from '@/contexts/ToastContext'
 import {
   fetchDocumentFileBlob,
@@ -14,70 +15,128 @@ import {
   DocumentUploadDialog,
 } from '@/features/documents/components'
 import { useDeleteDocument } from '@/features/documents/hooks/useDeleteDocument'
-import { useUploadDocument } from '@/features/documents/hooks/useUploadDocument'
-import { useDocuments } from '@/features/documents/hooks/useDocuments'
 import {
-  lifecycleStateFromUploadResponse,
-  logUploadTransition,
-} from '@/features/documents/utils/uploadLifecycleDebug'
+  formatUploadBatchSummary,
+  useUploadDocuments,
+} from '@/features/documents/hooks/useUploadDocuments'
+import { useDocuments } from '@/features/documents/hooks/useDocuments'
 import type { Document } from '@/features/documents/types'
-import { getApiErrorMessage } from '@/services/errorHandler'
-import type { ApiError } from '@/types'
-
-function resolveErrorMessage(error: unknown): string {
-  if (error && typeof error === 'object' && 'message' in error) {
-    return String((error as ApiError).message)
-  }
-  return 'Something went wrong. Please try again.'
-}
+import {
+  DUPLICATE_HIGHLIGHT_MS,
+  resolveHighlightDocumentId,
+} from '@/features/documents/utils/duplicateHighlight'
+import { getApiErrorMessage, resolveErrorMessage } from '@/services/errorHandler'
+import { Permission, hasPermission } from '@/types/permissions'
 
 export default function DocumentsPage() {
+  const { user } = useAuth()
   const { showSuccess, showError } = useToast()
+  const canUpload = hasPermission(user, Permission.DocumentCreate)
+
   const [uploadOpen, setUploadOpen] = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
+  const [uploadSummary, setUploadSummary] = useState<string | null>(null)
+  const [highlightedDocumentId, setHighlightedDocumentId] = useState<string | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<Document | null>(null)
   const [deleteError, setDeleteError] = useState<string | null>(null)
 
   const { data, isLoading, isError, error } = useDocuments()
-  const uploadDocument = useUploadDocument()
+  const { items: uploadProgress, isUploading, uploadFiles, retryFailed, reset } =
+    useUploadDocuments()
   const deleteDocument = useDeleteDocument()
 
   const documents = data?.items ?? []
   const total = data?.total ?? 0
 
+  useEffect(() => {
+    if (!highlightedDocumentId) return
+    const timer = window.setTimeout(() => {
+      setHighlightedDocumentId(null)
+    }, DUPLICATE_HIGHLIGHT_MS)
+    return () => window.clearTimeout(timer)
+  }, [highlightedDocumentId])
+
   function openUpload() {
+    if (!canUpload) return
     setUploadError(null)
+    setUploadSummary(null)
+    reset()
     setUploadOpen(true)
   }
 
   function closeUpload() {
-    if (uploadDocument.isPending) return
+    if (isUploading) return
+    const highlightId = resolveHighlightDocumentId(uploadProgress, documents)
     setUploadOpen(false)
     setUploadError(null)
+    setUploadSummary(null)
+    reset()
+    if (highlightId) {
+      setHighlightedDocumentId(highlightId)
+    }
   }
 
-  async function handleUpload(file: File) {
+  async function handleUpload(files: File[]) {
     setUploadError(null)
-    logUploadTransition('DocumentsPage', 'Uploading', { filename: file.name, sizeBytes: file.size })
+    setUploadSummary(
+      files.length === 1 ? '1 file selected — uploading…' : `${files.length} files selected — uploading…`,
+    )
 
-    try {
-      const result = await uploadDocument.mutateAsync(file)
-      logUploadTransition('DocumentsPage', lifecycleStateFromUploadResponse(result), {
-        filename: file.name,
-        documentId: result.document_id,
-        backendStatus: result.status,
-      })
-      setUploadOpen(false)
-      showSuccess('Document uploaded successfully.')
-    } catch (uploadFailure) {
-      const message = getApiErrorMessage(uploadFailure)
-      logUploadTransition('DocumentsPage', 'Failed', {
-        filename: file.name,
-        errorMessage: message,
-      })
-      setUploadError(message)
-      showError(message)
+    const result = await uploadFiles(files)
+    if (result.total === 0) return
+
+    const summary = formatUploadBatchSummary(result)
+    setUploadSummary(summary)
+
+    if (result.failureCount === 0 && result.duplicateCount === 0) {
+      showSuccess(
+        result.successCount === 1
+          ? 'Document uploaded successfully.'
+          : `${result.successCount} documents uploaded successfully.`,
+      )
+      return
     }
+
+    if (result.successCount > 0) {
+      showSuccess(summary)
+      return
+    }
+
+    if (result.duplicateCount > 0 && result.failureCount === 0) {
+      // Expected business condition — not a system failure.
+      setUploadError(null)
+      return
+    }
+
+    const message = 'Unable to upload documents. Check individual file errors below.'
+    setUploadError(message)
+    showError(message)
+  }
+
+  async function handleRetryFailed() {
+    setUploadError(null)
+    const result = await retryFailed()
+    if (!result) return
+
+    const summary = formatUploadBatchSummary(result)
+    setUploadSummary(summary)
+
+    if (result.failureCount === 0 && result.duplicateCount === 0) {
+      showSuccess(
+        result.successCount === 1
+          ? 'Document uploaded successfully.'
+          : `${result.successCount} documents uploaded successfully.`,
+      )
+      return
+    }
+
+    if (result.successCount > 0) {
+      showSuccess(summary)
+      return
+    }
+
+    setUploadError('Retry failed. Check individual file errors below.')
+    showError('Retry failed. Check individual file errors below.')
   }
 
   function openDelete(document: Document) {
@@ -128,14 +187,14 @@ export default function DocumentsPage() {
           <p className="text-sm text-neutral-600 dark:text-neutral-300">
             <span className="font-medium">{total}</span> document{total === 1 ? '' : 's'}
           </p>
-          <Button onClick={openUpload}>Upload document</Button>
+          {canUpload ? <Button onClick={openUpload}>Upload documents</Button> : null}
         </div>
       </div>
 
       {isError && (
         <Card>
           <p role="alert" className="text-sm text-error-500 dark:text-error-400">
-            {resolveErrorMessage(error)}
+            {resolveErrorMessage(error, 'Something went wrong. Please try again.')}
           </p>
         </Card>
       )}
@@ -146,9 +205,11 @@ export default function DocumentsPage() {
             title="No documents uploaded yet"
             description="Upload your first document to make it available for knowledge search and chat."
             action={
-              <Button size="sm" onClick={openUpload}>
-                Upload your first document
-              </Button>
+              canUpload ? (
+                <Button size="sm" onClick={openUpload}>
+                  Upload your first document
+                </Button>
+              ) : undefined
             }
           />
         </Card>
@@ -156,18 +217,24 @@ export default function DocumentsPage() {
         <DocumentTable
           documents={documents}
           isLoading={isLoading}
+          highlightedDocumentId={highlightedDocumentId}
           onDownload={(document) => void handleDownload(document)}
           onDelete={openDelete}
         />
       )}
 
-      <DocumentUploadDialog
-        isOpen={uploadOpen}
-        isUploading={uploadDocument.isPending}
-        error={uploadError}
-        onClose={closeUpload}
-        onUpload={(file) => void handleUpload(file)}
-      />
+      {canUpload ? (
+        <DocumentUploadDialog
+          isOpen={uploadOpen}
+          isUploading={isUploading}
+          error={uploadError}
+          uploadProgress={uploadProgress}
+          summary={uploadSummary}
+          onClose={closeUpload}
+          onUpload={(files) => void handleUpload(files)}
+          onRetryFailed={() => void handleRetryFailed()}
+        />
+      ) : null}
 
       <DeleteDocumentDialog
         targetDocument={deleteTarget}

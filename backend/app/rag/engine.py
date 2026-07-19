@@ -142,9 +142,13 @@ def _focus_chunk_priority(
     category: QueryCategory | None,
     query: str = "",
 ) -> tuple[int, str]:
-    """Rank same-document chunks so list/table answers surface complete sections first."""
+    """Rank same-document chunks so list/table answers surface complete sections first.
+
+    Priority is derived only from each chunk's own content against the query's
+    detected intent — never from chunk IDs, which are assigned per-ingestion
+    and carry no meaning across documents.
+    """
     content = result.content.lower()
-    chunk_id = result.chunk_id.lower()
     wants_exec = _query_wants_executive_leaders(query)
     wants_strategic = _query_wants_strategic_priorities(query)
 
@@ -161,40 +165,15 @@ def _focus_chunk_priority(
             )
         ):
             return (0, result.chunk_id)
-        if "executive leadership" in content or "sem-table-91" in chunk_id:
+        if "executive leadership" in content:
             return (1, result.chunk_id)
-        if "strategic priorit" in content or "sem-table-254" in chunk_id or "sem-h250" in chunk_id:
+        if "strategic priorit" in content:
             return (5, result.chunk_id)
 
     if category in (QueryCategory.LIST, QueryCategory.TABLE) and wants_strategic:
-        if "strategic priorit" in content or "sem-table-254" in chunk_id:
+        if "strategic priorit" in content:
             return (0, result.chunk_id)
-        if "sem-h250" in chunk_id:
-            return (1, result.chunk_id)
-        if any(
-            marker in chunk_id
-            for marker in (
-                "sem-h306",
-                "sem-h309",
-                "sem-h312",
-                "sem-h315",
-                "sem-h318",
-            )
-        ):
-            return (2, result.chunk_id)
-        if any(
-            marker in content
-            for marker in (
-                "operational efficiency",
-                "risk reduction",
-                "regulatory uplift",
-                "mortgage automation",
-            )
-        ):
-            return (2, result.chunk_id)
-        if "table of contents" in content or "sem-h29" in chunk_id:
-            return (4, result.chunk_id)
-        if "sem-h467" in chunk_id or "sem-p429" in chunk_id:
+        if "table of contents" in content:
             return (4, result.chunk_id)
 
     return (3, result.chunk_id)
@@ -475,8 +454,12 @@ class EnterpriseRAG:
                         settings=effective_metadata_settings,
                     ),
                 )
+                # Empty frozenset must remain deny-all — never coerce to None
+                # (None means "no source filter" / unrestricted retrieval).
                 allowed_source_set = (
-                    set(authorized_sources) if authorized_sources else None
+                    set(authorized_sources)
+                    if authorized_sources is not None
+                    else None
                 )
                 per_query_results: list[list[RetrievalResult]] = []
                 for retrieval_query in query_outcome.retrieval_queries:
@@ -498,6 +481,7 @@ class EnterpriseRAG:
                 effective_reranker = CrossEncoderReranker(
                     settings=effective_rerank_settings,
                     runtime=self._reranker.runtime,
+                    metadata_bonus_reference=effective_metadata_settings.max_metadata_bonus,
                 )
                 reranked = effective_reranker.rerank(
                     user_query,
@@ -547,7 +531,11 @@ class EnterpriseRAG:
                 user_query,
                 top_k=resolved_top_k,
                 allowed_categories=allowed_categories,
-                allowed_sources=set(authorized_sources) if authorized_sources else None,
+                allowed_sources=(
+                    set(authorized_sources)
+                    if authorized_sources is not None
+                    else None
+                ),
             )
 
         resolved_top_k = top_k if top_k is not None else get_settings().top_k_final
@@ -556,7 +544,11 @@ class EnterpriseRAG:
             user_query,
             top_k=resolved_top_k,
             allowed_categories=allowed_categories,
-            allowed_sources=set(authorized_sources) if authorized_sources else None,
+            allowed_sources=(
+                set(authorized_sources)
+                if authorized_sources is not None
+                else None
+            ),
         )
 
     @staticmethod

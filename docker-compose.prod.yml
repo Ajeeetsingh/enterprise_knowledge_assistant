@@ -1,0 +1,63 @@
+# Production-oriented stack (API + PostgreSQL).
+#
+# Usage:
+#   1. Copy .env.example → .env and set production values (see docs/DEPLOYMENT.md)
+#   2. docker compose -f docker-compose.prod.yml up -d --build
+#
+# This file does NOT publish PostgreSQL to the host. Frontend is built separately
+# (static hosting or a CDN) with VITE_API_BASE_URL pointing at the public API.
+
+services:
+  postgres:
+    image: postgres:16
+    container_name: eka-postgres-prod
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-eka}
+      POSTGRES_USER: ${POSTGRES_USER:?Set POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    # Intentionally no host ports — only reachable on the compose network.
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: eka-backend-prod
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      APP_ENV: production
+      DEBUG: "false"
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-eka}
+    ports:
+      - "${BACKEND_HOST_PORT:-8000}:8000"
+    volumes:
+      # Persist uploaded files and FAISS/BM25 indexes across restarts.
+      - backend_storage:/app/storage
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health')",
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 45s
+
+volumes:
+  postgres_data:
+  backend_storage:

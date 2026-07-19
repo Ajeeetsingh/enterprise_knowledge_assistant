@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass
 
 CITATION_EXCERPT_LENGTH = 200
 EMBEDDING_MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"

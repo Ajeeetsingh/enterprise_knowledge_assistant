@@ -58,8 +58,8 @@ def test_disabled_user_login(client: TestClient, inactive_user: User) -> None:
         json={"email": inactive_user.email, "password": TEST_PASSWORD},
     )
 
-    assert response.status_code == 403
-    assert response.json()["detail"] == "Account is inactive."
+    assert response.status_code == 401
+    assert response.json()["detail"] == "Invalid email or password."
 
 
 def test_successful_refresh(client: TestClient, active_user: User) -> None:
@@ -131,3 +131,16 @@ def test_login_validation_error(client: TestClient) -> None:
     response = client.post(LOGIN_URL, json={"email": "not-an-email", "password": ""})
 
     assert response.status_code == 422
+
+
+def test_login_rate_limit_returns_429(client: TestClient) -> None:
+    """Login allows 10 attempts per IP per minute; the 11th must be rejected."""
+    payload = {"email": "rate-limit@example.com", "password": "WrongPassword!"}
+
+    for _ in range(10):
+        response = client.post(LOGIN_URL, json=payload)
+        assert response.status_code == 401
+
+    limited = client.post(LOGIN_URL, json=payload)
+    assert limited.status_code == 429
+    assert "login attempts" in limited.json()["detail"].lower()

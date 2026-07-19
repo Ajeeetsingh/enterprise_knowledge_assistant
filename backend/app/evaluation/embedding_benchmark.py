@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import argparse
-import sys
 
 from app.evaluation.embedding_eval import EmbeddingEvaluationConfig, EmbeddingEvaluationFramework
 from app.evaluation.embedding_eval.comparison import render_comparison_table

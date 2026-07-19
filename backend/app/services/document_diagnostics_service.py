@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from app.ingestion.embedding.base import EmbeddingProvider
-from app.ingestion.pipeline import IngestionPipelineBase, create_default_pipeline
+from app.ingestion.pipeline import IngestionPipelineBase
 from app.ingestion.vector_store.base import VectorStore
 from app.storage.interface import StorageAdapter
 

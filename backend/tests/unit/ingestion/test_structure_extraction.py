@@ -72,6 +72,111 @@ About GTFS
         assert headings[0].text == "COMPANY OVERVIEW"
         assert headings[0].level == 1
 
+    def test_short_interrogative_heading_detected(self):
+        """FAQ-style question headings (no numbering/keyword/ALL-CAPS) must
+        still be tagged as headings — this is the retrieval-quality root
+        cause: without this, `ChunkMetadata.section_title` stays empty for
+        chunks like "Who are the main issuers?" and heading-aware
+        retrieval signals have nothing to work with."""
+        text = """<<<PAGE:1>>>
+Who are the main issuers?
+Non-financial corporations, financial institutions, and asset managers issue commercial paper to meet short-term funding needs.
+
+Who are the main investors?
+Money market funds, corporations, and institutional investors purchase commercial paper as a short-term cash investment.
+"""
+        doc = _extract(text)
+        headings = [block.heading.text for block in doc.blocks if block.heading]
+        assert "Who are the main issuers?" in headings
+        assert "Who are the main investors?" in headings
+
+    def test_short_declarative_heading_detected(self):
+        text = """<<<PAGE:1>>>
+Strategic priorities
+The bank will focus on digital transformation and operational efficiency this year.
+
+Strategic initiatives
+Regulatory uplift and mortgage automation programs are underway across all regions.
+"""
+        doc = _extract(text)
+        headings = [block.heading.text for block in doc.blocks if block.heading]
+        assert "Strategic priorities" in headings
+        assert "Strategic initiatives" in headings
+
+    def test_short_heading_fallback_does_not_swallow_list_items(self):
+        """Regression guard: the new short-heading fallback must not treat
+        ordinary list items (also short, capitalized, unpunctuated) as
+        headings — that would corrupt list detection for unrelated
+        documents."""
+        text = """<<<PAGE:1>>>
+Policies
+- Maintain confidentiality
+- Report incidents promptly
+- Complete annual training
+"""
+        lines = parse_line_stream(text)
+        headings = detect_headings(lines, StructureExtractionSettings())
+        heading_texts = {heading.text for heading in headings}
+        assert heading_texts == {"Policies"}
+
+    def test_short_heading_fallback_ignores_normal_sentences(self):
+        """A short capitalized sentence ending with terminal punctuation
+        must not be misread as a heading."""
+        text = "Revenue grew.\nThe company reported strong quarterly results."
+        lines = parse_line_stream(text)
+        headings = detect_headings(lines, StructureExtractionSettings())
+        assert headings == []
+
+    def test_short_heading_fallback_ignores_wrapped_paragraph_lines(self):
+        """Regression guard: real PDF text extraction wraps a single
+        paragraph across many short physical lines at the page-width
+        boundary, often without terminal punctuation on non-final lines.
+        The short-heading fallback must never fire on a line that is not
+        preceded by a paragraph break (blank line / page marker / start of
+        document), otherwise ordinary wrapped sentences would be
+        misclassified as headings throughout real documents."""
+        text = (
+            "<<<PAGE:1>>>\n"
+            "Large corporations, financial institutions, and money market\n"
+            "participants rely on commercial paper for short-term funding\n"
+            "needs across many industries and regions worldwide today.\n"
+        )
+        lines = parse_line_stream(text)
+        headings = detect_headings(lines, StructureExtractionSettings())
+        # Only the first (paragraph-initial) line may ever be considered;
+        # none of these wrapped continuation lines should be detected.
+        assert headings == []
+
+    def test_short_heading_fallback_ignores_wrapped_line_right_after_a_heading(self):
+        """Regression guard for the exact reported bug: a wrapped paragraph's
+        first physical line sitting right after a blank line (e.g.
+        immediately following a real heading) must not itself be misread as
+        a second, nested heading just because it is short and unpunctuated.
+        The tell is that the *next* physical line continues the sentence in
+        lowercase ("are the primary group...") rather than starting a new
+        one — see `_next_line_continues_sentence`."""
+        text = (
+            "<<<PAGE:1>>>\n"
+            "Who are the main investors in commercial paper?\n"
+            "\n"
+            "Large corporations, financial institutions, and money market\n"
+            "are the primary group involved in the commercial paper market.\n"
+        )
+        lines = parse_line_stream(text)
+        headings = detect_headings(lines, StructureExtractionSettings())
+        assert [heading.text for heading in headings] == [
+            "Who are the main investors in commercial paper?"
+        ]
+
+    def test_short_heading_fallback_fires_right_after_page_marker(self):
+        """A genuine short heading immediately after a page marker (no
+        blank line in between) must still be detected — page boundaries
+        are paragraph boundaries too."""
+        text = "<<<PAGE:2>>>\nRisk governance\nThe board oversees enterprise risk."
+        lines = parse_line_stream(text)
+        headings = detect_headings(lines, StructureExtractionSettings())
+        assert [heading.text for heading in headings] == ["Risk governance"]
+
 
 class TestTableDetection:
     def test_gap_separated_table(self):

@@ -3,14 +3,12 @@
 from __future__ import annotations
 
 import logging
-import uuid
 
 from sqlalchemy.orm import Session
 
 from app.core.logging import get_logger, log_with_fields
 from app.db.repositories.document_repository import DocumentFilter, DocumentRepository
 from app.documents.status import DocumentStatus
-from app.documents.types import IngestionContext
 from app.services.document_service import DocumentService
 
 logger = get_logger(__name__)

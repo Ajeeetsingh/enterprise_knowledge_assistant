@@ -65,8 +65,9 @@ class DocumentIntegrityResult:
             document_id=str(existing.id),
             existing_filename=existing.filename,
             message=(
-                f"Document with identical content already exists "
-                f"as '{existing.filename}'."
+                f"{filename} has already been uploaded."
+                if filename
+                else "This document has already been uploaded."
             ),
         )
 
@@ -115,6 +116,9 @@ class DuplicateDetectionPolicy:
     """Determine upload integrity outcomes from content and filename identity.
 
     Business rules live here — not in the API layer or repository.
+    Duplicate checks are scoped by tenant so organizations remain isolated.
+    Soft-deleted documents are ignored (repository default), allowing re-upload
+    after deletion per lifecycle rules.
     """
 
     def evaluate(
@@ -123,11 +127,18 @@ class DuplicateDetectionPolicy:
         *,
         checksum: str,
         filename: str,
+        tenant_id: str | None = None,
     ) -> DocumentIntegrityResult:
         """Evaluate whether an upload should proceed, short-circuit, or reject."""
         normalized_filename = filename.strip()
-        existing_by_checksum = repository.find_latest_version(checksum)
-        existing_by_filename = repository.find_by_filename(normalized_filename)
+        existing_by_checksum = repository.find_latest_version(
+            checksum,
+            tenant_id=tenant_id,
+        )
+        existing_by_filename = repository.find_by_filename(
+            normalized_filename,
+            tenant_id=tenant_id,
+        )
 
         if existing_by_checksum is not None:
             return DocumentIntegrityResult.for_exact_duplicate(

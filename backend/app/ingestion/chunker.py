@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 # Larger chunks preserve more context; overlap prevents splitting mid-sentence
 CHUNK_SIZE = 800

@@ -21,7 +21,7 @@ export const WORKSPACE_NAV_ITEMS: NavItem[] = [
 
 export const MANAGE_NAV_ITEMS: NavItem[] = [
   { label: 'Admin Portal', path: '/admin', roles: [Role.Admin] },
-  { label: 'Users', path: '/users', roles: [Role.Admin] },
+  { label: 'Users', path: '/admin/users', roles: [Role.Admin] },
   { label: 'Monitoring', path: '/monitoring', roles: [Role.Admin] },
   { label: 'Profile', path: '/profile' },
 ]

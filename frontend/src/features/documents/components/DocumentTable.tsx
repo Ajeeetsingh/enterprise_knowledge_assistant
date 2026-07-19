@@ -1,15 +1,19 @@
+import { useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 import ActionButton from '@/components/ui/ActionButton'
 import Button from '@/components/ui/Button'
+import { cn } from '@/utils/cn'
 
 import { VISIBILITY_NOT_IN_LIST_API } from '../constants'
 import type { Document } from '../types'
+import { prefersReducedMotion } from '../utils/duplicateHighlight'
 import DocumentStatusBadge from './DocumentStatusBadge'
 
 export interface DocumentTableProps {
   documents: Document[]
   isLoading: boolean
+  highlightedDocumentId?: string | null
   onView?: (document: Document) => void
   onDownload?: (document: Document) => void
   onDelete: (document: Document) => void
@@ -18,11 +22,25 @@ export interface DocumentTableProps {
 export default function DocumentTable({
   documents,
   isLoading,
+  highlightedDocumentId = null,
   onView,
   onDownload,
   onDelete,
 }: DocumentTableProps) {
   const navigate = useNavigate()
+  const rowRefs = useRef(new Map<string, HTMLTableRowElement>())
+
+  useEffect(() => {
+    if (!highlightedDocumentId) return
+    const row = rowRefs.current.get(highlightedDocumentId)
+    if (!row) return
+
+    const reduceMotion = prefersReducedMotion()
+    row.scrollIntoView({
+      behavior: reduceMotion ? 'auto' : 'smooth',
+      block: 'nearest',
+    })
+  }, [highlightedDocumentId])
 
   function handleView(document: Document) {
     if (onView) {
@@ -85,36 +103,54 @@ export default function DocumentTable({
           </tr>
         </thead>
         <tbody className="divide-y divide-neutral-200 bg-white dark:divide-neutral-700 dark:bg-neutral-900">
-          {documents.map((document) => (
-            <tr key={document.document_id} className="hover:bg-neutral-50 dark:hover:bg-neutral-800/40">
-              <td className="px-4 py-3 text-sm font-medium text-neutral-900 dark:text-neutral-100">
-                {document.filename}
-              </td>
-              <td className="px-4 py-3">
-                <DocumentStatusBadge status={document.status} />
-              </td>
-              <td
-                className="px-4 py-3 text-sm text-neutral-500 dark:text-neutral-400"
-                title={VISIBILITY_NOT_IN_LIST_API}
+          {documents.map((document) => {
+            const isHighlighted = highlightedDocumentId === document.document_id
+            return (
+              <tr
+                key={document.document_id}
+                ref={(node) => {
+                  if (node) {
+                    rowRefs.current.set(document.document_id, node)
+                  } else {
+                    rowRefs.current.delete(document.document_id)
+                  }
+                }}
+                data-document-id={document.document_id}
+                data-highlighted={isHighlighted ? 'true' : undefined}
+                className={cn(
+                  'hover:bg-neutral-50 dark:hover:bg-neutral-800/40',
+                  isHighlighted && 'document-row--highlight',
+                )}
               >
-                —
-              </td>
-              <td className="px-4 py-3 text-sm text-neutral-600 dark:text-neutral-300">
-                {new Date(document.uploaded_at).toLocaleString()}
-              </td>
-              <td className="px-4 py-3 text-right">
-                <div className="flex justify-end gap-2">
-                  <ActionButton onClick={() => handleView(document)}>View</ActionButton>
-                  {onDownload && (
-                    <ActionButton onClick={() => onDownload(document)}>Download</ActionButton>
-                  )}
-                  <Button variant="danger" size="sm" onClick={() => onDelete(document)}>
-                    Delete
-                  </Button>
-                </div>
-              </td>
-            </tr>
-          ))}
+                <td className="px-4 py-3 text-sm font-medium text-neutral-900 dark:text-neutral-100">
+                  {document.filename}
+                </td>
+                <td className="px-4 py-3">
+                  <DocumentStatusBadge status={document.status} />
+                </td>
+                <td
+                  className="px-4 py-3 text-sm text-neutral-500 dark:text-neutral-400"
+                  title={VISIBILITY_NOT_IN_LIST_API}
+                >
+                  —
+                </td>
+                <td className="px-4 py-3 text-sm text-neutral-600 dark:text-neutral-300">
+                  {new Date(document.uploaded_at).toLocaleString()}
+                </td>
+                <td className="px-4 py-3 text-right">
+                  <div className="flex justify-end gap-2">
+                    <ActionButton onClick={() => handleView(document)}>View</ActionButton>
+                    {onDownload && (
+                      <ActionButton onClick={() => onDownload(document)}>Download</ActionButton>
+                    )}
+                    <Button variant="danger" size="sm" onClick={() => onDelete(document)}>
+                      Delete
+                    </Button>
+                  </div>
+                </td>
+              </tr>
+            )
+          })}
         </tbody>
       </table>
     </div>

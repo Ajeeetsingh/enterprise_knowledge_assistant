@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState, type KeyboardEvent } from 'react'
 
 import { PlusIcon } from '@/components/layout/NavIcons'
 import EmptyState from '@/components/ui/EmptyState'
@@ -6,6 +6,7 @@ import Input from '@/components/ui/Input'
 import Spinner from '@/components/ui/Spinner'
 import { cn } from '@/utils/cn'
 
+import { MAX_CONVERSATION_TITLE_LENGTH } from '../constants'
 import { conversationDisplayTitle, type Conversation } from '../types'
 import ConversationListSkeleton from './ConversationListSkeleton'
 import ConversationMenu from './ConversationMenu'
@@ -18,7 +19,7 @@ export interface ConversationListProps {
   error: string | null
   onSelect: (conversationId: string) => void
   onCreate: () => void
-  onRename: (conversation: Conversation) => void
+  onRename: (conversationId: string, title: string) => void
   onDelete: (conversation: Conversation) => void
   className?: string
 }
@@ -70,6 +71,12 @@ export default function ConversationList({
   className,
 }: ConversationListProps) {
   const [query, setQuery] = useState('')
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editValue, setEditValue] = useState('')
+  // Guards against a stray native "blur" firing after Enter/Escape already
+  // ended the edit session (e.g. when React unmounts the focused input),
+  // which would otherwise double-commit or resurrect a cancelled edit.
+  const editSessionEndedRef = useRef(false)
 
   const filteredConversations = useMemo(() => {
     const normalized = query.trim().toLowerCase()
@@ -78,6 +85,39 @@ export default function ConversationList({
       conversationDisplayTitle(conversation).toLowerCase().includes(normalized),
     )
   }, [conversations, query])
+
+  function startEdit(conversation: Conversation) {
+    editSessionEndedRef.current = false
+    setEditValue(conversationDisplayTitle(conversation))
+    setEditingId(conversation.id)
+  }
+
+  function commitEdit(conversation: Conversation) {
+    if (editSessionEndedRef.current) return
+    editSessionEndedRef.current = true
+    setEditingId(null)
+
+    const trimmed = editValue.trim()
+    const currentTitle = conversation.title?.trim() ?? ''
+    if (trimmed && trimmed !== currentTitle) {
+      onRename(conversation.id, trimmed)
+    }
+  }
+
+  function cancelEdit() {
+    editSessionEndedRef.current = true
+    setEditingId(null)
+  }
+
+  function handleEditKeyDown(event: KeyboardEvent<HTMLInputElement>, conversation: Conversation) {
+    if (event.key === 'Enter') {
+      event.preventDefault()
+      commitEdit(conversation)
+    } else if (event.key === 'Escape') {
+      event.preventDefault()
+      cancelEdit()
+    }
+  }
 
   return (
     <aside
@@ -130,6 +170,7 @@ export default function ConversationList({
           <ul className="py-1">
             {filteredConversations.map((conversation) => {
               const isSelected = conversation.id === selectedId
+              const isEditing = editingId === conversation.id
               return (
                 <li key={conversation.id}>
                   <div
@@ -139,35 +180,54 @@ export default function ConversationList({
                       !isSelected && 'border-l-[3px] border-l-transparent',
                     )}
                   >
-                    <button
-                      type="button"
-                      onClick={() => onSelect(conversation.id)}
-                      className={cn(
-                        'interactive-row min-w-0 flex-1 px-4 py-3 text-left',
-                        'focus-visible:outline-none focus-visible:shadow-[0_0_0_3px_var(--accent-muted)]',
-                        isSelected ? 'text-foreground' : 'text-muted hover:text-foreground',
-                      )}
-                      aria-current={isSelected ? 'true' : undefined}
-                    >
-                      <p
+                    {isEditing ? (
+                      <div className="min-w-0 flex-1 px-4 py-2">
+                        <Input
+                          autoFocus
+                          value={editValue}
+                          maxLength={MAX_CONVERSATION_TITLE_LENGTH}
+                          aria-label="Conversation title"
+                          className="h-8 px-2 py-1 text-sm font-medium"
+                          onChange={(event) => setEditValue(event.target.value)}
+                          onKeyDown={(event) => handleEditKeyDown(event, conversation)}
+                          onBlur={() => commitEdit(conversation)}
+                          onClick={(event) => event.stopPropagation()}
+                          onFocus={(event) => event.currentTarget.select()}
+                        />
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => onSelect(conversation.id)}
                         className={cn(
-                          'truncate text-sm font-medium',
-                          isSelected ? 'text-accent' : undefined,
+                          'interactive-row min-w-0 flex-1 px-4 py-3 text-left',
+                          'focus-visible:outline-none focus-visible:shadow-[0_0_0_3px_var(--accent-muted)]',
+                          isSelected ? 'text-foreground' : 'text-muted hover:text-foreground',
                         )}
+                        aria-current={isSelected ? 'true' : undefined}
                       >
-                        {conversationDisplayTitle(conversation)}
-                      </p>
-                      <p className="mt-1 text-xs text-subtle">
-                        {formatCreatedDate(conversation.created_at)}
-                      </p>
-                    </button>
+                        <p
+                          className={cn(
+                            'truncate text-sm font-medium',
+                            isSelected ? 'text-accent' : undefined,
+                          )}
+                        >
+                          {conversationDisplayTitle(conversation)}
+                        </p>
+                        <p className="mt-1 text-xs text-subtle">
+                          {formatCreatedDate(conversation.created_at)}
+                        </p>
+                      </button>
+                    )}
 
-                    <div className="flex items-center pr-2">
-                      <ConversationMenu
-                        onRename={() => onRename(conversation)}
-                        onDelete={() => onDelete(conversation)}
-                      />
-                    </div>
+                    {!isEditing && (
+                      <div className="flex items-center pr-2">
+                        <ConversationMenu
+                          onRename={() => startEdit(conversation)}
+                          onDelete={() => onDelete(conversation)}
+                        />
+                      </div>
+                    )}
                   </div>
                 </li>
               )

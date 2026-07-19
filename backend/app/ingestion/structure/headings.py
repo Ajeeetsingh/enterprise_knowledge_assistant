@@ -20,6 +20,20 @@ _ROMAN_HEADING_RE = re.compile(
 _NUMBER_ONLY_RE = re.compile(r"^\d+(?:\.\d+)*\.?$")
 _PAGE_NUMBER_LINE_RE = re.compile(r"^\d{1,3}$")
 
+# Short standalone lines that read as a heading purely by structure: no
+# numbering, no ALL-CAPS, no keyword match, but also no mid-sentence
+# punctuation — e.g. "Strategic priorities", "Risk governance", or
+# interrogative FAQ-style headings such as "Who are the main issuers?".
+# This is the fallback pattern (tried last) that lets short declarative or
+# question headings be tagged as real headings instead of being silently
+# absorbed into the following paragraph's body text.
+_SHORT_HEADING_MAX_WORDS = 8
+
+# Mirrors the bullet/ordered-list markers recognised by `structure.lists` so
+# list items (which are also short, capitalized, and often unpunctuated)
+# are never mistaken for the short-heading fallback below.
+_LIST_MARKER_RE = re.compile(r"^(?:[-*\u2022\u25E6\u2023]\s+|\d+[.)]\s+|[a-zA-Z][.)]\s+)")
+
 _ENTERPRISE_HEADING_KEYWORDS = frozenset(
     {
         "scope",
@@ -60,6 +74,68 @@ def _is_all_caps_heading(text: str, settings: StructureExtractionSettings) -> bo
         return False
     words = text.split()
     return 1 <= len(words) <= 12
+
+
+def _next_line_continues_sentence(next_text: str) -> bool:
+    """Return True when *next_text* reads as a continuation of the previous line.
+
+    A wrapped line break inside one sentence is, in English prose, almost
+    always followed by a lowercase word (or a comma/connective) — a genuine
+    new sentence or heading's body starts with an uppercase letter (or a
+    digit/quote). This needs no keyword/topic knowledge, so it generalizes:
+    it is what lets "Large corporations, financial institutions, and money
+    market participants" (continues "...are the primary group...", lowercase
+    "are") be rejected as a heading while "Strategic priorities" (followed by
+    "The bank will focus...", uppercase "The") is correctly kept as one.
+    """
+    stripped = next_text.strip()
+    first_alpha = next((char for char in stripped if char.isalpha()), "")
+    return bool(first_alpha) and first_alpha.islower()
+
+
+def _looks_like_short_standalone_heading(
+    text: str,
+    settings: StructureExtractionSettings,
+    *,
+    preceded_by_break: bool,
+    next_text: str | None,
+) -> bool:
+    """Detect short declarative/interrogative headings with no other structural marker.
+
+    Generic, non-keyword heuristic: a heading-shaped line is short, starts
+    with a capital letter, and does **not** end with the kind of terminal
+    punctuation ordinary prose sentences end with (a period or semicolon).
+    A trailing "?" is allowed since many FAQ-style enterprise documents use
+    interrogative section headings (e.g. "Who are the main issuers?").
+    This intentionally does not reference any specific words/topics, so it
+    generalizes across domains and document sets.
+
+    ``preceded_by_break`` requires the candidate line to sit at a paragraph
+    boundary (start of document/page or right after a blank line). Without
+    this, a short *mid-paragraph* line — e.g. one half of a sentence that
+    happens to wrap at a page-width boundary in PDF-extracted text, such as
+    "Large corporations, financial institutions, and money market
+    participants" — would otherwise be misread as a heading purely because
+    it is short and its wrap point doesn't fall on terminal punctuation.
+    Genuine standalone headings are always separated from surrounding prose
+    by a paragraph break, so this keeps the heuristic safe for real,
+    line-wrapped document text while still catching true short headings.
+
+    ``next_text`` (the immediately following physical line, if any) is used
+    for the same reason: see `_next_line_continues_sentence`.
+    """
+    if not preceded_by_break:
+        return False
+    if not _looks_like_heading_title(text, settings):
+        return False
+    if text.endswith((".", ";", ",")):
+        return False
+    if _LIST_MARKER_RE.match(text):
+        return False
+    if next_text is not None and _next_line_continues_sentence(next_text):
+        return False
+    words = text.rstrip(":").split()
+    return 1 <= len(words) <= _SHORT_HEADING_MAX_WORDS
 
 
 def _keyword_heading_level(text: str) -> int | None:
@@ -117,6 +193,13 @@ def detect_headings(
     """Detect headings across the annotated line stream."""
     headings: list[DetectedHeading] = []
     content_lines = [line for line in lines if not line.is_blank]
+    blank_line_indexes = {line.index for line in lines if line.is_blank}
+    # Page markers (``<<<PAGE:N>>>``) are consumed by the line parser and
+    # never become entries in `lines`, so a content line whose predecessor
+    # index is simply absent (start of document, or right after a page
+    # marker/page break) is just as much a paragraph boundary as an
+    # explicit blank line.
+    present_indexes = {line.index for line in lines}
     index = 0
     while index < len(content_lines):
         line = content_lines[index]
@@ -200,6 +283,24 @@ def detect_headings(
                 line_index=line.index,
                 text=text,
                 level=1,
+                section_number=None,
+                page=line.page,
+            )
+
+        previous_index = line.index - 1
+        preceded_by_break = (
+            previous_index not in present_indexes or previous_index in blank_line_indexes
+        )
+        next_text = (
+            content_lines[index + 1].text.strip() if index + 1 < len(content_lines) else None
+        )
+        if detected is None and _looks_like_short_standalone_heading(
+            text, settings, preceded_by_break=preceded_by_break, next_text=next_text
+        ):
+            detected = DetectedHeading(
+                line_index=line.index,
+                text=text.rstrip(":"),
+                level=2,
                 section_number=None,
                 page=line.page,
             )

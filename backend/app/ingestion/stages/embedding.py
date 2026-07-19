@@ -4,13 +4,32 @@ from __future__ import annotations
 
 import logging
 
+from app.config import get_settings
 from app.core.exceptions import DocumentIngestionError, EmbeddingError
 from app.core.logging import get_logger, log_with_fields
 from app.documents.types import IngestionContext
 from app.ingestion.embedding.base import EmbeddingProvider
+from app.ingestion.retrieval_text import build_retrieval_text, resolve_chunk_heading
+from app.ingestion.semantic_chunking.types import ChunkMetadata
 from app.ingestion.stages.base import PipelineStage
 
 logger = get_logger(__name__)
+
+
+def _embedding_text_for_chunk(chunk, *, enabled: bool, repetitions: int) -> str:
+    """Return the text to embed for one chunk, weighting its heading when known.
+
+    ``chunk.content`` itself is left untouched — this only affects what
+    gets embedded, not what is stored, cited, or shown to end users.
+    """
+    if not enabled:
+        return chunk.content
+    metadata = chunk.metadata if isinstance(chunk.metadata, ChunkMetadata) else None
+    heading = resolve_chunk_heading(
+        metadata.section_title if metadata is not None else None,
+        metadata.hierarchy_path if metadata is not None else None,
+    )
+    return build_retrieval_text(chunk.content, heading, repetitions=repetitions)
 
 
 class EmbeddingStage(PipelineStage):
@@ -41,7 +60,15 @@ class EmbeddingStage(PipelineStage):
             context.stage_results[self.name] = "skipped:no_chunks"
             return context
 
-        texts = [chunk.content for chunk in context.chunks]
+        settings = get_settings()
+        texts = [
+            _embedding_text_for_chunk(
+                chunk,
+                enabled=settings.heading_weighting_enabled,
+                repetitions=settings.heading_weight_repetitions,
+            )
+            for chunk in context.chunks
+        ]
         try:
             context.embeddings = self._provider.embed(texts)
         except EmbeddingError:

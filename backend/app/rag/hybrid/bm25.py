@@ -10,6 +10,8 @@ from pathlib import Path
 
 from app.core.logging import get_logger, log_with_fields
 from app.ingestion.chunker import DocumentChunk
+from app.ingestion.retrieval_text import build_retrieval_text, resolve_chunk_heading
+from app.ingestion.semantic_chunking.types import ChunkMetadata
 from app.rag.hybrid.config import HybridRetrievalSettings
 from app.rag.hybrid.schemas import SparseSearchHit
 
@@ -47,6 +49,20 @@ class BM25Tokenizer:
         if self._settings.stemming_enabled:
             tokens = [_simple_stem(token) for token in tokens]
         return tokens
+
+
+def _indexable_text(chunk: DocumentChunk, settings: HybridRetrievalSettings) -> str:
+    """Return the text tokenized for BM25, weighting the chunk's heading when known."""
+    if not settings.heading_weighting_enabled:
+        return chunk.content
+    metadata = chunk.metadata if isinstance(chunk.metadata, ChunkMetadata) else None
+    heading = resolve_chunk_heading(
+        metadata.section_title if metadata is not None else None,
+        metadata.hierarchy_path if metadata is not None else None,
+    )
+    return build_retrieval_text(
+        chunk.content, heading, repetitions=settings.heading_weight_repetitions
+    )
 
 
 class BM25Index:
@@ -120,7 +136,9 @@ class BM25Index:
             self._chunks.append(chunk)
             self._chunk_ids.append(chunk.chunk_id)
             self._document_ids.append(document_id)
-            self._tokenized_corpus.append(self._tokenizer.tokenize(chunk.content))
+            self._tokenized_corpus.append(
+                self._tokenizer.tokenize(_indexable_text(chunk, self._settings))
+            )
         self._rebuild_bm25()
         self._persist()
         log_with_fields(
@@ -179,7 +197,9 @@ class BM25Index:
             self._chunks.append(chunk)
             self._chunk_ids.append(chunk_id)
             self._document_ids.append(owner_id)
-            self._tokenized_corpus.append(self._tokenizer.tokenize(chunk.content))
+            self._tokenized_corpus.append(
+                self._tokenizer.tokenize(_indexable_text(chunk, self._settings))
+            )
         self._rebuild_bm25()
         self._persist()
 

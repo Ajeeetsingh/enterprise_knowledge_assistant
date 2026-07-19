@@ -7,7 +7,9 @@ describe('BaseLineChart', () => {
   it('renders an empty state when no data is available', () => {
     render(<BaseLineChart data={[]} ariaLabel="Empty trend chart" />)
 
-    expect(screen.getByLabelText('Empty trend chart: no data')).toBeInTheDocument()
+    // Empty charts use ChartEmptyState with a period message as the accessible name.
+    expect(screen.getByLabelText('No data for the selected period')).toBeInTheDocument()
+    expect(screen.getByText('No data for the selected period')).toBeInTheDocument()
   })
 
   it('renders a chart container when data is available', () => {

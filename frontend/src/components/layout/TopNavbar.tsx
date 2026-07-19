@@ -25,6 +25,7 @@ const ROUTE_LABELS: Record<string, string> = {
   '/chat': 'Chat',
   '/documents': 'Documents',
   '/admin': 'Admin Portal',
+  '/admin/users': 'Users',
   '/users': 'Users',
   '/monitoring': 'Monitoring',
   '/profile': 'Profile',

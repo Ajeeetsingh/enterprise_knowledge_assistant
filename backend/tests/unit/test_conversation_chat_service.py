@@ -372,6 +372,132 @@ class TestConversationChatServiceAsk:
         assert messages[1].content == UNAVAILABLE_MESSAGE
         assert result.answer == UNAVAILABLE_MESSAGE
 
+    def test_first_message_generates_title_via_deterministic_fallback(
+        self,
+        db_session: Session,
+        owner: User,
+    ) -> None:
+        """No LLM provider wired in ⇒ deterministic fallback runs, and the
+        generated title is persisted after the first user message."""
+        conv_service = build_conversation_service(db_session)
+        chat_service = ConversationChatService(conv_service)
+        conv = conv_service.create_conversation(owner)
+        assert conv.title is None
+
+        rag = MagicMock()
+        rag.answer_question.return_value = _rag_response()
+
+        chat_service.ask_question(
+            owner,
+            conv.id,
+            "What are the main types of commercial paper issuers?",
+            "Employee",
+            rag,
+            None,
+        )
+
+        updated = conv_service.get_conversation(owner, conv.id)
+        assert updated.title == "Commercial Paper Issuers"
+
+    def test_existing_title_is_never_overwritten(
+        self,
+        chat_service: ConversationChatService,
+        db_session: Session,
+        owner: User,
+        conversation,
+    ) -> None:
+        """`conversation` fixture is created with title="Leave policy"."""
+        rag = MagicMock()
+        rag.answer_question.return_value = _rag_response()
+
+        chat_service.ask_question(
+            owner,
+            conversation.id,
+            "What is our maternity leave policy?",
+            "Employee",
+            rag,
+            frozenset({"hr_policy.txt"}),
+        )
+
+        conv_service = build_conversation_service(db_session)
+        updated = conv_service.get_conversation(owner, conversation.id)
+        assert updated.title == "Leave policy"
+
+    def test_title_generated_once_and_not_regenerated_on_second_message(
+        self,
+        db_session: Session,
+        owner: User,
+    ) -> None:
+        conv_service = build_conversation_service(db_session)
+        chat_service = ConversationChatService(conv_service)
+        conv = conv_service.create_conversation(owner)
+
+        rag = MagicMock()
+        rag.answer_question.return_value = _rag_response()
+
+        chat_service.ask_question(
+            owner, conv.id, "Explain Project Phoenix.", "Employee", rag, None
+        )
+        first_title = conv_service.get_conversation(owner, conv.id).title
+        assert first_title == "Project Phoenix"
+
+        chat_service.ask_question(
+            owner, conv.id, "What about the budget?", "Employee", rag, None
+        )
+        second_title = conv_service.get_conversation(owner, conv.id).title
+        assert second_title == "Project Phoenix"
+
+    def test_title_generation_failure_does_not_break_chat_response(
+        self,
+        db_session: Session,
+        owner: User,
+    ) -> None:
+        """A broken title provider must never surface as a chat failure."""
+        conv_service = build_conversation_service(db_session)
+        broken_provider = MagicMock()
+        broken_provider.generate_sync.side_effect = RuntimeError("provider down")
+        chat_service = ConversationChatService(conv_service, title_llm_provider=broken_provider)
+        conv = conv_service.create_conversation(owner)
+
+        rag = MagicMock()
+        rag.answer_question.return_value = _rag_response()
+
+        result = chat_service.ask_question(
+            owner, conv.id, "Explain Project Phoenix.", "Employee", rag, None
+        )
+
+        assert result.answer == "16 weeks of paid leave."
+        # Deterministic fallback still ran despite the LLM provider failing.
+        updated = conv_service.get_conversation(owner, conv.id)
+        assert updated.title == "Project Phoenix"
+
+    def test_uses_injected_llm_provider_for_title(
+        self,
+        db_session: Session,
+        owner: User,
+    ) -> None:
+        conv_service = build_conversation_service(db_session)
+        llm_provider = MagicMock()
+        llm_provider.generate_sync.return_value = SimpleNamespace(answer="Money Market Funds")
+        chat_service = ConversationChatService(conv_service, title_llm_provider=llm_provider)
+        conv = conv_service.create_conversation(owner)
+
+        rag = MagicMock()
+        rag.answer_question.return_value = _rag_response()
+
+        chat_service.ask_question(
+            owner,
+            conv.id,
+            "How do money market funds work?",
+            "Employee",
+            rag,
+            None,
+        )
+
+        llm_provider.generate_sync.assert_called_once()
+        updated = conv_service.get_conversation(owner, conv.id)
+        assert updated.title == "Money Market Funds"
+
     def test_persists_no_retrieval_answer_from_rag(
         self,
         chat_service: ConversationChatService,

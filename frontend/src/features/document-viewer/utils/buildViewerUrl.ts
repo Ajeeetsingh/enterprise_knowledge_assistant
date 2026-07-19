@@ -12,6 +12,10 @@ export function buildDocumentViewerUrl(
   if (params.chunkId) {
     search.set('chunkId', params.chunkId)
   }
+  if (params.citeKey) {
+    search.set('citeKey', params.citeKey)
+  }
+  // Keep short highlightText for backwards compatibility; open-source uses citeKey.
   if (params.highlightText) {
     search.set('highlightText', params.highlightText)
   }

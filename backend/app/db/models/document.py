@@ -7,7 +7,7 @@ import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import BigInteger, DateTime, ForeignKey, String, Text, Uuid, func
+from sqlalchemy import BigInteger, DateTime, ForeignKey, Index, String, Text, Uuid, func, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -32,9 +32,23 @@ class Document(Base):
     Storing ``allowed_roles`` as JSON text keeps the schema portable across
     PostgreSQL and SQLite while supporting future migration to a proper
     association table (Phase 5.x ACLs) without changing the column type.
+
+    Active-document uniqueness is tenant-scoped on ``(tenant_id, checksum)``
+    so the same file bytes may exist in different organizations, while
+    soft-deleted rows do not block re-upload.
     """
 
     __tablename__ = "documents"
+    __table_args__ = (
+        Index(
+            "uq_documents_tenant_checksum_active",
+            "tenant_id",
+            "checksum",
+            unique=True,
+            sqlite_where=text("status != 'deleted' AND tenant_id IS NOT NULL"),
+            postgresql_where=text("status != 'deleted' AND tenant_id IS NOT NULL"),
+        ),
+    )
 
     # ------------------------------------------------------------------ #
     # Core identity                                                        #

@@ -15,8 +15,11 @@ export const MAX_DOCUMENT_FILE_SIZE_BYTES = 50 * 1024 * 1024
 
 export const MAX_DOCUMENT_FILE_SIZE_MB = 50
 
-/** Maximum files per upload batch in the admin Upload Center. */
+/** Maximum files per upload batch (UI selection / one upload action). */
 export const MAX_BATCH_UPLOAD_FILES = 10
+
+/** Maximum simultaneous single-document upload requests. */
+export const MAX_CONCURRENT_UPLOADS = 3
 
 /**
  * HTTP timeout for document upload requests.

@@ -1,9 +1,3 @@
-export { default as CitationCard } from './CitationCard'
-export type { CitationCardProps } from './CitationCard'
-
-export { default as CitationModal } from './CitationModal'
-export type { CitationModalProps } from './CitationModal'
-
 export { default as MarkdownRenderer } from './MarkdownRenderer'
 export type { MarkdownRendererProps } from './MarkdownRenderer'
 

@@ -43,6 +43,10 @@ export function logUploadTransition(
   state: UploadLifecycleState,
   details: Record<string, unknown> = {},
 ): void {
+  if (!import.meta.env.DEV) {
+    return
+  }
+
   const payload = {
     state,
     context,

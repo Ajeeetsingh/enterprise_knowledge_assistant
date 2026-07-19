@@ -9,7 +9,6 @@ from pathlib import Path
 from app.evaluation.history import (
     compare_reports,
     list_benchmark_runs,
-    load_benchmark_report,
     load_best_run,
     load_previous_run,
 )

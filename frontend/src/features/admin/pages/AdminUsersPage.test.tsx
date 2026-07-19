@@ -43,7 +43,8 @@ vi.mock('@/features/users/hooks', () => ({
     error: null,
     refetch: vi.fn(),
   })),
-  useRoles: vi.fn(() => ({ data: { roles: [] } })),
+  useRoles: vi.fn(() => ({ data: { roles: [] }, isLoading: false })),
+  useCreateUser: vi.fn(() => ({ mutateAsync: vi.fn(), isPending: false })),
   useUpdateUserRole: vi.fn(() => ({ mutateAsync: vi.fn(), isPending: false })),
   useToggleUserStatus: vi.fn(() => ({ mutateAsync: vi.fn(), isPending: false })),
 }))

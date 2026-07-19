@@ -1,5 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 
+import { useAuth } from '@/contexts/AuthContext'
+
 import * as userApi from '../services/userApi'
 import type { User } from '../types'
 import { userQueryKeys } from './queryKeys'
@@ -12,6 +14,7 @@ export interface UpdateUserRoleInput {
 
 export function useUpdateUserRole() {
   const queryClient = useQueryClient()
+  const { user: currentUser, refreshUser } = useAuth()
 
   return useMutation({
     mutationFn: async ({ userId, user, newRole }: UpdateUserRoleInput) => {
@@ -25,9 +28,12 @@ export function useUpdateUserRole() {
         await userApi.assignUserRoles(userId, { roles: [newRole] })
       }
     },
-    onSuccess: (_data, { userId }) => {
+    onSuccess: async (_data, { userId }) => {
       void queryClient.invalidateQueries({ queryKey: userQueryKeys.list() })
       void queryClient.invalidateQueries({ queryKey: userQueryKeys.detail(userId) })
+      if (currentUser?.id === userId) {
+        await refreshUser()
+      }
     },
   })
 }

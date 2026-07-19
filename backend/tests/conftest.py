@@ -31,6 +31,16 @@ def pytest_configure(config: pytest.Config) -> None:
     _patch_database_lifecycle_for_tests()
 
 
+@pytest.fixture(autouse=True)
+def _reset_rate_limiter() -> None:
+    """Keep in-memory rate limits from leaking across tests."""
+    from app.core.rate_limit import rate_limiter
+
+    rate_limiter._events.clear()
+    yield
+    rate_limiter._events.clear()
+
+
 def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:
     """Auto-mark tests by directory for selective execution."""
     for item in items:

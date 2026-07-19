@@ -6,8 +6,7 @@ import { useToast } from '@/contexts/ToastContext'
 import DeleteDocumentDialog from '@/features/documents/components/DeleteDocumentDialog'
 import { useDeleteDocument, useDocument, useDocuments } from '@/features/documents/hooks'
 import type { Document } from '@/features/documents/types'
-import { getApiErrorMessage } from '@/services/errorHandler'
-import type { ApiError } from '@/types'
+import { getApiErrorMessage, resolveErrorMessage } from '@/services/errorHandler'
 
 import {
   ADMIN_DOCUMENTS_FETCH_LIMIT,
@@ -24,13 +23,6 @@ import {
   type AdminDocumentRow,
   type DocumentFilterState,
 } from '../utils/documentFilters'
-
-function resolveErrorMessage(error: unknown): string {
-  if (error && typeof error === 'object' && 'message' in error) {
-    return String((error as ApiError).message)
-  }
-  return 'Unable to load documents.'
-}
 
 const DEFAULT_FILTERS: DocumentFilterState = {
   status: 'ALL',
@@ -147,7 +139,7 @@ export default function AdminDocumentsPage() {
         <Card>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <p role="alert" className="text-sm text-error-500 dark:text-error-400">
-              {resolveErrorMessage(error)}
+              {resolveErrorMessage(error, 'Unable to load documents.')}
             </p>
             <Button variant="secondary" size="sm" onClick={() => void refetch()}>
               Retry

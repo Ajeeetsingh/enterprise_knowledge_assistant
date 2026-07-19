@@ -8,16 +8,21 @@ import uuid
 from functools import lru_cache
 
 from app.config import get_settings
+from sqlalchemy.exc import IntegrityError
+
+from app.auth.document_authorization import DocumentAuthorizationService
 from app.core.exceptions import (
     DocumentIngestionError,
     DocumentIntegrityError,
     DocumentNotFoundError,
     DocumentStorageError,
+    DuplicateDocumentError,
     EmbeddingError,
     StorageError,
 )
 from app.core.logging import get_logger, log_with_fields
 from app.db.models.document import Document
+from app.db.models.user import User
 from app.db.repositories.document_repository import DocumentFilter, DocumentRepository
 from app.documents.checksum import ChecksumProvider, Sha256ChecksumProvider
 from app.documents.dispatcher import LifecycleEventCollector, get_lifecycle_event_collector
@@ -366,6 +371,30 @@ class DocumentService:
             document_id=document_id,
         )
 
+    def _authorized_existing_document_id(
+        self,
+        repository: DocumentRepository,
+        *,
+        document_id: str | None,
+        requesting_user: User | None,
+    ) -> str | None:
+        """Return *document_id* only when *requesting_user* may read that document."""
+        if not document_id or requesting_user is None:
+            return None
+        try:
+            existing = repository.get_by_id(uuid.UUID(document_id))
+        except (ValueError, TypeError):
+            return None
+        if existing is None:
+            return None
+        decision = DocumentAuthorizationService.can_read_document(
+            requesting_user,
+            existing,
+        )
+        if not decision.granted:
+            return None
+        return str(existing.id)
+
     def upload_document(
         self,
         repository: DocumentRepository,
@@ -375,22 +404,28 @@ class DocumentService:
         content: bytes,
         uploaded_by: uuid.UUID,
         tenant_id: str | None = None,
+        requesting_user: User | None = None,
     ) -> DocumentUploadResult:
         """Upload, ingest, and persist document metadata.
 
         Integrity is evaluated before the pipeline runs. Exact duplicates
-        short-circuit without re-indexing; conflicts raise integrity errors.
+        raise ``DuplicateDocumentError``; conflicts raise integrity errors.
         The public upload API contract remains ``DocumentUploadResult``.
+
+        When a duplicate is detected, ``existing_document_id`` is included on
+        the error only if *requesting_user* is authorized to read that document.
         """
         settings = get_settings()
         resolved_tenant = tenant_id or settings.tenant_id
         user_id = str(uploaded_by)
         checksum = self._checksum_provider.compute(content)
+        acl_user = requesting_user
 
         integrity = self._integrity_policy.evaluate(
             repository,
             checksum=checksum,
             filename=filename,
+            tenant_id=resolved_tenant,
         )
         self._log_integrity_decision(
             user_id=user_id,
@@ -400,21 +435,20 @@ class DocumentService:
         )
 
         if integrity.decision == IntegrityDecision.EXACT_DUPLICATE:
-            existing = repository.get_by_id(uuid.UUID(integrity.document_id))
-            if existing is None:
-                raise DocumentNotFoundError(
-                    f"Document '{integrity.document_id}' not found."
-                )
             self._events.publish(
                 DuplicateDetected(
-                    document_id=str(existing.id),
+                    document_id=integrity.document_id or "",
                     user_id=user_id,
                     checksum=checksum,
                 )
             )
-            return DocumentUploadResult.from_existing_document(
-                existing,
-                message=integrity.message,
+            raise DuplicateDocumentError(
+                filename,
+                existing_document_id=self._authorized_existing_document_id(
+                    repository,
+                    document_id=integrity.document_id,
+                    requesting_user=acl_user,
+                ),
             )
 
         if integrity.decision in {
@@ -428,20 +462,44 @@ class DocumentService:
             document_id=document_id,
             checksum=checksum,
         )
-        repository.create(
-            document_id=version_info.document_id,
-            filename=filename,
-            content_type=content_type,
-            file_size=len(content),
-            checksum=checksum,
-            storage_path=f"pending/{document_id}",
-            uploaded_by=uploaded_by,
-            status=DocumentStatus.PROCESSING,
-            tenant_id=resolved_tenant,
-            version=version_info.version,
-            parent_document_id=version_info.parent_document_id,
-            owner_id=uploaded_by,
-        )
+        try:
+            repository.create(
+                document_id=version_info.document_id,
+                filename=filename,
+                content_type=content_type,
+                file_size=len(content),
+                checksum=checksum,
+                storage_path=f"pending/{document_id}",
+                uploaded_by=uploaded_by,
+                status=DocumentStatus.PROCESSING,
+                tenant_id=resolved_tenant,
+                version=version_info.version,
+                parent_document_id=version_info.parent_document_id,
+                owner_id=uploaded_by,
+            )
+        except IntegrityError:
+            # Concurrent upload of the same content for this tenant.
+            repository.rollback()
+            raced = repository.find_latest_version(
+                checksum,
+                tenant_id=resolved_tenant,
+            )
+            raced_id = str(raced.id) if raced is not None else ""
+            self._events.publish(
+                DuplicateDetected(
+                    document_id=raced_id,
+                    user_id=user_id,
+                    checksum=checksum,
+                )
+            )
+            raise DuplicateDocumentError(
+                filename,
+                existing_document_id=self._authorized_existing_document_id(
+                    repository,
+                    document_id=raced_id or None,
+                    requesting_user=acl_user,
+                ),
+            ) from None
 
         try:
             outcome = self._run_processing(
@@ -653,7 +711,10 @@ class DocumentService:
         self._vector_store.remove_document(str(document_id))
 
         try:
-            self._storage.delete(document.filename)
+            # Prefer the stored key; fall back to basename for legacy rows.
+            storage_key = document.storage_path or document.filename
+            if storage_key and not storage_key.startswith("pending/"):
+                self._storage.delete(storage_key)
         except StorageError as exc:
             raise DocumentStorageError(
                 f"Failed to delete stored file for document '{document_id}'."
@@ -681,8 +742,18 @@ class DocumentService:
         filename: str | None = None,
         status: DocumentStatus | None = None,
         uploaded_by: uuid.UUID | None = None,
+        viewer: User | None = None,
     ) -> tuple[list[Document], int]:
-        """Return a paginated list of document metadata records."""
+        """Return a paginated list of document metadata records.
+
+        When *viewer* is provided and is not an Admin/superuser, results are
+        filtered through ``DocumentAuthorizationService.can_read_document`` so
+        PRIVATE/RESTRICTED documents are not enumerable by unauthorized users.
+        """
+        from app.auth.dependencies import get_user_system_roles
+        from app.auth.document_authorization import DocumentAuthorizationService
+        from app.auth.role_permissions import SystemRole
+
         resolved_limit = min(max(limit, 1), MAX_LIST_LIMIT)
         resolved_offset = max(offset, 0)
         filters = DocumentFilter(
@@ -690,6 +761,31 @@ class DocumentService:
             status=status,
             uploaded_by=uploaded_by,
         )
+
+        is_admin = False
+        if viewer is not None:
+            is_admin = bool(viewer.is_superuser) or (
+                SystemRole.ADMIN in get_user_system_roles(viewer)
+            )
+
+        if viewer is not None and not is_admin:
+            # Over-fetch then filter in memory — correct for ACL on small/medium
+            # corpora; SQL-level visibility predicates can replace this later.
+            candidates, _ = repository.list(
+                limit=1000,
+                offset=0,
+                filters=filters,
+            )
+            visible = [
+                doc
+                for doc in candidates
+                if DocumentAuthorizationService.can_read_document(
+                    viewer, doc
+                ).granted
+            ]
+            total = len(visible)
+            return visible[resolved_offset : resolved_offset + resolved_limit], total
+
         return repository.list(
             limit=resolved_limit,
             offset=resolved_offset,

@@ -3,51 +3,44 @@ import { type ChangeEvent, type DragEvent, type FormEvent, useEffect, useId, use
 import Button from '@/components/ui/Button'
 import StatusBadge from '@/components/ui/StatusBadge'
 import { SUPPORTED_DOCUMENT_ACCEPT, SUPPORTED_DOCUMENT_EXTENSIONS } from '@/features/documents/constants'
+import type { BatchUploadItem, BatchUploadItemStatus } from '@/features/documents/hooks/useUploadDocuments'
+import {
+  countValidSelectedFiles,
+  dedupeSelectionByContent,
+  formatFileSize,
+  mergeUploadSelection,
+  type SelectedUploadFile,
+} from '@/features/documents/utils/uploadSelection'
 import { cn } from '@/utils/cn'
 
-import {
-  formatFileSize,
-  MAX_BATCH_UPLOAD_FILES,
-  MAX_DOCUMENT_FILE_SIZE_MB,
-  validateDocumentFileSelection,
-} from '../utils/uploadValidation'
-
-export type BatchUploadFileStatus = 'queued' | 'uploading' | 'processing' | 'ready' | 'failed'
-
-export interface BatchUploadProgressItem {
-  id: string
-  filename: string
-  size: number
-  status: BatchUploadFileStatus
-  error?: string
-}
+import { MAX_BATCH_UPLOAD_FILES, MAX_DOCUMENT_FILE_SIZE_MB } from '../utils/uploadValidation'
 
 export interface DocumentUploadFormProps {
   isUploading: boolean
   error: string | null
   resetKey?: number
-  uploadProgress?: BatchUploadProgressItem[]
+  uploadProgress?: BatchUploadItem[]
+  summary?: string | null
   onUpload: (files: File[]) => void
+  onRetryFailed?: () => void
 }
 
-const STATUS_LABELS: Record<BatchUploadFileStatus, string> = {
+const STATUS_LABELS: Record<BatchUploadItemStatus, string> = {
   queued: 'Queued',
   uploading: 'Uploading',
   processing: 'Processing',
-  ready: 'Ready',
+  completed: 'Completed',
+  duplicate: 'Already exists',
   failed: 'Failed',
 }
 
-const STATUS_TONES: Record<BatchUploadFileStatus, 'neutral' | 'good' | 'warn' | 'bad'> = {
+const STATUS_TONES: Record<BatchUploadItemStatus, 'neutral' | 'good' | 'warn' | 'bad'> = {
   queued: 'neutral',
   uploading: 'warn',
   processing: 'warn',
-  ready: 'good',
+  completed: 'good',
+  duplicate: 'warn',
   failed: 'bad',
-}
-
-function statusTone(status: BatchUploadFileStatus) {
-  return STATUS_TONES[status]
 }
 
 export default function DocumentUploadForm({
@@ -55,41 +48,54 @@ export default function DocumentUploadForm({
   error,
   resetKey = 0,
   uploadProgress,
+  summary,
   onUpload,
+  onRetryFailed,
 }: DocumentUploadFormProps) {
   const inputId = useId()
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const [selectedFiles, setSelectedFiles] = useState<File[]>([])
-  const [fieldError, setFieldError] = useState<string | null>(null)
+  const [selectedFiles, setSelectedFiles] = useState<SelectedUploadFile[]>([])
+  const [selectionNotice, setSelectionNotice] = useState<string | null>(null)
   const [isDragActive, setIsDragActive] = useState(false)
 
   const isBusy = isUploading
   const showingProgress = Boolean(uploadProgress && uploadProgress.length > 0)
+  const validCount = countValidSelectedFiles(selectedFiles)
+  const failedCount = uploadProgress?.filter((item) => item.status === 'failed').length ?? 0
 
   useEffect(() => {
     setSelectedFiles([])
-    setFieldError(null)
+    setSelectionNotice(null)
     setIsDragActive(false)
     if (fileInputRef.current) fileInputRef.current.value = ''
   }, [resetKey])
 
-  function applyFileSelection(files: File[]) {
-    const validationError = validateDocumentFileSelection(files)
-    setSelectedFiles(validationError ? [] : files)
-    setFieldError(validationError)
-    if (fileInputRef.current) {
-      fileInputRef.current.value = ''
+  async function applyIncomingFiles(incoming: File[]) {
+    if (isBusy || showingProgress) return
+    const merged = mergeUploadSelection(selectedFiles, incoming)
+    try {
+      const deduped = await dedupeSelectionByContent(merged.files)
+      const notices = [...merged.notices, ...deduped.notices]
+      setSelectedFiles(deduped.files)
+      setSelectionNotice(
+        deduped.error ?? merged.error ?? (notices.length > 0 ? notices.join(' ') : null),
+      )
+    } catch {
+      setSelectedFiles(merged.files)
+      setSelectionNotice(
+        merged.error ?? (merged.notices.length > 0 ? merged.notices.join(' ') : null),
+      )
     }
+    if (fileInputRef.current) fileInputRef.current.value = ''
   }
 
   function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
-    const files = Array.from(event.target.files ?? [])
-    applyFileSelection(files)
+    void applyIncomingFiles(Array.from(event.target.files ?? []))
   }
 
   function handleDragOver(event: DragEvent<HTMLDivElement>) {
     event.preventDefault()
-    if (!isBusy) setIsDragActive(true)
+    if (!isBusy && !showingProgress) setIsDragActive(true)
   }
 
   function handleDragLeave(event: DragEvent<HTMLDivElement>) {
@@ -100,25 +106,26 @@ export default function DocumentUploadForm({
   function handleDrop(event: DragEvent<HTMLDivElement>) {
     event.preventDefault()
     setIsDragActive(false)
-    if (isBusy) return
-    applyFileSelection(Array.from(event.dataTransfer.files ?? []))
+    void applyIncomingFiles(Array.from(event.dataTransfer.files ?? []))
   }
 
-  function handleRemoveFile(index: number) {
-    if (isBusy) return
-    const nextFiles = selectedFiles.filter((_, fileIndex) => fileIndex !== index)
-    setFieldError(validateDocumentFileSelection(nextFiles))
-    setSelectedFiles(nextFiles)
+  function handleRemoveFile(id: string) {
+    if (isBusy || showingProgress) return
+    setSelectedFiles((current) => current.filter((item) => item.id !== id))
+    setSelectionNotice(null)
   }
 
   function handleSubmit(event: FormEvent) {
     event.preventDefault()
-    const validationError = validateDocumentFileSelection(selectedFiles)
-    if (validationError) {
-      setFieldError(validationError)
+    if (isBusy || showingProgress) return
+    const validFiles = selectedFiles
+      .filter((item) => !item.validationError)
+      .map((item) => item.file)
+    if (validFiles.length === 0) {
+      setSelectionNotice('Please select at least one valid file to upload.')
       return
     }
-    onUpload(selectedFiles)
+    onUpload(validFiles)
   }
 
   return (
@@ -135,49 +142,54 @@ export default function DocumentUploadForm({
       </p>
 
       <form className="mt-4 space-y-4" onSubmit={handleSubmit}>
-        <div>
-          <div
-            className={cn(
-              'upload-dropzone',
-              isDragActive && 'upload-dropzone--active',
-              isBusy && 'upload-dropzone--disabled',
-            )}
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
-            onDrop={handleDrop}
-          >
-            <input
-              ref={fileInputRef}
-              id={inputId}
-              type="file"
-              multiple
-              accept={SUPPORTED_DOCUMENT_ACCEPT}
-              disabled={isBusy}
-              className="sr-only"
-              onChange={handleFileChange}
-            />
-            <p className="text-sm font-medium text-foreground">
-              Drop up to {MAX_BATCH_UPLOAD_FILES} files, or{' '}
-              <button
-                type="button"
-                className="text-accent hover:underline"
+        {!showingProgress && (
+          <div>
+            <div
+              className={cn(
+                'upload-dropzone',
+                isDragActive && 'upload-dropzone--active',
+                isBusy && 'upload-dropzone--disabled',
+              )}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+            >
+              <input
+                ref={fileInputRef}
+                id={inputId}
+                type="file"
+                multiple
+                accept={SUPPORTED_DOCUMENT_ACCEPT}
                 disabled={isBusy}
-                onClick={() => fileInputRef.current?.click()}
-              >
-                browse
-              </button>
-            </p>
-            <p className="mt-1 text-xs text-muted">
-              {selectedFiles.length} / {MAX_BATCH_UPLOAD_FILES} files selected
-            </p>
-          </div>
+                className="sr-only"
+                onChange={handleFileChange}
+              />
+              <p className="text-sm font-medium text-foreground">
+                Drop up to {MAX_BATCH_UPLOAD_FILES} files, or{' '}
+                <button
+                  type="button"
+                  className="text-accent hover:underline"
+                  disabled={isBusy}
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  browse
+                </button>
+              </p>
+              <p className="mt-1 text-xs text-muted">
+                {selectedFiles.length} / {MAX_BATCH_UPLOAD_FILES} files selected
+                {selectedFiles.length - validCount > 0
+                  ? ` · ${selectedFiles.length - validCount} invalid`
+                  : ''}
+              </p>
+            </div>
 
-          {fieldError && (
-            <p role="alert" className="mt-2 text-sm text-status-bad">
-              {fieldError}
-            </p>
-          )}
-        </div>
+            {selectionNotice && (
+              <p role="alert" className="mt-2 text-sm text-status-bad">
+                {selectionNotice}
+              </p>
+            )}
+          </div>
+        )}
 
         {showingProgress ? (
           <ul className="upload-file-list" aria-label="Upload progress">
@@ -187,27 +199,39 @@ export default function DocumentUploadForm({
                   <p className="truncate text-sm font-medium text-foreground">{item.filename}</p>
                   <p className="text-xs text-muted">{formatFileSize(item.size)}</p>
                   {item.error ? (
-                    <p className="mt-1 text-xs text-status-bad">{item.error}</p>
+                    <p
+                      className={cn(
+                        'mt-1 text-xs',
+                        item.status === 'duplicate' ? 'text-muted' : 'text-status-bad',
+                      )}
+                    >
+                      {item.error}
+                    </p>
                   ) : null}
                 </div>
-                <StatusBadge tone={statusTone(item.status)}>{STATUS_LABELS[item.status]}</StatusBadge>
+                <StatusBadge tone={STATUS_TONES[item.status]}>{STATUS_LABELS[item.status]}</StatusBadge>
               </li>
             ))}
           </ul>
         ) : selectedFiles.length > 0 ? (
           <ul className="upload-file-list" aria-label="Selected files">
-            {selectedFiles.map((file, index) => (
-              <li key={`${file.name}-${file.lastModified}`} className="upload-file-row">
+            {selectedFiles.map((item) => (
+              <li key={item.id} className="upload-file-row">
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium text-foreground">{file.name}</p>
-                  <p className="text-xs text-muted">{formatFileSize(file.size)}</p>
+                  <p className="truncate text-sm font-medium text-foreground">{item.file.name}</p>
+                  <p className="text-xs text-muted">{formatFileSize(item.file.size)}</p>
+                  {item.validationError ? (
+                    <p className="mt-1 text-xs text-status-bad">{item.validationError}</p>
+                  ) : (
+                    <p className="mt-1 text-xs text-muted">Ready</p>
+                  )}
                 </div>
                 <Button
                   type="button"
                   variant="ghost"
                   size="sm"
                   disabled={isBusy}
-                  onClick={() => handleRemoveFile(index)}
+                  onClick={() => handleRemoveFile(item.id)}
                 >
                   Remove
                 </Button>
@@ -216,21 +240,34 @@ export default function DocumentUploadForm({
           </ul>
         ) : null}
 
+        {summary && (
+          <p className="text-sm text-muted" role="status">
+            {summary}
+          </p>
+        )}
+
         {error && (
           <p role="alert" className="text-sm text-status-bad">
             {error}
           </p>
         )}
 
-        <Button
-          type="submit"
-          isLoading={isUploading}
-          disabled={isUploading || selectedFiles.length === 0}
-        >
-          {selectedFiles.length > 1
-            ? `Upload ${selectedFiles.length} files`
-            : 'Upload'}
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          {showingProgress && !isUploading && failedCount > 0 && onRetryFailed ? (
+            <Button type="button" variant="secondary" onClick={onRetryFailed}>
+              Retry failed
+            </Button>
+          ) : null}
+          {!showingProgress && (
+            <Button
+              type="submit"
+              isLoading={isUploading}
+              disabled={isUploading || validCount === 0}
+            >
+              {validCount > 1 ? `Upload ${validCount} files` : 'Upload'}
+            </Button>
+          )}
+        </div>
       </form>
     </section>
   )

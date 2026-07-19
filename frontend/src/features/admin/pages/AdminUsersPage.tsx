@@ -4,7 +4,9 @@ import Button from '@/components/ui/Button'
 import Card from '@/components/ui/Card'
 import { useAuth } from '@/contexts/AuthContext'
 import { useToast } from '@/contexts/ToastContext'
+import { CreateUserDialog } from '@/features/users/components'
 import {
+  useCreateUser,
   useRoles,
   useToggleUserStatus,
   useUpdateUserRole,
@@ -52,11 +54,14 @@ export default function AdminUsersPage() {
   const [roleError, setRoleError] = useState<string | null>(null)
   const [statusTarget, setStatusTarget] = useState<User | null>(null)
   const [statusError, setStatusError] = useState<string | null>(null)
+  const [createOpen, setCreateOpen] = useState(false)
+  const [createError, setCreateError] = useState<string | null>(null)
 
   const debouncedSearch = useDebouncedValue(search, 300)
 
   const { data, isLoading, isError, error, refetch } = useUsers()
-  const { data: rolesData } = useRoles()
+  const { data: rolesData, isLoading: rolesLoading } = useRoles()
+  const createUser = useCreateUser()
   const updateUserRole = useUpdateUserRole()
   const toggleUserStatus = useToggleUserStatus()
 
@@ -87,6 +92,35 @@ export default function AdminUsersPage() {
 
   function closeView() {
     setViewTargetId(null)
+  }
+
+  function openCreate() {
+    setCreateError(null)
+    setCreateOpen(true)
+  }
+
+  function closeCreate() {
+    if (createUser.isPending) return
+    setCreateOpen(false)
+    setCreateError(null)
+  }
+
+  async function handleCreate(input: {
+    full_name: string
+    email: string
+    password: string
+    role: string
+  }) {
+    setCreateError(null)
+    try {
+      await createUser.mutateAsync(input)
+      setCreateOpen(false)
+      showSuccess('User created successfully.')
+    } catch (createFailure) {
+      const message = getApiErrorMessage(createFailure) || 'Unable to create user.'
+      setCreateError(message)
+      showError(message)
+    }
   }
 
   function openRoleDialog(user: User) {
@@ -164,10 +198,13 @@ export default function AdminUsersPage() {
           </p>
         </div>
 
-        <p className="text-sm text-neutral-600 dark:text-neutral-300">
-          <span className="font-medium">{pagination.total}</span> user
-          {pagination.total === 1 ? '' : 's'}
-        </p>
+        <div className="flex items-center gap-3">
+          <p className="text-sm text-neutral-600 dark:text-neutral-300">
+            <span className="font-medium">{pagination.total}</span> user
+            {pagination.total === 1 ? '' : 's'}
+          </p>
+          <Button onClick={openCreate}>Create user</Button>
+        </div>
       </div>
 
       <UserFilters
@@ -214,6 +251,16 @@ export default function AdminUsersPage() {
           )}
         </>
       )}
+
+      <CreateUserDialog
+        isOpen={createOpen}
+        isSubmitting={createUser.isPending}
+        roles={rolesData?.roles ?? []}
+        rolesLoading={rolesLoading}
+        error={createError}
+        onClose={closeCreate}
+        onSubmit={(input) => void handleCreate(input)}
+      />
 
       <UserDetailsModal
         isOpen={viewTargetId !== null}

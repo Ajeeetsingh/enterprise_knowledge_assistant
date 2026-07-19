@@ -19,6 +19,7 @@ from app.auth.permissions import Permission, resolve_permission
 from app.auth.role_permissions import SystemRole, resolve_system_role
 from app.auth.security import get_current_user
 from app.core.logging import get_logger
+from app.core.request_utils import client_ip as _client_ip
 from app.db.models import User
 from app.db.models.document import Document
 from app.services.audit_dependencies import get_audit_service
@@ -154,15 +155,6 @@ def user_has_any_role(
 
 def _user_identifier(user: User) -> str:
     return user.username or user.email
-
-
-def _client_ip(request: Request) -> str | None:
-    forwarded_for = request.headers.get("X-Forwarded-For")
-    if forwarded_for:
-        return forwarded_for.split(",")[0].strip()
-    if request.client:
-        return request.client.host
-    return None
 
 
 def _log_authorization_denied(
@@ -355,7 +347,6 @@ def require_document_access(
     from app.auth.document_authorization import DocumentAuthorizationService
     from app.db.repositories.document_repository import DocumentRepository
     from app.dependencies import get_document_repository
-    from app.core.exceptions import DocumentNotFoundError
 
     def dependency(
         document_id: uuid.UUID,

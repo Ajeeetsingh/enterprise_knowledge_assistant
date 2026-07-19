@@ -28,6 +28,10 @@ class DocumentRepository:
     def __init__(self, db: Session) -> None:
         self._db = db
 
+    def rollback(self) -> None:
+        """Roll back the current database transaction."""
+        self._db.rollback()
+
     def create(
         self,
         *,
@@ -190,10 +194,13 @@ class DocumentRepository:
         self,
         checksum: str,
         *,
+        tenant_id: str | None = None,
         exclude_deleted: bool = True,
     ) -> list[Document]:
-        """Return all documents matching a content checksum."""
+        """Return all documents matching a content checksum (optionally tenant-scoped)."""
         query = select(Document).where(Document.checksum == checksum)
+        if tenant_id is not None:
+            query = query.where(Document.tenant_id == tenant_id)
         if exclude_deleted:
             query = query.where(Document.status != DocumentStatus.DELETED.value)
         return list(
@@ -204,10 +211,13 @@ class DocumentRepository:
         self,
         checksum: str,
         *,
+        tenant_id: str | None = None,
         exclude_deleted: bool = True,
     ) -> bool:
         """Return whether any non-deleted document has the given checksum."""
         query = select(Document.id).where(Document.checksum == checksum)
+        if tenant_id is not None:
+            query = query.where(Document.tenant_id == tenant_id)
         if exclude_deleted:
             query = query.where(Document.status != DocumentStatus.DELETED.value)
         return self._db.scalar(query.limit(1)) is not None
@@ -216,10 +226,13 @@ class DocumentRepository:
         self,
         checksum: str,
         *,
+        tenant_id: str | None = None,
         exclude_deleted: bool = True,
     ) -> Document | None:
         """Return the latest version record for a content checksum."""
         query = select(Document).where(Document.checksum == checksum)
+        if tenant_id is not None:
+            query = query.where(Document.tenant_id == tenant_id)
         if exclude_deleted:
             query = query.where(Document.status != DocumentStatus.DELETED.value)
         return self._db.scalar(
@@ -230,10 +243,13 @@ class DocumentRepository:
         self,
         filename: str,
         *,
+        tenant_id: str | None = None,
         exclude_deleted: bool = True,
     ) -> Document | None:
         """Return the most recent document with an exact filename match."""
         query = select(Document).where(Document.filename == filename)
+        if tenant_id is not None:
+            query = query.where(Document.tenant_id == tenant_id)
         if exclude_deleted:
             query = query.where(Document.status != DocumentStatus.DELETED.value)
         return self._db.scalar(query.order_by(Document.uploaded_at.desc()).limit(1))

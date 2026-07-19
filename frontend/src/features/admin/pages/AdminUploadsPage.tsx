@@ -1,21 +1,16 @@
-import { useCallback, useState } from 'react'
+import { useState } from 'react'
 
 import Button from '@/components/ui/Button'
 import Card from '@/components/ui/Card'
 import { useToast } from '@/contexts/ToastContext'
-import { useUploadDocument } from '@/features/documents/hooks'
 import {
-  lifecycleStateFromUploadResponse,
-  logUploadTransition,
-  type UploadLifecycleState,
-} from '@/features/documents/utils/uploadLifecycleDebug'
+  formatUploadBatchSummary,
+  useUploadDocuments,
+} from '@/features/documents/hooks/useUploadDocuments'
 import { getApiErrorMessage } from '@/services/errorHandler'
 import type { ApiError } from '@/types'
 
-import DocumentUploadForm, {
-  type BatchUploadFileStatus,
-  type BatchUploadProgressItem,
-} from '../components/DocumentUploadForm'
+import DocumentUploadForm from '../components/DocumentUploadForm'
 import RecentUploadsTable from '../components/RecentUploadsTable'
 import { useRecentUploads } from '../hooks/useRecentUploads'
 import type { AdminDocumentRow } from '../utils/documentFilters'
@@ -27,29 +22,14 @@ function resolveLoadError(error: unknown): string {
   return 'Unable to load uploads.'
 }
 
-function toUiBatchStatus(lifecycle: UploadLifecycleState): BatchUploadFileStatus {
-  if (lifecycle === 'Completed' || lifecycle === 'Indexed') return 'ready'
-  if (lifecycle === 'Failed') return 'failed'
-  if (lifecycle === 'Uploading') return 'uploading'
-  return 'processing'
-}
-
-function createProgressItem(file: File, index: number): BatchUploadProgressItem {
-  return {
-    id: `${file.name}-${file.lastModified}-${index}`,
-    filename: file.name,
-    size: file.size,
-    status: 'queued',
-  }
-}
-
 export default function AdminUploadsPage() {
   const { showSuccess, showError } = useToast()
   const [uploadError, setUploadError] = useState<string | null>(null)
-  const [uploadProgress, setUploadProgress] = useState<BatchUploadProgressItem[]>([])
+  const [uploadSummary, setUploadSummary] = useState<string | null>(null)
   const [formResetKey, setFormResetKey] = useState(0)
 
-  const uploadDocument = useUploadDocument()
+  const { items: uploadProgress, isUploading, uploadFiles, retryFailed, reset } =
+    useUploadDocuments()
   const {
     data,
     isLoading,
@@ -60,90 +40,77 @@ export default function AdminUploadsPage() {
   } = useRecentUploads()
 
   const recentUploads = (data?.items ?? []) as AdminDocumentRow[]
-  const isUploading = uploadDocument.isPending
-
-  const updateProgressItem = useCallback(
-    (id: string, patch: Partial<BatchUploadProgressItem>) => {
-      setUploadProgress((current) =>
-        current.map((item) => (item.id === id ? { ...item, ...patch } : item)),
-      )
-    },
-    [],
-  )
 
   async function handleUpload(files: File[]) {
     if (isUploading || files.length === 0) return
 
-    logUploadTransition('AdminUploadsPage', 'Uploading', {
-      fileCount: files.length,
-      filenames: files.map((file) => file.name),
-    })
-
     setUploadError(null)
-    const progressItems = files.map(createProgressItem)
-    setUploadProgress(progressItems)
+    setUploadSummary(
+      files.length === 1 ? '1 file selected — uploading…' : `${files.length} files selected — uploading…`,
+    )
 
-    let successCount = 0
-
-    for (const [index, file] of files.entries()) {
-      const item = progressItems[index]
-      if (!item) continue
-
-      logUploadTransition('AdminUploadsPage', 'Uploading', {
-        filename: file.name,
-        batchIndex: index + 1,
-        batchTotal: files.length,
-      })
-      updateProgressItem(item.id, { status: 'uploading', error: undefined })
-
-      try {
-        const result = await uploadDocument.mutateAsync(file)
-        const lifecycle = lifecycleStateFromUploadResponse(result)
-        logUploadTransition('AdminUploadsPage', lifecycle, {
-          filename: file.name,
-          documentId: result.document_id,
-          backendStatus: result.status,
-          message: result.message,
-        })
-        updateProgressItem(item.id, {
-          status: toUiBatchStatus(lifecycle),
-        })
-        successCount += 1
-      } catch (uploadFailure) {
-        const message = getApiErrorMessage(uploadFailure) || 'Unable to upload document.'
-        logUploadTransition('AdminUploadsPage', 'Failed', {
-          filename: file.name,
-          errorMessage: message,
-        })
-        updateProgressItem(item.id, { status: 'failed', error: message })
-      }
-    }
-
+    const result = await uploadFiles(files)
     void refetch()
 
-    if (successCount === files.length) {
-      logUploadTransition('AdminUploadsPage', 'Completed', {
-        uploadedCount: successCount,
-      })
+    const summary = formatUploadBatchSummary(result)
+    setUploadSummary(summary)
+
+    if (result.failureCount === 0 && result.duplicateCount === 0) {
       showSuccess(
-        successCount === 1
+        result.successCount === 1
           ? 'Document uploaded successfully.'
-          : `${successCount} documents uploaded successfully.`,
+          : `${result.successCount} documents uploaded successfully.`,
       )
       setFormResetKey((current) => current + 1)
-    } else if (successCount > 0) {
-      showSuccess(`${successCount} of ${files.length} documents uploaded.`)
-      setFormResetKey((current) => current + 1)
-    } else {
-      const message = 'Unable to upload documents. Check individual file errors below.'
-      logUploadTransition('AdminUploadsPage', 'Failed', {
-        uploadedCount: successCount,
-        totalCount: files.length,
-        errorMessage: message,
-      })
-      setUploadError(message)
-      showError(message)
+      reset()
+      setUploadSummary(null)
+      return
     }
+
+    if (result.successCount > 0) {
+      showSuccess(summary)
+      return
+    }
+
+    if (result.duplicateCount > 0 && result.failureCount === 0) {
+      // Expected business condition — not a system failure.
+      setUploadError(null)
+      return
+    }
+
+    const message = 'Unable to upload documents. Check individual file errors below.'
+    setUploadError(message)
+    showError(message)
+  }
+
+  async function handleRetryFailed() {
+    setUploadError(null)
+    const result = await retryFailed()
+    if (!result) return
+    void refetch()
+
+    const summary = formatUploadBatchSummary(result)
+    setUploadSummary(summary)
+
+    if (result.failureCount === 0 && result.duplicateCount === 0) {
+      showSuccess(
+        result.successCount === 1
+          ? 'Document uploaded successfully.'
+          : `${result.successCount} documents uploaded successfully.`,
+      )
+      setFormResetKey((current) => current + 1)
+      reset()
+      setUploadSummary(null)
+      return
+    }
+
+    if (result.successCount > 0) {
+      showSuccess(summary)
+      return
+    }
+
+    setUploadError('Retry failed. Check individual file errors below.')
+    showError(getApiErrorMessage(new Error('Retry failed')) || 'Retry failed.')
   }
 
   return (
@@ -160,7 +127,9 @@ export default function AdminUploadsPage() {
         error={uploadError}
         resetKey={formResetKey}
         uploadProgress={uploadProgress}
+        summary={uploadSummary}
         onUpload={(files) => void handleUpload(files)}
+        onRetryFailed={() => void handleRetryFailed()}
       />
 
       {isError && (

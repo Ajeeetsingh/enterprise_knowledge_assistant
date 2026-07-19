@@ -10,10 +10,12 @@ class ServiceError(EKAError):
 
     Subclasses define ``status_code`` and ``public_message`` for the client-facing
     response. The ``message`` attribute retains the internal detail for logging.
+    Optional ``code`` is a stable machine-readable error identifier.
     """
 
     status_code: int = 500
     public_message: str = "An unexpected error occurred."
+    code: str | None = None
 
     def __init__(self, message: str) -> None:
         self.message = message
@@ -128,6 +130,30 @@ class DocumentIntegrityError(DocumentServiceError):
 
     status_code = 409
     public_message = "Document integrity check failed."
+
+
+class DuplicateDocumentError(DocumentIntegrityError):
+    """Raised when uploaded content already exists for the tenant."""
+
+    status_code = 409
+    code = "DUPLICATE_DOCUMENT"
+    public_message = "This document has already been uploaded."
+
+    def __init__(
+        self,
+        filename: str | None = None,
+        *,
+        existing_document_id: str | None = None,
+    ) -> None:
+        if filename and filename.strip():
+            safe_name = filename.strip()
+            public = f"{safe_name} has already been uploaded."
+        else:
+            public = self.public_message
+        self.public_message = public
+        # Only set when the caller is authorized to know about the document.
+        self.existing_document_id = existing_document_id
+        super().__init__(public)
 
 
 # --- Conversation service errors (Phase 6.2) ---

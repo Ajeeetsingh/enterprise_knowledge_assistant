@@ -105,13 +105,29 @@ def _role_names(user: User) -> list[str]:
 def login(db: Session, email: str, password: str) -> LoginTokens:
     """Authenticate a user and return access and refresh tokens."""
     user = _get_user_by_email(db, email)
-    if user is None:
-        raise InvalidCredentialsError()
+    # Always verify against a hash so missing-user responses don't short-circuit
+    # the bcrypt work factor (timing oracle / user enumeration mitigation).
+    password_hash = (
+        user.password_hash
+        if user is not None
+        else (
+            # Fixed bcrypt hash used only to equalise verify work when the
+            # email is unknown (mitigates timing-based user enumeration).
+            "$2b$12$DppOw7dEBDwgauvL5bj7xe3u5YGUsD5g2IThXmDNcdgoDqWJeEdBG"
+        )
+    )
+    try:
+        password_ok = verify_password(password, password_hash)
+    except Exception:
+        password_ok = False
+
+    if user is None or not password_ok:
+        raise InvalidCredentialsError(
+            subject_user_id=user.id if user is not None else None
+        )
 
     if not user.is_active:
-        raise InactiveAccountError(subject_user_id=user.id)
-
-    if not verify_password(password, user.password_hash):
+        # Same public message as bad credentials — do not reveal inactive accounts.
         raise InvalidCredentialsError(subject_user_id=user.id)
 
     roles = _role_names(user)

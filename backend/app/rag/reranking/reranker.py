@@ -5,6 +5,8 @@ from __future__ import annotations
 import logging
 
 from app.core.logging import get_logger, log_with_fields
+from app.ingestion.retrieval_text import build_retrieval_text, resolve_chunk_heading
+from app.rag.metadata_retrieval.config import MetadataRetrievalSettings
 from app.rag.reranking.config import RerankingSettings
 from app.rag.reranking.metrics import log_reranking
 from app.rag.reranking.runtime import CrossEncoderRuntime, create_reranker_runtime
@@ -15,6 +17,21 @@ from app.rag.types import RetrievalResult
 logger = get_logger(__name__)
 
 
+def _rerank_passage(item: RetrievalResult, *, enabled: bool, repetitions: int) -> str:
+    """Return reranker input text, weighting the result's known heading.
+
+    Feeds the cross-encoder the same heading-weighted representation used
+    for embedding/BM25, so a section's distinguishing heading (e.g. "Who
+    are the main issuers?" vs "...investors?") isn't diluted by a longer,
+    topically-similar body. ``item.content`` (used for citations/LLM
+    context) is untouched.
+    """
+    if not enabled:
+        return item.content
+    heading = resolve_chunk_heading(item.section_title, item.hierarchy_path)
+    return build_retrieval_text(item.content, heading, repetitions=repetitions)
+
+
 class CrossEncoderReranker:
     """Production cross-encoder reranker with batch inference and failsafe fallback."""
 
@@ -23,9 +40,15 @@ class CrossEncoderReranker:
         *,
         settings: RerankingSettings | None = None,
         runtime: CrossEncoderRuntime | None = None,
+        metadata_bonus_reference: float | None = None,
     ) -> None:
         self._settings = settings or RerankingSettings.from_settings()
         self._runtime = runtime or create_reranker_runtime(self._settings)
+        self._metadata_bonus_reference = (
+            metadata_bonus_reference
+            if metadata_bonus_reference is not None
+            else MetadataRetrievalSettings.from_settings().max_metadata_bonus
+        )
 
     @property
     def settings(self) -> RerankingSettings:
@@ -60,10 +83,22 @@ class CrossEncoderReranker:
             outcome = score_pairs(
                 self._runtime,
                 query=query,
-                passages=[item.content for item in pool],
+                passages=[
+                    _rerank_passage(
+                        item,
+                        enabled=self._settings.heading_weighting_enabled,
+                        repetitions=self._settings.heading_weight_repetitions,
+                    )
+                    for item in pool
+                ],
                 settings=self._settings,
             )
-            reranked = apply_reranker_scores(pool, outcome.scores)
+            reranked = apply_reranker_scores(
+                pool,
+                outcome.scores,
+                metadata_bonus_weight=self._settings.metadata_bonus_weight,
+                metadata_bonus_reference=self._metadata_bonus_reference,
+            )
             log_reranking(outcome.metrics, query=query)
             return reranked[:top_k]
         except Exception as exc:

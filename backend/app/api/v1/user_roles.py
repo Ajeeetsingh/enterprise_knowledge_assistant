@@ -51,6 +51,8 @@ def assign_roles_endpoint(
     """Assign one or more existing roles to a user."""
     try:
         roles = role_service.assign_roles_to_user(db, user_id, body.roles)
+    except user_service.LastAdminError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.message) from exc
     except user_service.UserServiceError as exc:
         raise HTTPException(status_code=exc.status_code, detail=exc.message) from exc
     except role_service.RoleServiceError as exc:
@@ -78,6 +80,8 @@ def remove_role_endpoint(
     """Remove a role from a user."""
     try:
         roles = role_service.remove_role_from_user(db, user_id, role_name)
+    except user_service.LastAdminError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.message) from exc
     except user_service.UserServiceError as exc:
         raise HTTPException(status_code=exc.status_code, detail=exc.message) from exc
 

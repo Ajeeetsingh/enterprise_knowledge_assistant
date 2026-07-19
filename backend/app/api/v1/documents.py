@@ -7,11 +7,19 @@ import time
 import uuid
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, File, Query, Request, Response, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, Response, UploadFile
+from urllib.parse import quote
 
 from app.audit.service import AuditService
-from app.auth.dependencies import require_document_access, require_permission
+from app.auth.dependencies import (
+    get_user_system_roles,
+    require_document_access,
+    require_permission,
+)
 from app.auth.permissions import Permission
+from app.auth.role_permissions import SystemRole
+from app.core.rate_limit import enforce_rate_limit
+from app.core.request_utils import client_ip as _client_ip
 from app.db.models import User
 from app.db.models.document import Document
 from app.db.repositories.document_repository import DocumentRepository
@@ -21,7 +29,7 @@ from app.dependencies import (
     get_document_service_dep,
 )
 from app.documents.status import DocumentStatus
-from app.ingestion.supported_types import EXTENSION_TO_MIME
+from app.ingestion.supported_types import EXTENSION_TO_MIME, MAX_FILE_SIZE_BYTES
 from app.mappers.documents import (
     map_to_detail_response,
     map_to_lifecycle_response,
@@ -57,9 +65,24 @@ _DOCUMENT_ERROR_RESPONSES: dict[int, dict[str, object]] = {
         "model": ErrorResponse,
         "description": "Document not found.",
     },
+    409: {
+        "model": ErrorResponse,
+        "description": (
+            "Document content already exists (DUPLICATE_DOCUMENT) "
+            "or filename conflicts with different content."
+        ),
+    },
+    413: {
+        "model": ErrorResponse,
+        "description": "Uploaded file exceeds the maximum allowed size.",
+    },
     422: {
         "model": ErrorResponse,
         "description": "Invalid upload or unsupported document format.",
+    },
+    429: {
+        "model": ErrorResponse,
+        "description": "Too many upload requests.",
     },
     500: {
         "model": ErrorResponse,
@@ -72,21 +95,69 @@ _DOCUMENT_ERROR_RESPONSES: dict[int, dict[str, object]] = {
 }
 
 
-def _resolve_content_type(filename: str, declared_type: str | None) -> str:
-    if declared_type and declared_type != "application/octet-stream":
-        return declared_type
+def _resolve_content_type(filename: str, declared_type: str | None = None) -> str:
+    """Derive MIME type from the file extension only (ignore client claim)."""
+    del declared_type  # Client Content-Type is untrusted.
     ext = Path(filename).suffix.lower()
-    return EXTENSION_TO_MIME.get(ext, declared_type or "application/octet-stream")
+    return EXTENSION_TO_MIME.get(ext, "application/octet-stream")
 
 
-def _client_ip(request: Request) -> str | None:
-    forwarded_for = request.headers.get("X-Forwarded-For")
-    if forwarded_for:
-        return forwarded_for.split(",")[0].strip()
-    if request.client:
-        return request.client.host
-    return None
+def _sanitize_upload_filename(filename: str) -> str:
+    """Keep only the basename and strip path / control characters."""
+    name = Path(filename or "").name
+    cleaned = "".join(
+        ch for ch in name if ch.isprintable() and ch not in '<>:"|?*\r\n\x00'
+    ).strip()
+    if not cleaned or cleaned in {".", ".."}:
+        return "upload.bin"
+    return cleaned
 
+
+def _content_disposition(disposition: str, filename: str) -> str:
+    """Build a safe Content-Disposition header value."""
+    safe = (
+        filename.replace('"', "")
+        .replace("\r", "")
+        .replace("\n", "")
+        .replace("\\", "")
+    )
+    ascii_fallback = "".join(ch if ord(ch) < 128 else "_" for ch in safe) or "download"
+    return (
+        f"{disposition}; filename=\"{ascii_fallback}\"; "
+        f"filename*=UTF-8''{quote(safe)}"
+    )
+
+
+def _is_document_admin(user: User) -> bool:
+    return user.is_superuser or SystemRole.ADMIN in get_user_system_roles(user)
+
+
+def _read_upload_bytes(request: Request, file: UploadFile) -> bytes:
+    """Read upload content with an early size cap to avoid unbounded buffering."""
+    content_length = request.headers.get("content-length")
+    if content_length is not None and content_length.isdigit():
+        # multipart overhead means Content-Length can exceed the file size;
+        # still reject clearly oversized requests early.
+        if int(content_length) > MAX_FILE_SIZE_BYTES + (1024 * 1024):
+            raise HTTPException(
+                status_code=413,
+                detail="File exceeds the maximum allowed size of 50 MB.",
+            )
+
+    chunks: list[bytes] = []
+    total = 0
+    while True:
+        chunk = file.file.read(1024 * 1024)
+        if not chunk:
+            break
+        total += len(chunk)
+        if total > MAX_FILE_SIZE_BYTES:
+            raise HTTPException(
+                status_code=413,
+                detail="File exceeds the maximum allowed size of 50 MB.",
+            )
+        chunks.append(chunk)
+    return b"".join(chunks)
 
 @router.get(
     "",
@@ -128,7 +199,13 @@ def list_documents(
     document_service: DocumentService = Depends(get_document_service_dep),
     repository: DocumentRepository = Depends(get_document_repository),
 ) -> PaginatedDocumentResponse:
-    """Return paginated document metadata."""
+    """Return paginated document metadata visible to the caller."""
+    if status == DocumentStatus.DELETED and not _is_document_admin(current_user):
+        raise HTTPException(
+            status_code=403,
+            detail="Only administrators can list deleted documents.",
+        )
+
     documents, total = document_service.list_documents(
         repository,
         limit=limit,
@@ -136,6 +213,7 @@ def list_documents(
         filename=filename,
         status=status,
         uploaded_by=uploaded_by,
+        viewer=current_user,
     )
 
     return map_to_paginated_response(
@@ -211,8 +289,9 @@ def get_document_file(
         content=content,
         media_type=content_type,
         headers={
-            "Content-Disposition": f'{disposition}; filename="{filename}"',
+            "Content-Disposition": _content_disposition(disposition, filename),
             "Cache-Control": "private, max-age=300",
+            "X-Content-Type-Options": "nosniff",
         },
     )
 
@@ -283,10 +362,18 @@ def upload_document(
     audit_service: PersistedAuditService = Depends(get_audit_service),
 ) -> DocumentUploadResponse:
     """Accept a document upload and return its lifecycle status."""
+    enforce_rate_limit(
+        request,
+        bucket="document-upload",
+        max_calls=20,
+        window_seconds=3600,
+        detail="Too many uploads. Please try again later.",
+    )
+
     user_id = str(current_user.id)
-    filename = file.filename or ""
-    content = file.file.read()
-    content_type = _resolve_content_type(filename, file.content_type)
+    filename = _sanitize_upload_filename(file.filename or "")
+    content = _read_upload_bytes(request, file)
+    content_type = _resolve_content_type(filename)
     started_at = time.perf_counter()
 
     logger.info(
@@ -302,6 +389,7 @@ def upload_document(
         content_type=content_type,
         content=content,
         uploaded_by=current_user.id,
+        requesting_user=current_user,
     )
 
     elapsed_s = time.perf_counter() - started_at

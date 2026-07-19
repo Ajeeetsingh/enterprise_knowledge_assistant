@@ -9,7 +9,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from app.core.exceptions import ServiceError
+from app.core.exceptions import DuplicateDocumentError, ServiceError
 from app.core.logging import get_logger, log_with_fields
 from app.schemas.errors import ErrorResponse
 
@@ -43,8 +43,18 @@ def _log_exception(
     )
 
 
-def _error_response(status_code: int, detail: str) -> JSONResponse:
-    payload = ErrorResponse(detail=detail).model_dump()
+def _error_response(
+    status_code: int,
+    detail: str,
+    *,
+    code: str | None = None,
+    existing_document_id: str | None = None,
+) -> JSONResponse:
+    payload = ErrorResponse(
+        detail=detail,
+        code=code,
+        existing_document_id=existing_document_id,
+    ).model_dump(mode="json", exclude_none=True)
     return JSONResponse(status_code=status_code, content=payload)
 
 
@@ -64,7 +74,17 @@ async def service_error_handler(
         request_id=context["request_id"],
         internal_message=exc.message,
     )
-    return _error_response(exc.status_code, exc.public_message)
+    existing_document_id = (
+        exc.existing_document_id
+        if isinstance(exc, DuplicateDocumentError)
+        else None
+    )
+    return _error_response(
+        exc.status_code,
+        exc.public_message,
+        code=exc.code,
+        existing_document_id=existing_document_id,
+    )
 
 
 async def validation_error_handler(
@@ -90,8 +110,18 @@ async def http_exception_handler(
     return _error_response(exc.status_code, detail)
 
 
+async def unhandled_exception_handler(
+    request: Request,
+    exc: Exception,
+) -> JSONResponse:
+    """Log unexpected errors without leaking internals to clients."""
+    _log_exception(request, exc)
+    return _error_response(500, "An unexpected error occurred.")
+
+
 def register_exception_handlers(application: FastAPI) -> None:
     """Attach global exception handlers to the FastAPI application."""
     application.add_exception_handler(ServiceError, service_error_handler)
     application.add_exception_handler(RequestValidationError, validation_error_handler)
     application.add_exception_handler(StarletteHTTPException, http_exception_handler)
+    application.add_exception_handler(Exception, unhandled_exception_handler)

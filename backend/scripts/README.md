@@ -37,9 +37,9 @@ py scripts/measure_performance.py --full
 
 ## Documentation
 
-- **[docs/EVALUATION_FRAMEWORK.md](../../docs/EVALUATION_FRAMEWORK.md)** — benchmark framework, metrics, golden datasets
-- **[docs/RETRIEVAL_PIPELINE.md](../../docs/RETRIEVAL_PIPELINE.md)** — retrieval, reranking, query intelligence
-- **[docs/INGESTION_PIPELINE.md](../../docs/INGESTION_PIPELINE.md)** — ingestion, chunking, embedding
+- **[docs/TESTING.md](../../docs/TESTING.md)** — automated tests, manual checklist, evaluation entry points
+- **[docs/ARCHITECTURE.md](../../docs/ARCHITECTURE.md)** — ingestion and retrieval pipelines
+- **[docs/DEVELOPMENT.md](../../docs/DEVELOPMENT.md)** — local setup
 
 ## Embedding evaluation
 

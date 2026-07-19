@@ -55,6 +55,7 @@ export default function DocumentViewerLayout({
   const [pdfProxy, setPdfProxy] = useState<SearchablePdfDocument | null>(null)
   const [pageCount, setPageCount] = useState<number | null>(null)
   const [scrollTargetPage, setScrollTargetPage] = useState<number | null>(null)
+  const [citationHighlightNotice, setCitationHighlightNotice] = useState<string | null>(null)
   const searchInputRef = useRef<HTMLInputElement>(null)
 
   const search = usePdfTextSearch(pdfProxy, state.searchQuery)
@@ -63,6 +64,21 @@ export default function DocumentViewerLayout({
   useEffect(() => {
     setThumbnailsOpen(isTabletUp)
   }, [isTabletUp, setThumbnailsOpen])
+
+  useEffect(() => {
+    setCitationHighlightNotice(null)
+  }, [highlightTarget?.page, highlightTarget?.highlightText])
+
+  const handleCitationHighlightResult = useCallback(
+    (result: 'matched' | 'failed' | 'skipped') => {
+      if (result === 'failed' && highlightTarget?.highlightText) {
+        setCitationHighlightNotice(
+          'Source page opened. The exact cited passage could not be highlighted.',
+        )
+      }
+    },
+    [highlightTarget?.highlightText],
+  )
 
   const zoomPercent = state.fitWidth ? 100 : Math.round(state.zoom * 100)
 
@@ -179,6 +195,11 @@ export default function DocumentViewerLayout({
         )}
 
         <main className="viewer-canvas-region">
+          {citationHighlightNotice && (
+            <div className="viewer-citation-notice" role="status">
+              {citationHighlightNotice}
+            </div>
+          )}
           {isPdf ? (
             <DocumentPdfViewer
               fileUrl={fileUrl}
@@ -190,6 +211,7 @@ export default function DocumentViewerLayout({
               onGoToPage={goToPage}
               scrollTargetPage={scrollTargetPage}
               highlightTarget={highlightTarget}
+              onCitationHighlightResult={handleCitationHighlightResult}
               zoomIntent={state.zoomIntent}
               onZoomCommit={commitZoom}
             />

@@ -21,13 +21,14 @@ export function getCitationChunkId(citation: Citation): string | undefined {
 
 export function buildCitationViewerParams(citation: Citation): DocumentViewerParams {
   const params: DocumentViewerParams = {}
-  if (typeof citation.page === 'number') {
+  if (typeof citation.page === 'number' && citation.page > 0) {
     params.page = citation.page
   }
   const chunkId = getCitationChunkId(citation)
   if (chunkId) {
     params.chunkId = chunkId
   }
+  // Excerpt is passed via localStorage (citeKey), never as raw URL text.
   return params
 }
 

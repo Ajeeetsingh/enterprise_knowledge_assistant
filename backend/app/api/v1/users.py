@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 from app.audit.service import AuditService
 from app.auth.dependencies import require_permission
 from app.auth.permissions import Permission
+from app.core.request_utils import client_ip as _client_ip
 from app.db.models import User
 from app.dependencies import get_audit_service, get_db
 from app.schemas.users import (
@@ -30,15 +31,6 @@ def _admin_id(user: User) -> str:
 
 def _admin_username(user: User) -> str:
     return user.username or user.email
-
-
-def _client_ip(request: Request) -> str | None:
-    forwarded_for = request.headers.get("X-Forwarded-For")
-    if forwarded_for:
-        return forwarded_for.split(",")[0].strip()
-    if request.client:
-        return request.client.host
-    return None
 
 
 @router.get("", response_model=UserListResponse)
@@ -77,10 +69,11 @@ def create_user_endpoint(
     try:
         user = user_service.create_user(
             db,
-            email=body.email,
+            email=str(body.email),
             password=body.password,
             full_name=body.full_name,
             username=body.username,
+            role=body.role,
         )
     except user_service.UserServiceError as exc:
         raise HTTPException(status_code=exc.status_code, detail=exc.message) from exc

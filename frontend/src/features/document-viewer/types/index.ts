@@ -1,16 +1,19 @@
 /**
  * Document viewer URL/query parameters.
- * `page` is implemented today; chunk and text highlight are extension points.
+ * `page` / `citeKey` drive citation navigation; large excerpt text stays out of the URL.
  */
 export interface DocumentViewerParams {
   page?: number
   chunkId?: string
+  /** Opaque localStorage key for citation excerpt (preferred over highlightText in URL). */
+  citeKey?: string
+  /** Optional short highlight query; prefer citeKey for full excerpts. */
   highlightText?: string
 }
 
 /**
- * Future highlight target — bounding boxes and OCR regions can be added without
- * changing the viewer shell.
+ * Highlight target for the PDF canvas — text-layer matching today;
+ * bounding boxes / OCR regions remain extension points.
  */
 export interface DocumentViewerHighlightTarget {
   page: number
@@ -23,6 +26,8 @@ export interface DocumentViewerHighlightTarget {
   /** Reserved for OCR bounding boxes. */
   ocrRegions?: never
 }
+
+export type CitationHighlightResult = 'matched' | 'failed' | 'skipped'
 
 /**
  * One-shot trigger for discrete (button/keyboard) zoom actions.

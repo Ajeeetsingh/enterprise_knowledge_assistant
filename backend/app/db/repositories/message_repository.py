@@ -5,9 +5,10 @@ from __future__ import annotations
 import uuid
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from app.db.models.conversation import Conversation
 from app.db.models.message import Message, MessageRole
 
 
@@ -124,3 +125,16 @@ class MessageRepository:
         )
         recent.reverse()
         return recent
+
+    def count_user_questions(self, user_id: uuid.UUID) -> int:
+        """Count user-role messages across conversations owned by *user_id*."""
+        count_query = (
+            select(func.count())
+            .select_from(Message)
+            .join(Conversation, Conversation.id == Message.conversation_id)
+            .where(
+                Conversation.user_id == user_id,
+                Message.role == MessageRole.USER.value,
+            )
+        )
+        return int(self._db.scalar(count_query) or 0)

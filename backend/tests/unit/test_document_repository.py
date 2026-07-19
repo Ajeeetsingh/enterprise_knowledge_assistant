@@ -68,7 +68,7 @@ def _create_document(
         filename=filename,
         content_type="text/plain",
         file_size=128,
-        checksum="abc123",
+        checksum=f"checksum-{document_id}",
         storage_path=f"documents/{document_id}/{filename}",
         uploaded_by=uploader_id,
         status=status,

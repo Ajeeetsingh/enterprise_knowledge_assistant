@@ -8,8 +8,30 @@ from app.rag.metadata_retrieval.config import MetadataRetrievalSettings
 from app.rag.metadata_retrieval.intent import QueryIntent, detect_query_intent
 from app.rag.metadata_retrieval.retriever import MetadataAwareRetriever
 from app.ingestion.vector_store.candidates import VectorSearchCandidate
-from app.rag.metadata_retrieval.scorer import score_candidate
+from app.rag.metadata_retrieval.scorer import _apply_soft_ceiling, score_candidate
 from app.rag.types import calibrate_confidence
+
+
+class TestApplySoftCeiling:
+    def test_zero_or_negative_raw_bonus_returns_zero(self):
+        assert _apply_soft_ceiling(0.0, 0.15) == 0.0
+        assert _apply_soft_ceiling(-0.1, 0.15) == 0.0
+
+    def test_zero_ceiling_returns_zero(self):
+        assert _apply_soft_ceiling(0.2, 0.0) == 0.0
+
+    def test_stays_strictly_below_ceiling(self):
+        assert _apply_soft_ceiling(0.15, 0.15) < 0.15
+        assert _apply_soft_ceiling(1.0, 0.15) < 0.15
+
+    def test_monotonically_increasing_even_past_the_ceiling(self):
+        """The whole point of the soft ceiling: unlike a hard clip, two raw
+        totals that both exceed the ceiling must still produce two distinct,
+        correctly-ordered capped values instead of collapsing to the same
+        number."""
+        low = _apply_soft_ceiling(0.16, 0.15)
+        high = _apply_soft_ceiling(0.20, 0.15)
+        assert low < high < 0.15
 
 
 def _chunk(
@@ -326,3 +348,62 @@ class TestMetadataAwareRetriever:
             top_k=1,
         )
         assert results[0].metadata_bonus <= 0.05
+
+    def test_metadata_bonus_soft_ceiling_preserves_relative_order(self):
+        """Root-cause regression guard: a *hard* `min(bonus, ceiling)` clip
+        collapses two candidates that both exceed the ceiling to the exact
+        same capped value, silently discarding the very distinction the
+        heading-similarity signal exists to make (e.g. an "issuers" heading
+        matching a query slightly better than an "investors" heading, but
+        both being strong enough matches to exceed the ceiling). The bonus
+        must stay strictly monotonic in the *raw*, uncapped signal total —
+        a stronger match must always produce a strictly larger bonus, even
+        once both are near/above the ceiling."""
+        settings = MetadataRetrievalSettings(
+            max_metadata_bonus=0.15,
+            heading_similarity_weight=0.04,
+            section_title_similarity_weight=0.05,
+            hierarchy_similarity_weight=0.03,
+        )
+        stronger_match = VectorSearchCandidate(
+            chunk=_chunk(
+                chunk_id="issuers",
+                content="Issuer body content.",
+                metadata=_metadata(
+                    chunk_type=ChunkType.PARAGRAPH,
+                    section_title="Who are the main issuers of commercial paper?",
+                ),
+            ),
+            raw_cosine_score=0.5,
+        )
+        weaker_match = VectorSearchCandidate(
+            chunk=_chunk(
+                chunk_id="investors",
+                content="Investor body content.",
+                metadata=_metadata(
+                    chunk_type=ChunkType.PARAGRAPH,
+                    section_title="Who are the main investors in commercial paper?",
+                ),
+            ),
+            raw_cosine_score=0.5,
+        )
+        query = "Who are the main commercial paper issuers?"
+        stronger_breakdown = score_candidate(
+            query,
+            stronger_match,
+            intent_result=detect_query_intent(query),
+            settings=settings,
+            peers=[stronger_match, weaker_match],
+            calibrated_cosine=calibrate_confidence(0.5),
+        )
+        weaker_breakdown = score_candidate(
+            query,
+            weaker_match,
+            intent_result=detect_query_intent(query),
+            settings=settings,
+            peers=[stronger_match, weaker_match],
+            calibrated_cosine=calibrate_confidence(0.5),
+        )
+        assert stronger_breakdown.metadata_bonus > weaker_breakdown.metadata_bonus
+        assert stronger_breakdown.metadata_bonus < settings.max_metadata_bonus
+        assert weaker_breakdown.metadata_bonus < settings.max_metadata_bonus

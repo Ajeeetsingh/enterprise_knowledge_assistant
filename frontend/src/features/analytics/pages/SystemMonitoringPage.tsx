@@ -4,7 +4,7 @@ import Button from '@/components/ui/Button'
 import Card from '@/components/ui/Card'
 import Spinner from '@/components/ui/Spinner'
 import { AnalyticsExportButton } from '@/features/reports'
-import type { ApiError } from '@/types'
+import { resolveErrorMessage } from '@/services/errorHandler'
 
 import { AnalyticsDateFilter, AnalyticsErrorPanel } from '../components'
 import {
@@ -24,13 +24,6 @@ import {
   useSystemMonitoring,
 } from '../hooks'
 import type { AnalyticsFilterParams } from '../types'
-
-function resolveErrorMessage(error: unknown): string {
-  if (error && typeof error === 'object' && 'message' in error) {
-    return String((error as ApiError).message)
-  }
-  return 'Something went wrong. Please try again.'
-}
 
 function formatSeconds(value: number | null): string {
   return value === null ? 'N/A' : `${value}s`
@@ -118,7 +111,7 @@ export default function SystemMonitoringPage() {
 
       {!isInitialLoading && hasError ? (
         <AnalyticsErrorPanel
-          message={resolveErrorMessage(failedQuery?.error)}
+          message={resolveErrorMessage(failedQuery?.error, 'Something went wrong. Please try again.')}
           isRetrying={isRefreshing}
           onRetry={handleRefresh}
         />

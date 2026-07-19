@@ -17,6 +17,7 @@ from app.core.exception_handlers import (
 from app.core.exceptions import (
     AuthorizationError,
     DocumentNotFoundError,
+    DuplicateDocumentError,
     RagInitializationError,
     RagRetrievalError,
 )
@@ -77,6 +78,38 @@ def test_document_not_found_error_returns_404() -> None:
 
     assert response.status_code == 404
     assert body == {"detail": "Document not found."}
+
+
+def test_duplicate_document_error_returns_409_with_code() -> None:
+    request = _mock_request(path="/api/v1/documents/upload")
+    exc = DuplicateDocumentError("Annual_Report.pdf")
+
+    response = asyncio.run(service_error_handler(request, exc))
+    body = json.loads(response.body.decode())
+
+    assert response.status_code == 409
+    assert body == {
+        "detail": "Annual_Report.pdf has already been uploaded.",
+        "code": "DUPLICATE_DOCUMENT",
+    }
+    assert "checksum" not in body["detail"].lower()
+    assert "existing_document_id" not in body
+
+
+def test_duplicate_document_error_includes_authorized_existing_id() -> None:
+    request = _mock_request(path="/api/v1/documents/upload")
+    existing_id = "11111111-1111-1111-1111-111111111111"
+    exc = DuplicateDocumentError(
+        "Annual_Report.pdf",
+        existing_document_id=existing_id,
+    )
+
+    response = asyncio.run(service_error_handler(request, exc))
+    body = json.loads(response.body.decode())
+
+    assert response.status_code == 409
+    assert body["code"] == "DUPLICATE_DOCUMENT"
+    assert body["existing_document_id"] == existing_id
 
 
 def test_validation_error_returns_422() -> None:

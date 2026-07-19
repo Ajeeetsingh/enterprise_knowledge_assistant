@@ -251,7 +251,7 @@ class TestDocumentAuditEvents:
 
 class TestUserManagementAuditEvents:
     def test_user_created_emits_event(
-        self, audit_client: TestClient, admin_user: User
+        self, audit_client: TestClient, admin_user: User, employee_role: Role
     ) -> None:
         token = access_token_for(admin_user)
         with patch("app.api.v1.users.AuditService.record") as mock_record:
@@ -263,6 +263,7 @@ class TestUserManagementAuditEvents:
                     "password": TEST_PASSWORD,
                     "full_name": "New User",
                     "username": "newaudituser",
+                    "role": "Employee",
                 },
             )
         assert response.status_code == 201

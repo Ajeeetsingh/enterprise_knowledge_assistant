@@ -1,6 +1,7 @@
 import { DocumentStatus } from '@/features/documents/types'
 
 import { DEFAULT_EMBEDDING_MODEL } from '../constants'
+import { formatFileSize } from './formatFileSize'
 
 export function getIndexingStatusLabel(status: string): string {
   switch (status) {
@@ -27,7 +28,7 @@ export function getViewerMetadataFields(detail: {
     { label: 'File name', value: detail.filename },
     { label: 'Upload date', value: new Date(detail.uploaded_at).toLocaleString() },
     { label: 'Pages', value: detail.pageCount != null ? String(detail.pageCount) : '—' },
-    { label: 'File size', value: formatFileSizeInline(detail.file_size) },
+    { label: 'File size', value: formatFileSize(detail.file_size) },
     { label: 'Processing status', value: detail.status },
     { label: 'Indexing status', value: getIndexingStatusLabel(detail.status) },
     { label: 'Number of chunks', value: '—', hint: 'Not exposed by document API yet' },
@@ -35,10 +36,4 @@ export function getViewerMetadataFields(detail: {
     { label: 'Last indexed', value: '—', hint: 'Not exposed by document API yet' },
     { label: 'Document ID', value: detail.document_id, mono: true },
   ] as const
-}
-
-function formatFileSizeInline(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }

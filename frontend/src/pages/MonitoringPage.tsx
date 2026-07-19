@@ -7,14 +7,9 @@ import {
 } from '@/features/monitoring/components'
 import { useMonitoringSummary } from '@/features/monitoring/hooks/useMonitoringSummary'
 import { useSystemMetrics } from '@/features/monitoring/hooks/useSystemMetrics'
-import type { ApiError } from '@/types'
+import { resolveErrorMessage } from '@/services/errorHandler'
 
-function resolveErrorMessage(error: unknown): string {
-  if (error && typeof error === 'object' && 'message' in error) {
-    return String((error as ApiError).message)
-  }
-  return 'Something went wrong. Please try again.'
-}
+const GENERIC_ERROR_FALLBACK = 'Something went wrong. Please try again.'
 
 export default function MonitoringPage() {
   const summaryQuery = useMonitoringSummary()
@@ -28,9 +23,9 @@ export default function MonitoringPage() {
   const hasError = summaryQuery.isError || metricsQuery.isError
 
   const errorMessage = summaryQuery.isError
-    ? resolveErrorMessage(summaryQuery.error)
+    ? resolveErrorMessage(summaryQuery.error, GENERIC_ERROR_FALLBACK)
     : metricsQuery.isError
-      ? resolveErrorMessage(metricsQuery.error)
+      ? resolveErrorMessage(metricsQuery.error, GENERIC_ERROR_FALLBACK)
       : 'Failed to load monitoring data.'
 
   function handleRefresh() {

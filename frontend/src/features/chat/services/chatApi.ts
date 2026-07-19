@@ -14,6 +14,7 @@ import type {
   ConversationHistoryResponse,
   ConversationListResponse,
   ConversationUpdateRequest,
+  SuggestedQuestionsResponse,
 } from '../types'
 
 async function request<T>(operation: () => Promise<T>): Promise<T> {
@@ -86,6 +87,15 @@ export async function getMessages(conversationId: string): Promise<ConversationH
 export async function askQuestion(body: ChatRequest): Promise<ChatResponse> {
   return request(async () => {
     const { data } = await apiClient.post<ChatResponse>('/chat/ask', body)
+    return data
+  })
+}
+
+export async function getSuggestedQuestions(): Promise<SuggestedQuestionsResponse> {
+  return request(async () => {
+    const { data } = await apiClient.get<SuggestedQuestionsResponse>(
+      '/chat/suggested-questions',
+    )
     return data
   })
 }

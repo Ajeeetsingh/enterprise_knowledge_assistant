@@ -30,7 +30,7 @@ def test_list_users(client: TestClient, admin_user: User, active_user: User) -> 
         assert "password_hash" not in user
 
 
-def test_create_user(client: TestClient, admin_user: User) -> None:
+def test_create_user(client: TestClient, admin_user: User, employee_role) -> None:
     token = access_token_for(admin_user)
     response = client.post(
         USERS_URL,
@@ -40,6 +40,7 @@ def test_create_user(client: TestClient, admin_user: User) -> None:
             "password": "NewUserPass1!",
             "full_name": "New User",
             "username": "newuser",
+            "role": "Employee",
         },
     )
 
@@ -49,8 +50,48 @@ def test_create_user(client: TestClient, admin_user: User) -> None:
     assert data["full_name"] == "New User"
     assert data["username"] == "newuser"
     assert data["is_active"] is True
-    assert data["roles"] == []
+    assert data["roles"] == ["Employee"]
     assert "password_hash" not in data
+
+
+def test_create_user_requires_role(client: TestClient, admin_user: User) -> None:
+    token = access_token_for(admin_user)
+    response = client.post(
+        USERS_URL,
+        headers=_bearer_headers(token),
+        json={
+            "email": "norole@example.com",
+            "password": "NewUserPass1!",
+            "full_name": "No Role",
+        },
+    )
+    assert response.status_code == 422
+
+
+def test_create_user_invalid_role_does_not_persist(
+    client: TestClient,
+    admin_user: User,
+    db_session,
+) -> None:
+    token = access_token_for(admin_user)
+    response = client.post(
+        USERS_URL,
+        headers=_bearer_headers(token),
+        json={
+            "email": "badrole@example.com",
+            "password": "NewUserPass1!",
+            "full_name": "Bad Role",
+            "role": "NotARealRole",
+        },
+    )
+    assert response.status_code == 404
+    from sqlalchemy import select as sa_select
+    from app.db.models import User as UserModel
+
+    assert (
+        db_session.scalar(sa_select(UserModel).where(UserModel.email == "badrole@example.com"))
+        is None
+    )
 
 
 def test_duplicate_email(client: TestClient, admin_user: User, active_user: User) -> None:
@@ -62,6 +103,7 @@ def test_duplicate_email(client: TestClient, admin_user: User, active_user: User
             "email": active_user.email,
             "password": "AnotherPass1!",
             "full_name": "Duplicate User",
+            "role": "Employee",
         },
     )
 

@@ -645,7 +645,7 @@ def test_openapi_includes_delete_endpoint(client: TestClient) -> None:
     assert "404" in delete_op["responses"]
 
 
-def test_duplicate_upload_returns_existing_document_without_reindexing(
+def test_duplicate_upload_returns_409_duplicate_document(
     real_document_client: TestClient,
     db_session: Session,
     admin_user: User,
@@ -662,13 +662,18 @@ def test_duplicate_upload_returns_existing_document_without_reindexing(
     )
 
     assert first.status_code == 200
-    assert second.status_code == 200
-    assert second.json()["document_id"] == first.json()["document_id"]
-    assert "identical content" in second.json()["message"].lower()
+    assert second.status_code == 409
+    body = second.json()
+    assert body["code"] == "DUPLICATE_DOCUMENT"
+    assert body["detail"] == "policy-copy.txt has already been uploaded."
+    assert "checksum" not in body["detail"].lower()
+    assert body["existing_document_id"] == first.json()["document_id"]
+    assert "storage_path" not in body
 
     repository = DocumentRepository(db_session)
     checksum_matches = repository.find_by_checksum(
-        repository.get_by_id(uuid.UUID(first.json()["document_id"])).checksum
+        repository.get_by_id(uuid.UUID(first.json()["document_id"])).checksum,
+        tenant_id="default",
     )
     assert len(checksum_matches) == 1
 

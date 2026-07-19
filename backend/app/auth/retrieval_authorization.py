@@ -82,7 +82,7 @@ class RetrievalAuthorizationService:
     * Fail-closed for unknown visibility — delegated to
       ``DocumentAuthorizationService._evaluate``.
     * Transparent for filesystem-only sources — documents absent from
-      the DB pass through (category RBAC already applied upstream).
+      the DB are denied (fail closed — orphan index sources must not leak).
     * Never modifies stored metadata — read-only access to the repository.
     """
 
@@ -96,8 +96,9 @@ class RetrievalAuthorizationService:
     ) -> frozenset[str]:
         """Return the subset of *candidate_sources* the user is allowed to read.
 
-        Sources that have no matching DB record are passed through unchanged
-        (they remain subject to category-based RBAC from the RAG engine).
+        Sources with no matching DB record are denied (fail closed). Index
+        entries must correspond to persisted document metadata for access
+        control to apply; orphan/legacy filenames are never auto-authorized.
 
         Args:
             user: Authenticated requesting user.
@@ -120,8 +121,7 @@ class RetrievalAuthorizationService:
         for source in candidate_sources:
             document = db_by_filename.get(source)
             if document is None:
-                # No DB record → legacy filesystem file; category RBAC governs.
-                authorized.add(source)
+                # Fail closed: unknown/orphan index sources are not readable.
                 continue
 
             decision = DocumentAuthorizationService.can_read_document(user, document)  # type: ignore[arg-type]

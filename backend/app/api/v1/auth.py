@@ -5,6 +5,9 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from app.audit.service import AuditService
 from app.auth.dependencies import require_any_role, require_role, require_superuser
 from app.auth.security import get_current_user
+from app.config import get_settings
+from app.core.rate_limit import enforce_rate_limit
+from app.core.request_utils import client_ip as _client_ip
 from app.db.models import User
 from app.dependencies import get_audit_service, get_db
 from app.schemas.auth import (
@@ -15,21 +18,45 @@ from app.schemas.auth import (
     LogoutResponse,
     RefreshRequest,
     RefreshResponse,
+    RegisterRequest,
+    RegisterResponse,
 )
-from app.services import auth_audit_integration, auth_service
+from app.services import auth_audit_integration, auth_service, user_service
 from app.services.audit_service import AuditService as PersistedAuditService
 
 router = APIRouter()
 
 
-def _client_ip(request: Request) -> str | None:
-    """Extract the client IP from the request, honouring forwarded headers."""
-    forwarded_for = request.headers.get("X-Forwarded-For")
-    if forwarded_for:
-        return forwarded_for.split(",")[0].strip()
-    if request.client:
-        return request.client.host
-    return None
+@router.post("/register", response_model=RegisterResponse, status_code=201)
+def register_endpoint(
+    body: RegisterRequest,
+    request: Request,
+    db=Depends(get_db),
+) -> RegisterResponse:
+    """Public self-registration. Always assigns the Employee role server-side."""
+    enforce_rate_limit(
+        request,
+        bucket="auth-register",
+        max_calls=5,
+        window_seconds=3600,
+        detail="Too many registration attempts. Please try again later.",
+    )
+    try:
+        user = user_service.register_public_user(
+            db,
+            email=str(body.email),
+            password=body.password,
+            full_name=body.full_name,
+            username=body.username,
+        )
+    except user_service.UserServiceError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.message) from exc
+
+    return RegisterResponse(
+        id=user.id,
+        email=user.email,
+        full_name=user.full_name,
+    )
 
 
 @router.post("/login", response_model=LoginResponse)
@@ -40,6 +67,13 @@ def login_endpoint(
     audit_service: PersistedAuditService = Depends(get_audit_service),
 ) -> LoginResponse:
     """Authenticate with email and password."""
+    enforce_rate_limit(
+        request,
+        bucket="auth-login",
+        max_calls=10,
+        window_seconds=60,
+        detail="Too many login attempts. Please try again later.",
+    )
     ip = _client_ip(request)
     ua = request.headers.get("User-Agent")
     try:
@@ -86,9 +120,17 @@ def login_endpoint(
 @router.post("/refresh", response_model=RefreshResponse)
 def refresh_endpoint(
     body: RefreshRequest,
+    request: Request,
     db=Depends(get_db),
 ) -> RefreshResponse:
     """Issue a new access token from a valid refresh token."""
+    enforce_rate_limit(
+        request,
+        bucket="auth-refresh",
+        max_calls=30,
+        window_seconds=60,
+        detail="Too many token refresh attempts. Please try again later.",
+    )
     try:
         access_token = auth_service.refresh_access_token(db, body.refresh_token)
     except auth_service.AuthServiceError as exc:
@@ -125,25 +167,31 @@ def me_endpoint(
     return CurrentUserResponse.from_user(current_user)
 
 
-@router.get("/admin-demo", response_model=AuthorizationDemoResponse)
-def admin_demo_endpoint(
-    current_user: User = Depends(require_role("Admin")),
-) -> AuthorizationDemoResponse:
-    """Demonstration endpoint — Admin role required."""
-    return AuthorizationDemoResponse(message="Admin access granted.")
+def _register_authorization_demo_routes() -> None:
+    """Expose role demo endpoints only outside production."""
+    if get_settings().app_env != "development":
+        return
+
+    @router.get("/admin-demo", response_model=AuthorizationDemoResponse)
+    def admin_demo_endpoint(
+        current_user: User = Depends(require_role("Admin")),
+    ) -> AuthorizationDemoResponse:
+        """Demonstration endpoint — Admin role required."""
+        return AuthorizationDemoResponse(message="Admin access granted.")
+
+    @router.get("/hr-demo", response_model=AuthorizationDemoResponse)
+    def hr_demo_endpoint(
+        current_user: User = Depends(require_any_role(["Admin", "HR"])),
+    ) -> AuthorizationDemoResponse:
+        """Demonstration endpoint — Admin or HR role required."""
+        return AuthorizationDemoResponse(message="HR or Admin access granted.")
+
+    @router.get("/superuser-demo", response_model=AuthorizationDemoResponse)
+    def superuser_demo_endpoint(
+        current_user: User = Depends(require_superuser),
+    ) -> AuthorizationDemoResponse:
+        """Demonstration endpoint — superuser flag required."""
+        return AuthorizationDemoResponse(message="Superuser access granted.")
 
 
-@router.get("/hr-demo", response_model=AuthorizationDemoResponse)
-def hr_demo_endpoint(
-    current_user: User = Depends(require_any_role(["Admin", "HR"])),
-) -> AuthorizationDemoResponse:
-    """Demonstration endpoint — Admin or HR role required."""
-    return AuthorizationDemoResponse(message="HR or Admin access granted.")
-
-
-@router.get("/superuser-demo", response_model=AuthorizationDemoResponse)
-def superuser_demo_endpoint(
-    current_user: User = Depends(require_superuser),
-) -> AuthorizationDemoResponse:
-    """Demonstration endpoint — superuser flag required."""
-    return AuthorizationDemoResponse(message="Superuser access granted.")
+_register_authorization_demo_routes()

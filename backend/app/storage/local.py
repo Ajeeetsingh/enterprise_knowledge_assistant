@@ -16,9 +16,29 @@ class LocalStorage(StorageAdapter):
         self.base_path.mkdir(parents=True, exist_ok=True)
 
     def _safe_path(self, relative_path: str) -> Path:
-        destination = (self.base_path / relative_path).resolve()
-        if not str(destination).startswith(str(self.base_path.resolve())):
-            raise StorageError(f"Invalid storage path: {relative_path}")
+        """Resolve *relative_path* and ensure it stays under ``base_path``.
+
+        Accepts a relative storage key or an absolute path already under the
+        storage root (legacy rows). Rejects ``..`` traversal and paths that
+        resolve outside the storage root (avoids ``startswith`` prefix bypass).
+        """
+        if not relative_path or not str(relative_path).strip():
+            raise StorageError("Invalid storage path: empty path.")
+
+        base = self.base_path.resolve()
+        raw = Path(relative_path)
+
+        if raw.is_absolute():
+            destination = raw.resolve()
+        else:
+            if ".." in raw.parts:
+                raise StorageError(f"Invalid storage path: {relative_path}")
+            destination = (base / relative_path).resolve()
+
+        try:
+            destination.relative_to(base)
+        except ValueError as exc:
+            raise StorageError(f"Invalid storage path: {relative_path}") from exc
         return destination
 
     def save(self, relative_path: str, content: bytes) -> Path:

@@ -1,13 +1,14 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 import EmptyState from '@/components/ui/EmptyState'
+import Skeleton from '@/components/ui/Skeleton'
 import { useToast } from '@/contexts/ToastContext'
-import { getApiErrorMessage } from '@/services/errorHandler'
-import type { ApiError } from '@/types'
+import { getApiErrorMessage, resolveErrorMessage } from '@/services/errorHandler'
 import { cn } from '@/utils/cn'
 
 import { useAskQuestion } from '../hooks/useAskQuestion'
 import { useConversationMessages } from '../hooks/useConversationMessages'
+import { useSuggestedQuestions } from '../hooks/useSuggestedQuestions'
 import { normalizeMessageCitations } from '../types'
 import type { ActiveStream } from '../types/streaming'
 import ChatHeader from './ChatHeader'
@@ -16,22 +17,28 @@ import MessageList from './MessageList'
 
 export interface ChatAreaProps {
   conversationId: string | null
+  /** One-shot question from dashboard deep-link; sent once messages are ready. */
+  initialQuestion?: string | null
+  onInitialQuestionConsumed?: () => void
 }
 
-const STARTER_PROMPTS = [
-  'What is our remote work policy?',
-  'Summarise the FY2026 strategic priorities.',
-  'Who are the executive leaders?',
+// Shown only while suggestions are loading, or if the request fails —
+// the real list is fetched dynamically via useSuggestedQuestions.
+const FALLBACK_PROMPTS = [
+  'What can this assistant help me with?',
+  'How do I upload a document for the assistant to use?',
+  'What kinds of questions can I ask once documents are added?',
 ]
 
-function resolveErrorMessage(error: unknown): string {
-  if (error && typeof error === 'object' && 'message' in error) {
-    return String((error as ApiError).message)
-  }
-  return 'Something went wrong. Please try again.'
+interface ChatEmptyStateProps {
+  onSelectSuggestion: (question: string) => void
 }
 
-function ChatEmptyState() {
+function ChatEmptyState({ onSelectSuggestion }: ChatEmptyStateProps) {
+  const { data, isLoading } = useSuggestedQuestions()
+  const suggestions =
+    data && data.items.length > 0 ? data.items.map((item) => item.text) : FALLBACK_PROMPTS
+
   return (
     <EmptyState
       icon={
@@ -56,25 +63,40 @@ function ChatEmptyState() {
       action={
         <div className="w-full max-w-sm text-left">
           <p className="mb-2 text-xs font-medium uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
-            Example questions
+            Suggested questions
           </p>
-          <ul className="space-y-2">
-            {STARTER_PROMPTS.map((prompt) => (
-              <li
-                key={prompt}
-                className="rounded-md border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-600 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-300"
-              >
-                {prompt}
-              </li>
-            ))}
-          </ul>
+          {isLoading ? (
+            <div className="space-y-2" aria-hidden>
+              {[0, 1, 2].map((index) => (
+                <Skeleton key={index} className="h-10 w-full" />
+              ))}
+            </div>
+          ) : (
+            <ul className="space-y-2">
+              {suggestions.map((prompt) => (
+                <li key={prompt}>
+                  <button
+                    type="button"
+                    onClick={() => onSelectSuggestion(prompt)}
+                    className="interactive-row w-full rounded-md border border-neutral-200 bg-white px-3 py-2 text-left text-sm text-neutral-600 transition-colors duration-150 hover:border-accent/40 hover:text-foreground dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-300"
+                  >
+                    {prompt}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       }
     />
   )
 }
 
-export default function ChatArea({ conversationId }: ChatAreaProps) {
+export default function ChatArea({
+  conversationId,
+  initialQuestion = null,
+  onInitialQuestionConsumed,
+}: ChatAreaProps) {
   const [draft, setDraft] = useState('')
   const [sendError, setSendError] = useState<string | null>(null)
   const [activeStream, setActiveStream] = useState<ActiveStream | null>(null)
@@ -89,6 +111,11 @@ export default function ChatArea({ conversationId }: ChatAreaProps) {
   } = useConversationMessages(conversationId)
 
   const askQuestion = useAskQuestion()
+  const initialQuestionConsumedRef = useRef(false)
+
+  useEffect(() => {
+    initialQuestionConsumedRef.current = false
+  }, [conversationId, initialQuestion])
 
   useEffect(() => {
     setActiveStream(null)
@@ -100,6 +127,68 @@ export default function ChatArea({ conversationId }: ChatAreaProps) {
   const handleStreamComplete = useCallback(() => {
     setActiveStream(null)
   }, [])
+
+  const sendQuestion = useCallback(
+    async (question: string) => {
+      const trimmed = question.trim()
+      if (!trimmed || !conversationId) return
+
+      setSendError(null)
+      setActiveStream(null)
+
+      try {
+        const result = await askQuestion.mutateAsync({
+          conversation_id: conversationId,
+          question: trimmed,
+        })
+        setDraft('')
+        setActiveStream({
+          conversationId,
+          content: result.answer,
+          citations: normalizeMessageCitations(result.citations),
+          confidence_score: result.confidence_score,
+        })
+      } catch (error) {
+        setSendError(getApiErrorMessage(error))
+        showError(getApiErrorMessage(error))
+      }
+    },
+    [askQuestion, conversationId, showError],
+  )
+
+  // Consume a dashboard deep-linked question once the conversation is empty/ready.
+  useEffect(() => {
+    const question = initialQuestion?.trim()
+    if (
+      !question ||
+      !conversationId ||
+      isLoading ||
+      isError ||
+      askQuestion.isPending ||
+      initialQuestionConsumedRef.current
+    ) {
+      return
+    }
+    if (messages.length > 0 || activeStream) {
+      initialQuestionConsumedRef.current = true
+      onInitialQuestionConsumed?.()
+      return
+    }
+
+    initialQuestionConsumedRef.current = true
+    onInitialQuestionConsumed?.()
+    void sendQuestion(question)
+  }, [
+    initialQuestion,
+    conversationId,
+    isLoading,
+    isError,
+    messages.length,
+    activeStream,
+    askQuestion.isPending,
+    sendQuestion,
+    onInitialQuestionConsumed,
+  ])
 
   if (!conversationId) {
     return (
@@ -129,30 +218,16 @@ export default function ChatArea({ conversationId }: ChatAreaProps) {
     )
   }
 
-  async function handleSend() {
-    const question = draft.trim()
-    if (!question || !conversationId) return
+  function handleSend() {
+    return sendQuestion(draft)
+  }
 
-    setSendError(null)
-    setActiveStream(null)
-
-    try {
-      const result = await askQuestion.mutateAsync({ conversation_id: conversationId, question })
-      setDraft('')
-      setActiveStream({
-        conversationId,
-        content: result.answer,
-        citations: normalizeMessageCitations(result.citations),
-        confidence_score: result.confidence_score,
-      })
-    } catch (error) {
-      setSendError(getApiErrorMessage(error))
-      showError(getApiErrorMessage(error))
-    }
+  function handleSelectSuggestion(question: string) {
+    return sendQuestion(question)
   }
 
   const showEmptyState =
-    !isError && messages.length === 0 && !isLoading && !activeStream && !isTransitioning
+    !isError && messages.length === 0 && !isLoading && !activeStream && !isTransitioning && !initialQuestion
 
   return (
     <section className="flex h-full min-h-0 min-w-0 flex-1 flex-col bg-surface">
@@ -163,7 +238,7 @@ export default function ChatArea({ conversationId }: ChatAreaProps) {
           role="alert"
           className="shrink-0 border-b border-error-500/20 bg-error-50 px-4 py-3 text-sm text-error-700 dark:bg-error-700/10 dark:text-error-400 sm:px-6"
         >
-          {resolveErrorMessage(messagesError)}
+          {resolveErrorMessage(messagesError, 'Something went wrong. Please try again.')}
         </p>
       )}
 
@@ -176,7 +251,7 @@ export default function ChatArea({ conversationId }: ChatAreaProps) {
       >
         {showEmptyState ? (
           <div className="flex min-h-0 flex-1 items-center justify-center">
-            <ChatEmptyState />
+            <ChatEmptyState onSelectSuggestion={(question) => void handleSelectSuggestion(question)} />
           </div>
         ) : (
           <MessageList

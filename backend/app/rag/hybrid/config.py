@@ -22,6 +22,8 @@ class HybridRetrievalSettings:
     top_k_final: int = 5
     stemming_enabled: bool = False
     stopwords_enabled: bool = True
+    heading_weighting_enabled: bool = True
+    heading_weight_repetitions: int = 2
 
     @classmethod
     def from_settings(cls, settings: Settings | None = None) -> HybridRetrievalSettings:
@@ -38,4 +40,6 @@ class HybridRetrievalSettings:
             top_k_final=resolved.top_k_final,
             stemming_enabled=resolved.hybrid_stemming_enabled,
             stopwords_enabled=resolved.hybrid_stopwords_enabled,
+            heading_weighting_enabled=resolved.heading_weighting_enabled,
+            heading_weight_repetitions=resolved.heading_weight_repetitions,
         )

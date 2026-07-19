@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import re
 
-from app.rag.query_processing.registry import EntitySpec, QueryRulesRegistry
+from app.rag.query_processing.registry import QueryRulesRegistry
 
 
 def _alias_pattern(alias: str) -> re.Pattern[str]:

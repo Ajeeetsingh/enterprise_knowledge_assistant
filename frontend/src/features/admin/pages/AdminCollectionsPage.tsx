@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react'
 import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
 import { useToast } from '@/contexts/ToastContext'
+import { resolveErrorMessage } from '@/services/errorHandler'
 
 import {
   ArchiveCollectionDialog,
@@ -69,8 +70,7 @@ export default function AdminCollectionsPage() {
       setCreateOpen(false)
       showSuccess('Collection created in local preview.')
     } catch (error) {
-      const message =
-        error instanceof Error ? error.message : 'Unable to create collection.'
+      const message = resolveErrorMessage(error, 'Unable to create collection.')
       setCreateError(message)
       showError(message)
     }
@@ -107,8 +107,7 @@ export default function AdminCollectionsPage() {
       setPendingRename('')
       showSuccess('Collection renamed in local preview.')
     } catch (error) {
-      const message =
-        error instanceof Error ? error.message : 'Unable to update collection.'
+      const message = resolveErrorMessage(error, 'Unable to update collection.')
       setRenameError(message)
       showError(message)
     }
@@ -134,8 +133,7 @@ export default function AdminCollectionsPage() {
       setArchiveTarget(null)
       showSuccess('Collection archived in local preview.')
     } catch (error) {
-      const message =
-        error instanceof Error ? error.message : 'Unable to archive collection.'
+      const message = resolveErrorMessage(error, 'Unable to archive collection.')
       setArchiveError(message)
       showError(message)
     }

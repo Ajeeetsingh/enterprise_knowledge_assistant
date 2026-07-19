@@ -248,6 +248,55 @@ class ConversationService:
         )
         return updated
 
+    def set_auto_generated_title(
+        self,
+        user: User,
+        conversation_id: uuid.UUID,
+        title: str,
+    ) -> Conversation | None:
+        """Set an auto-generated title, but only when the conversation has none yet.
+
+        Safe to call unconditionally after every user message: once a title
+        exists — whether set by the user via ``rename_conversation`` or by a
+        prior successful auto-generation — this is a no-op. That single
+        guarantee is what makes a conversation's title get generated
+        exactly once, without any separate "already generated" flag or
+        bookkeeping.
+
+        Args:
+            user: The authenticated user who owns the conversation.
+            conversation_id: Primary key of the target conversation.
+            title: Generated title text. Whitespace is stripped and the
+                result is truncated to ``MAX_TITLE_LENGTH`` defensively —
+                generated titles are always short in practice, so this
+                should never actually trigger.
+
+        Returns:
+            The updated ``Conversation`` when the title was set, or
+            ``None`` when the conversation already had a title (no-op) or
+            *title* was blank after stripping.
+
+        Raises:
+            ConversationNotFoundError: When the conversation does not exist.
+            ConversationAccessDeniedError: When the conversation belongs to
+                a different user.
+        """
+        conversation = self._get_owned_conversation(user, conversation_id)
+        if conversation.title is not None:
+            return None
+
+        clean_title = title.strip()[:MAX_TITLE_LENGTH]
+        if not clean_title:
+            return None
+
+        updated = self._conversation_repo.set_title_if_unset(conversation.id, clean_title)
+        if updated is not None:
+            logger.debug(
+                "conversation.auto_titled",
+                extra={"conversation_id": str(conversation_id), "user_id": str(user.id)},
+            )
+        return updated
+
     # ------------------------------------------------------------------ #
     # Message management (Phase 6.3)                                      #
     # ------------------------------------------------------------------ #

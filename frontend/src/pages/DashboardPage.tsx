@@ -1,15 +1,60 @@
-import { Card } from '@/components/ui'
+import { useAuth } from '@/contexts/AuthContext'
+import {
+  ContinueWorkPanel,
+  DashboardAskBar,
+  DashboardStatsRow,
+  QuickActionsGrid,
+  RecentDocumentsPanel,
+  SystemOverviewCard,
+  buildDashboardGreeting,
+  useWorkspaceSummary,
+} from '@/features/dashboard'
+import { useConversations } from '@/features/chat/hooks/useConversations'
+import { useDocuments } from '@/features/documents/hooks/useDocuments'
+import { isAdminUser } from '@/types/permissions'
 
 export default function DashboardPage() {
+  const { user } = useAuth()
+  const greeting = buildDashboardGreeting(user?.full_name)
+
+  const summaryQuery = useWorkspaceSummary()
+  const conversationsQuery = useConversations()
+  const documentsQuery = useDocuments({ limit: 10, offset: 0 })
+
+  const showSystemOverview = isAdminUser(user)
+
   return (
-    <div className="flex flex-col gap-4 text-center sm:text-left">
-      <h1 className="text-2xl font-bold text-neutral-900 dark:text-neutral-50">Dashboard</h1>
-      <Card>
-        <p className="text-sm text-neutral-600 dark:text-neutral-400">
-          Dashboard features will be implemented in a future phase. This page uses
-          AppLayout with Sidebar, TopNavbar, and PageContainer.
-        </p>
-      </Card>
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-8">
+      <header className="space-y-1">
+        <h1 className="font-display text-2xl font-semibold tracking-tight text-foreground sm:text-[1.75rem]">
+          {greeting.title}
+        </h1>
+        <p className="text-sm text-muted sm:text-base">{greeting.subtitle}</p>
+      </header>
+
+      <section aria-label="Ask the knowledge assistant" className="w-full">
+        <DashboardAskBar />
+      </section>
+
+      <DashboardStatsRow
+        summary={summaryQuery.data}
+        isLoading={summaryQuery.isLoading}
+      />
+
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+        <ContinueWorkPanel
+          conversations={conversationsQuery.data?.items ?? []}
+          isLoading={conversationsQuery.isLoading}
+        />
+        <RecentDocumentsPanel
+          documents={documentsQuery.data?.items ?? []}
+          isLoading={documentsQuery.isLoading}
+        />
+      </div>
+
+      <QuickActionsGrid user={user} />
+
+      {showSystemOverview && <SystemOverviewCard />}
     </div>
   )
 }

@@ -6,7 +6,7 @@ import re
 
 from app.rag.query_processing.acronyms import expand_acronyms
 from app.rag.query_processing.config import QueryProcessingSettings
-from app.rag.query_processing.entities import detect_entities, normalize_entities
+from app.rag.query_processing.entities import normalize_entities
 from app.rag.query_processing.registry import QueryRulesRegistry
 from app.rag.query_processing.schemas import ClassificationResult, QueryCategory
 from app.rag.query_processing.synonyms import expand_synonyms

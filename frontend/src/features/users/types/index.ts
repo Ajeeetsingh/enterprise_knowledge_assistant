@@ -35,6 +35,8 @@ export interface CreateUserRequest {
   password: string
   full_name: string
   username?: string | null
+  /** Initial system role assigned atomically with user creation. */
+  role: string
 }
 
 /** Successful user creation returns the same shape as {@link User}. */

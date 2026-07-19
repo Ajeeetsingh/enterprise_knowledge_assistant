@@ -6,8 +6,8 @@ import AiAvatar from './AiAvatar'
 
 export interface AiMessageLayoutProps {
   children: ReactNode
-  className?: string
-  style?: CSSProperties
+  className?: string | undefined
+  style?: CSSProperties | undefined
 }
 
 export default function AiMessageLayout({ children, className, style }: AiMessageLayoutProps) {

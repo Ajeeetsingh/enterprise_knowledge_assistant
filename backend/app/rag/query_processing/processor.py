@@ -10,7 +10,7 @@ from app.rag.query_processing.classifier import classify_query
 from app.rag.query_processing.config import QueryProcessingSettings
 from app.rag.query_processing.expander import expand_query, generate_retrieval_queries
 from app.rag.query_processing.metrics import log_query_processing
-from app.rag.query_processing.registry import QueryRulesRegistry, StrategySpec, get_rules
+from app.rag.query_processing.registry import StrategySpec, get_rules
 from app.rag.query_processing.schemas import (
     QueryProcessingMetrics,
     QueryProcessingOutcome,

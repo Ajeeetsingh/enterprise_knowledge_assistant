@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 import re
 
 from app.ingestion.chunker import DocumentChunk
@@ -12,6 +13,28 @@ from app.ingestion.vector_store.candidates import VectorSearchCandidate
 from app.rag.metadata_retrieval.types import MetadataScoreBreakdown
 
 _TOKEN_RE = re.compile(r"[a-z0-9]+")
+
+
+def _apply_soft_ceiling(raw_bonus: float, ceiling: float) -> float:
+    """Bound an additive metadata bonus without flattening relative order.
+
+    A hard ``min(raw_bonus, ceiling)`` clip collapses *every* candidate whose
+    combined signals exceed the ceiling to the exact same capped value —
+    which silently discards the very distinction this scorer exists to make
+    whenever two competing chunks (e.g. two headings that both genuinely
+    match the query well) each accumulate more bonus than the ceiling
+    allows. A smooth saturating curve (scaled ``tanh``) stays strictly
+    monotonic in ``raw_bonus`` — a stronger match always yields a strictly
+    larger bonus — while still asymptotically bounded by ``ceiling``, so the
+    metadata bonus can never override the cross-encoder/cosine signal by
+    more than intended. This requires no per-document tuning and applies
+    uniformly to any weight configuration.
+    """
+    if ceiling <= 0:
+        return 0.0
+    if raw_bonus <= 0:
+        return 0.0
+    return ceiling * math.tanh(raw_bonus / ceiling)
 
 
 def _tokenize(text: str) -> set[str]:
@@ -213,7 +236,7 @@ def score_candidate(
     bonus += continuity_bonus
     explanations.extend(continuity_explanations)
 
-    bonus = min(bonus, settings.max_metadata_bonus)
+    bonus = _apply_soft_ceiling(bonus, settings.max_metadata_bonus)
     final_score = min(1.0, calibrated_cosine + bonus)
 
     return MetadataScoreBreakdown(

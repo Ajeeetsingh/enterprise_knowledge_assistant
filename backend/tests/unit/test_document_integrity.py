@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from tests.constants import TEST_PASSWORD_HASH
-from app.core.exceptions import DocumentIntegrityError
+from app.core.exceptions import DocumentIntegrityError, DuplicateDocumentError
 from app.db.base import Base
 from app.db.models import Document, Role, User  # noqa: F401
 from app.db.repositories.document_repository import DocumentRepository
@@ -121,6 +121,7 @@ def _persist_document(
     uploader_id: uuid.UUID,
     filename: str,
     content: bytes,
+    tenant_id: str = "default",
 ) -> Document:
     checksum = Sha256ChecksumProvider().compute(content)
     return repository.create(
@@ -132,6 +133,7 @@ def _persist_document(
         storage_path=f"/stored/{filename}",
         uploaded_by=uploader_id,
         status=DocumentStatus.SEARCHABLE,
+        tenant_id=tenant_id,
     )
 
 
@@ -169,10 +171,12 @@ def test_policy_detects_exact_duplicate(
         repository,
         checksum=checksum,
         filename="copy.txt",
+        tenant_id="default",
     )
 
     assert result.decision == IntegrityDecision.EXACT_DUPLICATE
     assert result.document_id == str(existing.id)
+    assert "already been uploaded" in result.message
 
 
 def test_policy_detects_filename_conflict(
@@ -193,9 +197,62 @@ def test_policy_detects_filename_conflict(
         repository,
         checksum=checksum,
         filename="policy.txt",
+        tenant_id="default",
     )
 
     assert result.decision == IntegrityDecision.FILENAME_CONFLICT
+
+
+def test_policy_allows_same_checksum_in_different_tenant(
+    db_session: Session,
+    uploader_id: uuid.UUID,
+) -> None:
+    repository = DocumentRepository(db_session)
+    content = b"shared across orgs"
+    _persist_document(
+        repository,
+        uploader_id=uploader_id,
+        filename="shared.txt",
+        content=content,
+        tenant_id="tenant-a",
+    )
+    checksum = Sha256ChecksumProvider().compute(content)
+    policy = DuplicateDetectionPolicy()
+
+    result = policy.evaluate(
+        repository,
+        checksum=checksum,
+        filename="shared-copy.txt",
+        tenant_id="tenant-b",
+    )
+
+    assert result.decision == IntegrityDecision.NEW_DOCUMENT
+
+
+def test_policy_ignores_soft_deleted_duplicates(
+    db_session: Session,
+    uploader_id: uuid.UUID,
+) -> None:
+    repository = DocumentRepository(db_session)
+    content = b"deleted then reuploaded"
+    existing = _persist_document(
+        repository,
+        uploader_id=uploader_id,
+        filename="gone.txt",
+        content=content,
+    )
+    repository.mark_deleted(existing.id)
+    checksum = Sha256ChecksumProvider().compute(content)
+    policy = DuplicateDetectionPolicy()
+
+    result = policy.evaluate(
+        repository,
+        checksum=checksum,
+        filename="gone-again.txt",
+        tenant_id="default",
+    )
+
+    assert result.decision == IntegrityDecision.NEW_DOCUMENT
 
 
 def test_repository_find_by_checksum_and_latest_version(
@@ -212,13 +269,13 @@ def test_repository_find_by_checksum_and_latest_version(
         content=content,
     )
 
-    assert repository.exists_checksum(checksum) is True
-    matches = repository.find_by_checksum(checksum)
+    assert repository.exists_checksum(checksum, tenant_id="default") is True
+    matches = repository.find_by_checksum(checksum, tenant_id="default")
     assert len(matches) == 1
-    assert repository.find_latest_version(checksum).id == first.id
+    assert repository.find_latest_version(checksum, tenant_id="default").id == first.id
 
 
-def test_upload_exact_duplicate_skips_reindexing(
+def test_upload_exact_duplicate_raises_conflict(
     db_session: Session,
     uploader_id: uuid.UUID,
     tmp_path,
@@ -232,6 +289,7 @@ def test_upload_exact_duplicate_skips_reindexing(
     )
     repository = DocumentRepository(db_session)
     content = b"Employee handbook."
+    uploader = db_session.get(User, uploader_id)
 
     first = service.upload_document(
         repository,
@@ -239,21 +297,108 @@ def test_upload_exact_duplicate_skips_reindexing(
         content_type="text/plain",
         content=content,
         uploaded_by=uploader_id,
+        requesting_user=uploader,
     )
-    second = service.upload_document(
+
+    with pytest.raises(DuplicateDocumentError) as exc_info:
+        service.upload_document(
+            repository,
+            filename="handbook-copy.txt",
+            content_type="text/plain",
+            content=content,
+            uploaded_by=uploader_id,
+            requesting_user=uploader,
+        )
+
+    assert exc_info.value.code == "DUPLICATE_DOCUMENT"
+    assert "handbook-copy.txt has already been uploaded." in exc_info.value.public_message
+    assert exc_info.value.existing_document_id == first.document_id
+    assert vector_store.add_chunks.call_count == 1
+    assert any(isinstance(event, DuplicateDetected) for event in collector.history)
+
+
+def test_duplicate_omits_existing_id_when_requester_unauthorized(
+    db_session: Session,
+    uploader_id: uuid.UUID,
+    tmp_path,
+) -> None:
+    from app.documents.visibility import DocumentVisibility
+
+    service = _build_service(tmp_path)
+    repository = DocumentRepository(db_session)
+    content = b"restricted duplicate payload"
+
+    service.upload_document(
         repository,
-        filename="handbook-copy.txt",
+        filename="secret.txt",
+        content_type="text/plain",
+        content=content,
+        uploaded_by=uploader_id,
+    )
+    # Make the stored document private so a different non-owner cannot read it.
+    stored = repository.find_by_filename("secret.txt", tenant_id="default")
+    assert stored is not None
+    stored.visibility = DocumentVisibility.PRIVATE.value
+    stored.owner_id = uploader_id
+    repository.update(stored)
+
+    outsider_role = Role(name="Employee", description="Employee")
+    outsider = User(
+        email="employee@example.com",
+        username="employee",
+        full_name="Employee User",
+        password_hash=TEST_PASSWORD_HASH,
+        is_active=True,
+    )
+    outsider.roles.append(outsider_role)
+    db_session.add_all([outsider_role, outsider])
+    db_session.commit()
+    db_session.refresh(outsider)
+
+    with pytest.raises(DuplicateDocumentError) as exc_info:
+        service.upload_document(
+            repository,
+            filename="secret-copy.txt",
+            content_type="text/plain",
+            content=content,
+            uploaded_by=outsider.id,
+            requesting_user=outsider,
+        )
+
+    assert exc_info.value.code == "DUPLICATE_DOCUMENT"
+    assert exc_info.value.existing_document_id is None
+
+
+def test_upload_same_content_renamed_is_duplicate(
+    db_session: Session,
+    uploader_id: uuid.UUID,
+    tmp_path,
+) -> None:
+    service = _build_service(tmp_path)
+    repository = DocumentRepository(db_session)
+    content = b"identical bytes"
+
+    service.upload_document(
+        repository,
+        filename="original.txt",
         content_type="text/plain",
         content=content,
         uploaded_by=uploader_id,
     )
 
-    assert second.document_id == first.document_id
-    assert vector_store.add_chunks.call_count == 1
-    assert any(isinstance(event, DuplicateDetected) for event in collector.history)
+    with pytest.raises(DuplicateDocumentError) as exc_info:
+        service.upload_document(
+            repository,
+            filename="renamed.txt",
+            content_type="text/plain",
+            content=content,
+            uploaded_by=uploader_id,
+        )
+
+    assert "renamed.txt has already been uploaded." == exc_info.value.public_message
 
 
-def test_upload_filename_conflict_raises_integrity_error(
+def test_upload_same_filename_different_content_still_conflicts(
     db_session: Session,
     uploader_id: uuid.UUID,
     tmp_path,
@@ -269,7 +414,7 @@ def test_upload_filename_conflict_raises_integrity_error(
         uploaded_by=uploader_id,
     )
 
-    with pytest.raises(DocumentIntegrityError):
+    with pytest.raises(DocumentIntegrityError) as exc_info:
         service.upload_document(
             repository,
             filename="policy.txt",
@@ -277,6 +422,45 @@ def test_upload_filename_conflict_raises_integrity_error(
             content=b"different content",
             uploaded_by=uploader_id,
         )
+
+    assert not isinstance(exc_info.value, DuplicateDocumentError)
+
+
+def test_upload_maps_unique_constraint_race_to_duplicate_error(
+    db_session: Session,
+    uploader_id: uuid.UUID,
+    tmp_path,
+) -> None:
+    """Pre-check miss + unique index hit must still return DUPLICATE_DOCUMENT."""
+    from unittest.mock import patch
+
+    from sqlalchemy.exc import IntegrityError
+
+    service = _build_service(tmp_path)
+    repository = DocumentRepository(db_session)
+
+    with (
+        patch.object(repository, "find_latest_version", return_value=None),
+        patch.object(repository, "find_by_filename", return_value=None),
+        patch.object(
+            repository,
+            "create",
+            side_effect=IntegrityError("duplicate", {}, None),
+        ),
+        patch.object(repository, "rollback") as rollback,
+    ):
+        with pytest.raises(DuplicateDocumentError) as exc_info:
+            service.upload_document(
+                repository,
+                filename="racy.txt",
+                content_type="text/plain",
+                content=b"race content",
+                uploaded_by=uploader_id,
+            )
+
+    assert exc_info.value.code == "DUPLICATE_DOCUMENT"
+    assert exc_info.value.public_message == "racy.txt has already been uploaded."
+    rollback.assert_called_once()
 
 
 def test_map_to_integrity_response() -> None:

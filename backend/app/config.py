@@ -3,9 +3,15 @@
 from functools import lru_cache
 from pathlib import Path
 
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 BACKEND_ROOT = Path(__file__).resolve().parent.parent
+
+# Placeholder JWT secret shipped as the default for local development
+# convenience only. Any non-development environment must override it via the
+# JWT_SECRET environment variable — see `Settings._require_real_jwt_secret`.
+_DEFAULT_JWT_SECRET = "change-me-in-production"
 
 
 class Settings(BaseSettings):
@@ -47,7 +53,7 @@ class Settings(BaseSettings):
     cors_origins: list[str] = ["http://localhost:5173", "http://localhost:3000"]
 
     # JWT (Phase 2.3 token service — consumed by app.auth.jwt)
-    jwt_secret: str = "change-me-in-production"
+    jwt_secret: str = _DEFAULT_JWT_SECRET
     jwt_algorithm: str = "HS256"
     jwt_access_token_expire_minutes: int = 30
     jwt_refresh_token_expire_days: int = 7
@@ -133,6 +139,17 @@ class Settings(BaseSettings):
     rerank_model: str = "ms-marco-minilm-l6-v2"
     rerank_max_batch_size: int = 16
     rerank_max_sequence_length: int = 512
+    # Weight given to the metadata bonus (heading/section similarity, continuity,
+    # intent) when combined with the normalized cross-encoder score to produce
+    # the final ranking. 0 disables blending and reproduces prior behaviour.
+    rerank_metadata_bonus_weight: float = 0.25
+
+    # Heading-aware semantic representation for retrieval quality.
+    # Repeats a chunk's known section heading ahead of its body when building
+    # embedding/BM25/reranker input so thematically-close sections stay
+    # distinguishable. Citation/LLM `content` is never modified.
+    heading_weighting_enabled: bool = True
+    heading_weight_repetitions: int = 2
 
     # Query intelligence (Phase 12.9)
     query_intelligence_enabled: bool = True
@@ -142,6 +159,26 @@ class Settings(BaseSettings):
     entity_normalization_enabled: bool = True
     synonym_expansion_enabled: bool = True
     strategy_selection_enabled: bool = True
+
+    @model_validator(mode="after")
+    def _require_real_jwt_secret(self) -> "Settings":
+        """Fail startup if a non-development environment keeps the placeholder secret.
+
+        The default `jwt_secret` value exists purely for local development
+        convenience. Any other `app_env` must set a real `JWT_SECRET` via the
+        environment — running with the placeholder (or an empty secret)
+        outside development would let anyone forge valid access tokens.
+        """
+        if self.app_env != "development" and (
+            not self.jwt_secret or self.jwt_secret == _DEFAULT_JWT_SECRET
+        ):
+            raise ValueError(
+                "JWT_SECRET is missing or still set to the default placeholder "
+                f"value. Set a unique, secret JWT_SECRET environment variable "
+                f"before starting the application outside development "
+                f"(APP_ENV={self.app_env!r})."
+            )
+        return self
 
 
 @lru_cache

@@ -306,6 +306,28 @@
     box-shadow: var(--shadow-elevation-glow);
   }
 
+  /* Landing page entrance / scroll reveals */
+  .landing-reveal {
+    opacity: 0;
+    transform: translateY(12px);
+    transition:
+      opacity 300ms ease-out,
+      transform 300ms ease-out;
+  }
+
+  .landing-reveal.is-visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .landing-reveal {
+      opacity: 1;
+      transform: none;
+      transition: none;
+    }
+  }
+
   .bg-gradient-accent {
     background: linear-gradient(135deg, var(--accent), var(--gradient-accent-end));
   }
@@ -933,6 +955,20 @@
     background: var(--bg-overlay);
   }
 
+  .document-row--highlight {
+    background: var(--accent-muted);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 55%, transparent);
+    transition:
+      background-color 0.45s ease,
+      box-shadow 0.45s ease;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .document-row--highlight {
+      transition: none;
+    }
+  }
+
   /* ======================================================================
      Enterprise document viewer
      ====================================================================== */
@@ -1180,6 +1216,27 @@
 
   .document-page-frame:hover .document-page-number {
     opacity: 1;
+  }
+
+  /* Citation excerpt highlight on the PDF text layer */
+  .textLayer span.pdf-citation-highlight,
+  .react-pdf__Page__textContent span.pdf-citation-highlight {
+    background: rgb(250 204 21 / 0.45);
+    border-radius: 2px;
+    box-decoration-break: clone;
+    -webkit-box-decoration-break: clone;
+  }
+
+  .viewer-citation-notice {
+    flex-shrink: 0;
+    margin: 0.5rem 1rem 0;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.8125rem;
+    line-height: 1.4;
+    color: var(--text-muted, #5b6472);
+    background: rgb(250 204 21 / 0.12);
+    border: 1px solid rgb(250 204 21 / 0.35);
+    border-radius: var(--radius-md, 6px);
   }
 
   /* Thumbnails ------------------------------------------------------------ */

@@ -1,58 +1,63 @@
-# Virtual Environment
+# Virtual environments
 .venv/
+venv/
 
 # Python
 __pycache__/
-*.pyc
+*.py[cod]
+*.egg-info/
 .pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.tox/
 
-# Node
+# Node / frontend
 node_modules/
 dist/
-
-# Vite
+build/
+frontend/dist/
 node_modules/.vite/
 
-# IDE
+# Environment / secrets — never commit real credentials
+.env
+.env.local
+.env.*.local
+frontend/.env
+frontend/.env.local
+!.env.example
+!frontend/.env.example
+
+# IDE / OS
 .idea/
 .vscode/
-
-# OS
-.DS_Store
-Thumbs.db
-
-# Environment Variables
-.env
-
-# OS files
+*.swp
 .DS_Store
 Thumbs.db
 
 # Logs
 *.log
+logs/
 
-# Build
-dist/
-build/
-
-# Test artifacts
-.pytest_cache/
-.coverage
-
-# Results
-results/
-
-# Runtime uploads
+# Runtime uploads & search indexes (persist locally / in Docker volumes)
 backend/storage/documents/*
 !backend/storage/documents/.gitkeep
-
-# Search indexes
 backend/storage/indexes/*
 !backend/storage/indexes/.gitkeep
+backend/evaluation_storage/
+backend/trace_output.txt
 
-# Evaluation datasets
+# Evaluation / benchmark outputs (keep fixtures under backend/tests)
+results/
 data/
+backend/evaluation_results/
+backend/benchmark_results/
 
-# Node
-node_modules/
-dist/
+# Model caches (Hugging Face / SentenceTransformers)
+.cache/
+**/huggingface/
+**/sentence-transformers/
+
+# Docker
+*.pid

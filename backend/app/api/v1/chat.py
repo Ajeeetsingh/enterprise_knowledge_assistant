@@ -9,10 +9,7 @@ import uuid
 from fastapi import APIRouter, Depends, Request
 
 from app.audit.service import AuditService
-from app.auth.retrieval_authorization import (
-    EMPTY_RETRIEVAL_MESSAGE,
-    RetrievalAuthorizationService,
-)
+from app.auth.retrieval_authorization import RetrievalAuthorizationService
 from app.auth.security import get_current_user
 from app.core.exceptions import (
     AuthorizationError,
@@ -21,6 +18,8 @@ from app.core.exceptions import (
     RagRetrievalError,
 )
 from app.core.logging import get_logger, log_with_fields
+from app.core.rate_limit import enforce_rate_limit
+from app.core.request_utils import client_ip as _client_ip
 from app.db.models import User
 from app.db.repositories.document_repository import DocumentRepository
 from app.dependencies import (
@@ -28,15 +27,21 @@ from app.dependencies import (
     get_conversation_chat_service,
     get_document_repository,
     get_rag_service_dep,
+    get_suggested_question_service_dep,
 )
 from app.mappers.chat import map_chat_result_to_answer_response
-from app.rag.types import Citation, QueryResponse
-from app.schemas.chat import AnswerResponse, ChatAskRequest
+from app.schemas.chat import (
+    AnswerResponse,
+    ChatAskRequest,
+    SuggestedQuestionResponse,
+    SuggestedQuestionsResponse,
+)
 from app.schemas.errors import ErrorResponse
 from app.services import chat_audit_integration, security_audit_integration
 from app.services.audit_service import AuditService as PersistedAuditService
 from app.services.conversation_chat_service import ConversationChatService
 from app.services.rag_service import RagService
+from app.services.suggested_questions import SuggestedQuestionService
 
 router = APIRouter()
 logger = get_logger(__name__)
@@ -65,6 +70,10 @@ _CHAT_ERROR_RESPONSES: dict[int, dict[str, object]] = {
         "model": ErrorResponse,
         "description": "Request validation failed.",
     },
+    429: {
+        "model": ErrorResponse,
+        "description": "Too many chat requests.",
+    },
     503: {
         "model": ErrorResponse,
         "description": "Knowledge service is temporarily unavailable.",
@@ -78,15 +87,6 @@ _CHAT_ERROR_RESPONSES: dict[int, dict[str, object]] = {
 
 def _elapsed_ms(start: float) -> float:
     return round((time.perf_counter() - start) * 1000, 2)
-
-
-def _client_ip(request: Request) -> str | None:
-    forwarded_for = request.headers.get("X-Forwarded-For")
-    if forwarded_for:
-        return forwarded_for.split(",")[0].strip()
-    if request.client:
-        return request.client.host
-    return None
 
 
 def _log_chat_success(user_id: str, start: float) -> None:
@@ -111,22 +111,6 @@ def _primary_role_name(user: User) -> str:
     return primary_role.name
 
 
-def _empty_authorized_response(query: str, role: str) -> QueryResponse:
-    """Build a QueryResponse for when no authorized sources remain."""
-    return QueryResponse(
-        query=query,
-        role=role,
-        routed_category="",
-        route_confidence=0.0,
-        answer=EMPTY_RETRIEVAL_MESSAGE,
-        sources_used=[],
-        citations=[],
-        confidence_score=0.0,
-        access_granted=True,
-        message=EMPTY_RETRIEVAL_MESSAGE,
-    )
-
-
 def _get_authorized_sources(
     user: User,
     repository: DocumentRepository,
@@ -138,12 +122,9 @@ def _get_authorized_sources(
     single batch query, applies ``DocumentAuthorizationService`` rules, and
     returns the set of authorized filenames.
 
-    Returns ``None`` when the repository is unavailable (graceful fallback
-    to category-based RBAC only) so that a transient DB error does not
-    silently deny retrieval — consistent with the fail-open-for-legacy-docs
-    policy for filesystem-only sources.
-
-    In practice the repository is always available during a normal request.
+    Returns an empty frozenset when the repository is unavailable (fail
+    closed). Never returns ``None`` — that would disable source filtering
+    in the RAG engine and leak unauthorized document content.
     """
     try:
         # Fetch all searchable documents in one query.  For large corpora a
@@ -176,15 +157,15 @@ def _get_authorized_sources(
 
         return authorized
     except Exception:
-        # Graceful fallback — do not let a DB error block the query.
+        # Fail closed — never disable document ACL on lookup errors.
         log_with_fields(
             logger,
-            logging.WARNING,
-            "Retrieval authorization source lookup failed; falling back to category RBAC",
+            logging.ERROR,
+            "Retrieval authorization source lookup failed; denying all sources",
             user_id=str(user.id),
             query_id=query_id,
         )
-        return None
+        return frozenset()
 
 
 @router.post(
@@ -209,6 +190,13 @@ def ask_question(
     audit_service: PersistedAuditService = Depends(get_audit_service),
 ) -> AnswerResponse:
     """Submit a conversation-aware enterprise question and receive a RAG answer."""
+    enforce_rate_limit(
+        request,
+        bucket="chat-ask",
+        max_calls=30,
+        window_seconds=60,
+        detail="Too many questions. Please try again later.",
+    )
     start = time.perf_counter()
     user_id = str(current_user.id)
     query_id = str(uuid.uuid4())
@@ -285,3 +273,50 @@ def ask_question(
     )
     _log_chat_success(user_id, start)
     return map_chat_result_to_answer_response(result)
+
+
+@router.get(
+    "/suggested-questions",
+    response_model=SuggestedQuestionsResponse,
+    summary="Get contextual suggested questions",
+    description=(
+        "Returns a short list of AI-generated example questions grounded in "
+        "the currently indexed documents the caller is authorized to read. "
+        "Falls back to generic onboarding questions when no authorized, "
+        "indexed documents exist. The underlying candidate pool is cached "
+        "and only regenerated when documents are uploaded, deleted, or "
+        "reindexed — never on a plain page refresh."
+    ),
+    responses={
+        401: {
+            "model": ErrorResponse,
+            "description": "Missing or invalid authentication token.",
+        },
+    },
+)
+def get_suggested_questions(
+    current_user: User = Depends(get_current_user),
+    repository: DocumentRepository = Depends(get_document_repository),
+    service: SuggestedQuestionService = Depends(get_suggested_question_service_dep),
+) -> SuggestedQuestionsResponse:
+    """Return authorized, document-grounded suggested questions for the chat UI."""
+    query_id = str(uuid.uuid4())
+    pool = service.get_candidate_pool()
+    candidate_sources = frozenset(question.source for question in pool if question.source)
+
+    authorized_sources = frozenset()
+    if candidate_sources:
+        authorized_sources = RetrievalAuthorizationService.get_authorized_sources(
+            current_user,
+            candidate_sources,
+            repository,
+            query_id=query_id,
+        )
+
+    suggestions = service.get_suggestions(authorized_sources)
+    return SuggestedQuestionsResponse(
+        items=[
+            SuggestedQuestionResponse(text=question.text, source=question.source or None)
+            for question in suggestions
+        ]
+    )

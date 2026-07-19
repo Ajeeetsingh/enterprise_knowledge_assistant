@@ -1,12 +1,13 @@
 import { useId, useState, type ReactNode } from 'react'
-import { useNavigate } from 'react-router-dom'
 
 import { InfoIcon } from '@/components/layout/NavIcons'
 import { useToast } from '@/contexts/ToastContext'
 import {
   buildCitationViewerParams,
   buildDocumentViewerUrl,
+  openDocumentInNewTab,
   resolveCitationDocumentId,
+  storeCitationHighlight,
 } from '@/features/document-viewer'
 import { getApiErrorMessage } from '@/services/errorHandler'
 import type { Citation } from '../types'
@@ -43,7 +44,6 @@ export default function AssistantMessagePresentation({
   className,
 }: AssistantMessagePresentationProps) {
   const panelId = useId()
-  const navigate = useNavigate()
   const { showError } = useToast()
   const [detailsOpen, setDetailsOpen] = useState(false)
   const [isOpeningSource, setIsOpeningSource] = useState(false)
@@ -60,8 +60,20 @@ export default function AssistantMessagePresentation({
         return
       }
 
+      const params = buildCitationViewerParams(citation)
+      const highlightInput: { excerpt: string; page?: number } = {
+        excerpt: citation.excerpt,
+      }
+      if (typeof citation.page === 'number' && citation.page > 0) {
+        highlightInput.page = citation.page
+      }
+      const citeKey = storeCitationHighlight(highlightInput)
+      if (citeKey) {
+        params.citeKey = citeKey
+      }
+
       setDetailsOpen(false)
-      navigate(buildDocumentViewerUrl(documentId, buildCitationViewerParams(citation)))
+      openDocumentInNewTab(buildDocumentViewerUrl(documentId, params))
     } catch (error) {
       showError(getApiErrorMessage(error))
     } finally {

@@ -13,7 +13,7 @@ export function DataTableShell({
   className,
 }: {
   children: ReactNode
-  className?: string
+  className?: string | undefined
 }) {
   return <div className={cn('data-table-shell', className)}>{children}</div>
 }

@@ -1,3 +1,9 @@
+# Local development stack ONLY.
+# Do NOT use this compose file as-is for a public portfolio deployment:
+# it forces APP_ENV=development (which permits the placeholder JWT secret),
+# publishes Postgres on the host, and uses a weak default DB password.
+# For public deploy: set APP_ENV=production, DEBUG=false, strong JWT_SECRET
+# and DB credentials via secrets, and do not expose Postgres publicly.
 services:
   postgres:
     image: postgres:16

@@ -342,6 +342,62 @@ class TestConversationUpdateTitle:
 
 
 # =========================================================================== #
+# ConversationRepository — set_title_if_unset (auto-title generation)          #
+# =========================================================================== #
+
+
+class TestConversationSetTitleIfUnset:
+    def test_sets_title_when_currently_unset(
+        self,
+        conv_repo: ConversationRepository,
+        user: User,
+    ) -> None:
+        conv = conv_repo.create(user_id=user.id, title=None)
+
+        updated = conv_repo.set_title_if_unset(conv.id, "Commercial Paper Issuers")
+
+        assert updated is not None
+        assert updated.title == "Commercial Paper Issuers"
+        fetched = conv_repo.get_by_id(conv.id)
+        assert fetched is not None
+        assert fetched.title == "Commercial Paper Issuers"
+
+    def test_does_not_overwrite_existing_title(
+        self,
+        conv_repo: ConversationRepository,
+        conversation: Conversation,
+    ) -> None:
+        result = conv_repo.set_title_if_unset(conversation.id, "New Auto Title")
+
+        assert result is None
+        fetched = conv_repo.get_by_id(conversation.id)
+        assert fetched is not None
+        assert fetched.title == "Test Conversation"
+
+    def test_returns_none_when_conversation_missing(
+        self,
+        conv_repo: ConversationRepository,
+    ) -> None:
+        assert conv_repo.set_title_if_unset(uuid.uuid4(), "Anything") is None
+
+    def test_second_call_is_a_no_op(
+        self,
+        conv_repo: ConversationRepository,
+        user: User,
+    ) -> None:
+        conv = conv_repo.create(user_id=user.id, title=None)
+
+        first = conv_repo.set_title_if_unset(conv.id, "First Title")
+        second = conv_repo.set_title_if_unset(conv.id, "Second Title")
+
+        assert first is not None
+        assert second is None
+        fetched = conv_repo.get_by_id(conv.id)
+        assert fetched is not None
+        assert fetched.title == "First Title"
+
+
+# =========================================================================== #
 # ConversationRepository — delete                                              #
 # =========================================================================== #
 

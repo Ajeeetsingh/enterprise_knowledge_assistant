@@ -7,7 +7,11 @@ import 'react-pdf/dist/Page/TextLayer.css'
 import { usePdfZoomGestures } from '../hooks/usePdfZoomGestures'
 import type { SearchablePdfDocument } from '../hooks/usePdfTextSearch'
 import '../pdfWorker'
-import type { DocumentViewerHighlightTarget, ZoomIntent } from '../types'
+import type { CitationHighlightResult, DocumentViewerHighlightTarget, ZoomIntent } from '../types'
+import {
+  findPageTextLayer,
+  highlightCitationInTextLayer,
+} from '../utils/applyTextLayerHighlight'
 import { computeRenderWidth } from '../utils/zoomMath'
 import DocumentPageSkeleton from './DocumentPageSkeleton'
 
@@ -24,6 +28,8 @@ export interface DocumentPdfViewerProps {
   onGoToPage: (page: number) => void
   scrollTargetPage?: number | null
   highlightTarget?: DocumentViewerHighlightTarget | null
+  /** Reports citation text-highlight outcome (progressive enhancement). */
+  onCitationHighlightResult?: (result: CitationHighlightResult) => void
   /** One-shot trigger for toolbar/keyboard zoom actions (see `usePdfZoomGestures`). */
   zoomIntent?: ZoomIntent | null
   /** Commits a new zoom/fitWidth value back to the viewer's source of truth. */
@@ -40,6 +46,7 @@ export default function DocumentPdfViewer({
   onGoToPage,
   scrollTargetPage,
   highlightTarget,
+  onCitationHighlightResult,
   zoomIntent,
   onZoomCommit,
 }: DocumentPdfViewerProps) {
@@ -51,6 +58,8 @@ export default function DocumentPdfViewer({
   const touchStartX = useRef<number | null>(null)
   const activeTouchCount = useRef(0)
   const pendingScrollPage = useRef<number | null>(null)
+  const lastHighlightKey = useRef<string | null>(null)
+  const highlightAttemptedFor = useRef<string | null>(null)
 
   useLayoutEffect(() => {
     const node = scrollRef.current
@@ -129,6 +138,76 @@ export default function DocumentPdfViewer({
       scrollToPage(scrollTargetPage)
     }
   }, [scrollTargetPage, scrollToPage])
+
+  // Re-apply highlights after zoom/layout rebuilds the text layer.
+  useEffect(() => {
+    lastHighlightKey.current = null
+  }, [pageWidth])
+
+  // Progressive enhancement: match citation excerpt against the cited page text layer only.
+  useEffect(() => {
+    const page = highlightTarget?.page
+    const excerpt = highlightTarget?.highlightText?.trim()
+    if (!page || !excerpt || numPages === 0) {
+      return
+    }
+
+    const highlightKey = `${page}::${excerpt}`
+    if (lastHighlightKey.current === highlightKey) {
+      return
+    }
+
+    let cancelled = false
+    let tries = 0
+
+    const attempt = (): boolean => {
+      if (cancelled) return true
+      const frame = pageRefs.current.get(page)
+      if (!frame) return false
+      const textLayer = findPageTextLayer(frame)
+      if (!textLayer || textLayer.querySelectorAll('span').length === 0) {
+        return false
+      }
+
+      const result = highlightCitationInTextLayer(textLayer, excerpt)
+      lastHighlightKey.current = highlightKey
+      highlightAttemptedFor.current = highlightKey
+      onCitationHighlightResult?.(result)
+      return true
+    }
+
+    if (attempt()) {
+      return () => {
+        cancelled = true
+      }
+    }
+
+    const timer = window.setInterval(() => {
+      tries += 1
+      if (attempt() || tries >= 25) {
+        window.clearInterval(timer)
+        if (
+          !cancelled &&
+          tries >= 25 &&
+          highlightAttemptedFor.current !== highlightKey
+        ) {
+          highlightAttemptedFor.current = highlightKey
+          onCitationHighlightResult?.('failed')
+        }
+      }
+    }, 120)
+
+    return () => {
+      cancelled = true
+      window.clearInterval(timer)
+    }
+  }, [
+    highlightTarget?.page,
+    highlightTarget?.highlightText,
+    numPages,
+    pageWidth,
+    onCitationHighlightResult,
+  ])
 
   useEffect(() => {
     const root = scrollRef.current
@@ -232,13 +311,6 @@ export default function DocumentPdfViewer({
                   className="document-page-frame relative"
                   style={{ width: pageWidth }}
                 >
-                  {/*
-                    RAG / OCR extension point: absolutely-positioned overlays
-                    (cited chunk highlight, paragraph boxes, OCR regions) can be
-                    rendered here per page using `highlightTarget` + `pdfProxy`.
-                    They scale together with the page automatically since they
-                    live inside the same zoom-transformed wrapper.
-                  */}
                   <Page
                     pageNumber={pageNumber}
                     width={pageWidth}

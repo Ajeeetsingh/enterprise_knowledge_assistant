@@ -4,9 +4,31 @@ from __future__ import annotations
 
 import uuid
 
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 from app.db.models import User
+
+
+class RegisterRequest(BaseModel):
+    """Public self-registration payload.
+
+    Privileged fields (role, permissions, is_superuser, is_active) are
+    intentionally omitted and rejected via ``extra='forbid'``.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    email: EmailStr
+    password: str = Field(min_length=8, max_length=128)
+    full_name: str = Field(min_length=1, max_length=255)
+    username: str | None = Field(default=None, max_length=100)
+
+
+class RegisterResponse(BaseModel):
+    id: uuid.UUID
+    email: EmailStr
+    full_name: str
+    message: str = "Account created successfully. You can now sign in."
 
 
 class LoginRequest(BaseModel):

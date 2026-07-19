@@ -6,7 +6,6 @@ import Spinner from '@/components/ui/Spinner'
 import { DEFAULT_DATE_RANGE_PRESET } from '@/features/analytics/constants'
 import type { AnalyticsFilterParams } from '@/features/analytics/types'
 import { useToast } from '@/contexts/ToastContext'
-import type { ApiError } from '@/types'
 
 import {
   DateRangeSelector,
@@ -16,36 +15,8 @@ import {
 } from '../components'
 import { useExportReport, useReportFormats, useReportModules } from '../hooks'
 import { downloadReportFile } from '../services/reportsApi'
-import type { ReportExportRequest, ReportFormatId, ReportModuleId } from '../types'
-
-function resolveErrorMessage(error: unknown): string {
-  if (error && typeof error === 'object' && 'message' in error) {
-    return String((error as ApiError).message)
-  }
-  return 'Unable to export report. Please try again.'
-}
-
-function buildExportRequest(
-  module: ReportModuleId,
-  format: ReportFormatId,
-  filters: AnalyticsFilterParams,
-): ReportExportRequest {
-  if (filters.range_preset === 'custom') {
-    return {
-      module,
-      format,
-      date_range: 'custom',
-      start_date: filters.start_date,
-      end_date: filters.end_date,
-    }
-  }
-
-  return {
-    module,
-    format,
-    date_range: filters.range_preset ?? DEFAULT_DATE_RANGE_PRESET,
-  }
-}
+import type { ReportFormatId, ReportModuleId } from '../types'
+import { resolveErrorMessage, buildExportRequest } from '../utils/exportHelpers'
 
 export default function ReportsPage() {
   const { showSuccess, showError } = useToast()

@@ -76,6 +76,43 @@ class ConversationRepository:
         self._db.refresh(conversation)
         return conversation
 
+    def set_title_if_unset(
+        self,
+        conversation_id: uuid.UUID,
+        title: str,
+    ) -> Conversation | None:
+        """Set the title only when it is currently ``NULL``.
+
+        Uses a conditional ``UPDATE ... WHERE title IS NULL`` so this is
+        safe to call speculatively (e.g. after every user message until a
+        title exists): a concurrent rename or a second auto-title attempt
+        can never overwrite a title that was already set, by the user or
+        by a prior successful auto-generation.
+
+        Args:
+            conversation_id: Primary key of the conversation to update.
+            title: New title to set.
+
+        Returns:
+            The updated ``Conversation`` when the title was set by this
+            call, or ``None`` when the conversation does not exist or
+            already had a title.
+        """
+        conversation = self.get_by_id(conversation_id)
+        if conversation is None:
+            return None
+
+        result = self._db.execute(
+            sa_update(Conversation)
+            .where(Conversation.id == conversation_id, Conversation.title.is_(None))
+            .values(title=title, updated_at=func.now())
+        )
+        self._db.commit()
+        if result.rowcount == 0:
+            return None
+        self._db.refresh(conversation)
+        return conversation
+
     def touch(self, conversation_id: uuid.UUID) -> None:
         """Update ``updated_at`` to the current database time.
 

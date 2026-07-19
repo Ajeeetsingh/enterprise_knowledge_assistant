@@ -9,19 +9,25 @@ Flow:
     3. Call ``RagService.answer_question`` with ``current_question`` for retrieval
        and formatted history for LLM prompt injection only.
     4. Persist the assistant message on success.
+    5. Generate and persist a conversation title, but only the first time a
+       conversation has none yet — see ``app.services.title_generation``.
 
 If RAG fails after step 1, the user message remains stored and the error
-propagates through existing global exception handling.
+propagates through existing global exception handling. Title generation
+(step 5) never propagates errors: any failure is logged and swallowed so it
+can never turn an otherwise-successful chat turn into a failed request.
 """
 
 from __future__ import annotations
 
+import logging
 import uuid
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
 from sqlalchemy.orm import Session
 
+from app.core.logging import get_logger, log_with_fields
 from app.db.models.message import Message
 from app.db.models.user import User
 from app.rag.answer_generator import UNAVAILABLE_MESSAGE
@@ -33,9 +39,13 @@ from app.services.context_builder import (
     ConversationContext,
 )
 from app.services.conversation_service import ConversationService
+from app.services.title_generation import generate_conversation_title
 
 if TYPE_CHECKING:
+    from app.llm.base import LLMProvider
     from app.services.rag_service import RagService
+
+logger = get_logger(__name__)
 
 
 @dataclass(frozen=True)
@@ -65,8 +75,14 @@ class ConversationChatService:
     remain in ``RagService`` and the route-layer authorization helpers.
     """
 
-    def __init__(self, conversation_service: ConversationService) -> None:
+    def __init__(
+        self,
+        conversation_service: ConversationService,
+        *,
+        title_llm_provider: "LLMProvider | None" = None,
+    ) -> None:
         self._conversation_service = conversation_service
+        self._title_llm_provider = title_llm_provider
 
     def ask_question(
         self,
@@ -130,6 +146,8 @@ class ConversationChatService:
             confidence_score=query_response.confidence_score,
         )
 
+        self._maybe_generate_title(user, conversation_id, question)
+
         return ConversationChatResult(
             conversation_id=conversation_id,
             answer=assistant_content,
@@ -164,6 +182,37 @@ class ConversationChatService:
             history,
             max_chars=MAX_CONTEXT_CHARACTERS,
         )
+
+    def _maybe_generate_title(
+        self,
+        user: User,
+        conversation_id: uuid.UUID,
+        question: str,
+    ) -> None:
+        """Generate and persist a title after the conversation's first message.
+
+        No-op once a title already exists — checked up front to avoid an
+        unnecessary LLM call on every later message, and enforced again
+        atomically by ``set_auto_generated_title``. Any failure (LLM error,
+        or anything else unexpected) is logged and swallowed: title
+        generation must never turn an otherwise-successful chat turn into a
+        failed request.
+        """
+        try:
+            conversation = self._conversation_service.get_conversation(user, conversation_id)
+            if conversation.title is not None:
+                return
+
+            title = generate_conversation_title(question, self._title_llm_provider)
+            self._conversation_service.set_auto_generated_title(user, conversation_id, title)
+        except Exception as exc:
+            log_with_fields(
+                logger,
+                logging.WARNING,
+                "Conversation auto-title generation failed; leaving title unset",
+                conversation_id=str(conversation_id),
+                reason=type(exc).__name__,
+            )
 
 
 def resolve_assistant_content(query_response: QueryResponse) -> str:
@@ -207,5 +256,9 @@ def _serialize_citations(citations: list[Citation]) -> list[dict[str, Any]]:
 def build_conversation_chat_service(db: Session) -> ConversationChatService:
     """Construct a ``ConversationChatService`` bound to *db*."""
     from app.services.conversation_service import build_conversation_service
+    from app.services.title_generation import get_title_llm_provider
 
-    return ConversationChatService(build_conversation_service(db))
+    return ConversationChatService(
+        build_conversation_service(db),
+        title_llm_provider=get_title_llm_provider(),
+    )

@@ -1,5 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 
+import { chatQueryKeys } from '@/features/chat/hooks/queryKeys'
+
 import type { PaginatedDocumentResponse } from '../types'
 import * as documentApi from '../services/documentApi'
 import { documentQueryKeys } from './queryKeys'
@@ -25,6 +27,8 @@ export function useDeleteDocument() {
       )
       void queryClient.invalidateQueries({ queryKey: documentQueryKeys.list() })
       void queryClient.removeQueries({ queryKey: documentQueryKeys.detail(documentId) })
+      // Removed content may change what questions are worth suggesting.
+      void queryClient.invalidateQueries({ queryKey: chatQueryKeys.suggestedQuestions() })
     },
   })
 }

@@ -35,14 +35,6 @@ export interface Citation {
   metadata?: Record<string, unknown>
 }
 
-export interface CitationDetails {
-  source: string
-  excerpt: string | null
-  confidence: number
-  page: number | null
-  metadata?: Record<string, unknown>
-}
-
 export function formatCitationConfidence(confidence: number): string {
   return `${Math.round(confidence * 100)}%`
 }
@@ -73,6 +65,18 @@ export interface ChatResponse {
   confidence_score: number
   citations: Citation[]
   message: string
+}
+
+/** A single AI-generated suggested question shown in the chat empty state. */
+export interface SuggestedQuestion {
+  text: string
+  /** Filename of the document that inspired this suggestion, or `null` for
+   * generic onboarding prompts shown when no authorized documents exist. */
+  source: string | null
+}
+
+export interface SuggestedQuestionsResponse {
+  items: SuggestedQuestion[]
 }
 
 /** Normalise citation objects returned on message history records. */

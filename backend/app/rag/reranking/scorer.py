@@ -13,7 +13,12 @@ from app.rag.types import calibrate_confidence
 
 
 def _normalize_scores(scores: list[float]) -> list[float]:
-    """Legacy min-max normalization retained for explainability comparisons."""
+    """Min-max normalize raw cross-encoder logits to [0, 1] within one pool.
+
+    Used to blend the cross-encoder's opinion with the metadata bonus on a
+    comparable scale — the model's own scores are unit-less logits, so a
+    fixed-scale bonus cannot be combined with them directly.
+    """
     if not scores:
         return []
     low = min(scores)
@@ -21,6 +26,13 @@ def _normalize_scores(scores: list[float]) -> list[float]:
     if high <= low:
         return [1.0 for _ in scores]
     return [round((score - low) / (high - low), 4) for score in scores]
+
+
+def _metadata_component(metadata_bonus: float | None, reference: float) -> float:
+    """Scale a metadata bonus to [0, 1] relative to its configured maximum."""
+    if not metadata_bonus or reference <= 0:
+        return 0.0
+    return min(1.0, max(0.0, metadata_bonus / reference))
 
 
 def _reranker_display_confidence(result, raw_reranker_score: float) -> float:
@@ -102,26 +114,52 @@ def _build_rerank_explanation(
 def apply_reranker_scores(
     results: list,
     scores: list[float],
+    *,
+    metadata_bonus_weight: float = 0.0,
+    metadata_bonus_reference: float = 1.0,
 ) -> list:
-    """Return results sorted by reranker score with explainability fields."""
+    """Return results sorted by (metadata-aware) reranker score.
+
+    When ``metadata_bonus_weight`` is 0 (the default), ranking is purely the
+    raw cross-encoder score — identical to the original behaviour. When
+    positive, the final ranking blends the normalized cross-encoder score
+    with each result's existing ``metadata_bonus`` (heading/section
+    similarity, chunk-type intent, continuity — computed upstream by
+    ``MetadataAwareRetriever`` and already present on the result). This is
+    "metadata-aware reranking": the cross-encoder model itself is untouched,
+    only how its output is combined with signals the retriever already
+    computed changes.
+    """
     if not results or not scores:
         return results
 
+    normalized_scores = _normalize_scores(scores)
     enriched: list = []
-    for result, reranker_score in zip(results, scores, strict=True):
+    for result, reranker_score, normalized_score in zip(
+        results, scores, normalized_scores, strict=True
+    ):
         display_confidence = _reranker_display_confidence(result, reranker_score)
+        combined_score = reranker_score
+        if metadata_bonus_weight > 0:
+            metadata_component = _metadata_component(
+                result.metadata_bonus, metadata_bonus_reference
+            )
+            combined_score = (
+                (1 - metadata_bonus_weight) * normalized_score
+                + metadata_bonus_weight * metadata_component
+            )
         enriched.append(
             replace(
                 result,
                 reranker_score=round(reranker_score, 4),
                 confidence=display_confidence,
-                final_score=round(reranker_score, 4),
+                final_score=round(combined_score, 4),
             )
         )
 
     enriched.sort(
         key=lambda item: (
-            -(item.reranker_score or 0.0),
+            -(item.final_score if item.final_score is not None else 0.0),
             item.chunk_id,
         )
     )

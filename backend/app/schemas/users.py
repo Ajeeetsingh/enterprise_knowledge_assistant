@@ -11,10 +11,17 @@ from app.db.models import User
 
 
 class UserCreateRequest(BaseModel):
+    """Admin-only user creation. Requires an initial system role."""
+
     email: EmailStr
-    password: str = Field(min_length=1)
+    password: str = Field(min_length=8, max_length=128)
     full_name: str = Field(min_length=1, max_length=255)
     username: str | None = Field(default=None, max_length=100)
+    role: str = Field(
+        min_length=1,
+        max_length=100,
+        description="Initial system role to assign (Admin, HR, Finance, or Employee).",
+    )
 
 
 class UserUpdateRequest(BaseModel):

@@ -122,3 +122,50 @@ class AnswerResponse(BaseModel):
         description="Status or contextual message about how the answer was produced.",
         examples=["Answer generated from hr_policy.txt."],
     )
+
+
+class SuggestedQuestionResponse(BaseModel):
+    """A single AI-generated suggested question for the chat empty state."""
+
+    text: str = Field(
+        ...,
+        description="Suggested question or prompt text.",
+        examples=["What are the main commercial paper issuers?"],
+    )
+    source: str | None = Field(
+        default=None,
+        description=(
+            "Filename of the document that inspired this suggestion, or "
+            "null for generic onboarding prompts shown when no authorized "
+            "documents are indexed yet."
+        ),
+        examples=["commercial_paper_market.pdf"],
+    )
+
+
+class SuggestedQuestionsResponse(BaseModel):
+    """Public API response for contextual suggested questions."""
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {
+                    "items": [
+                        {
+                            "text": "What are the main commercial paper issuers?",
+                            "source": "commercial_paper_market.pdf",
+                        },
+                        {
+                            "text": "How do Money Market Funds invest in commercial paper?",
+                            "source": "commercial_paper_market.pdf",
+                        },
+                    ]
+                }
+            ]
+        }
+    )
+
+    items: list[SuggestedQuestionResponse] = Field(
+        default_factory=list,
+        description="Up to a handful of contextual suggested questions.",
+    )

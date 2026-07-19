@@ -1,6 +1,5 @@
 export { useCreateUser } from './useCreateUser'
 export type { CreateUserInput } from './useCreateUser'
-export { useDisableUser } from './useDisableUser'
 export { useRoles } from './useRoles'
 export { useToggleUserStatus } from './useToggleUserStatus'
 export type { ToggleUserStatusInput } from './useToggleUserStatus'

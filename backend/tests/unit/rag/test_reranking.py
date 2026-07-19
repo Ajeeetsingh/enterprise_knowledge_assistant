@@ -135,6 +135,60 @@ class TestApplyRerankerScores:
         assert [item.chunk_id for item in first] == [item.chunk_id for item in second]
         assert first[0].chunk_id == "a"
 
+    def test_metadata_bonus_weight_zero_matches_prior_behavior(self) -> None:
+        """Default (weight=0) blending must reproduce the original raw-score
+        ranking exactly — this is the backward-compatibility guard for the
+        metadata-aware reranking fix."""
+        results = [
+            _result("a", "alpha", metadata_bonus=0.15),
+            _result("b", "beta", metadata_bonus=0.0),
+            _result("c", "gamma", metadata_bonus=0.1),
+        ]
+        reranked = apply_reranker_scores(results, [0.2, 0.9, 0.5])
+        assert [item.chunk_id for item in reranked] == ["b", "c", "a"]
+        assert reranked[0].final_score == reranked[0].reranker_score == 0.9
+
+    def test_metadata_bonus_breaks_close_cross_encoder_tie(self) -> None:
+        """When the cross-encoder is nearly undecided between two closely
+        related chunks in a larger candidate pool, a meaningfully stronger
+        metadata/heading bonus should be able to flip their *relative*
+        order — this is the "metadata-aware reranking" fix for cases like
+        issuers vs. investors sections. (A 2-item pool is avoided here
+        because min-max normalization degenerates to a hard 0/1 split for
+        exactly two scores, which isn't representative of a real rerank
+        pool of ~20 candidates.)"""
+        results = [
+            _result("distractor_high", "unrelated but strong match", metadata_bonus=0.0),
+            _result("investors", "investors body", metadata_bonus=0.02),
+            _result("issuers", "issuers body", metadata_bonus=0.12),
+            _result("distractor_low", "unrelated weak match", metadata_bonus=0.0),
+        ]
+        # Cross-encoder scores are close for investors/issuers (investors
+        # slightly ahead) — a realistic model-confusion scenario.
+        reranked = apply_reranker_scores(
+            results,
+            [0.95, 0.60, 0.58, 0.10],
+            metadata_bonus_weight=0.3,
+            metadata_bonus_reference=0.15,
+        )
+        ranked_ids = [item.chunk_id for item in reranked]
+        assert ranked_ids.index("issuers") < ranked_ids.index("investors")
+
+    def test_metadata_bonus_does_not_override_decisive_cross_encoder_gap(self) -> None:
+        """A small metadata bonus must not overturn a clearly decisive
+        cross-encoder preference — the model remains the dominant signal."""
+        results = [
+            _result("weak_heading_strong_match", "content", metadata_bonus=0.15),
+            _result("no_heading_best_match", "content", metadata_bonus=0.0),
+        ]
+        reranked = apply_reranker_scores(
+            results,
+            [0.05, 0.98],
+            metadata_bonus_weight=0.3,
+            metadata_bonus_reference=0.15,
+        )
+        assert reranked[0].chunk_id == "no_heading_best_match"
+
     def test_explainability_fields_present(self) -> None:
         result = _result(
             "x",

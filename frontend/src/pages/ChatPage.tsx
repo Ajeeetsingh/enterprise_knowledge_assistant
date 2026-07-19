@@ -1,10 +1,9 @@
-import { useEffect, useState } from 'react'
-import { useNavigate, useOutletContext, useSearchParams } from 'react-router-dom'
+import { useEffect, useRef, useState } from 'react'
+import { useLocation, useNavigate, useOutletContext, useSearchParams } from 'react-router-dom'
 
 import ChatArea from '@/features/chat/components/ChatArea'
 import ConversationList from '@/features/chat/components/ConversationList'
 import DeleteConversationDialog from '@/features/chat/components/DeleteConversationDialog'
-import RenameConversationModal from '@/features/chat/components/RenameConversationModal'
 import ChatLayout from '@/features/chat/layouts/ChatLayout'
 import { useConversations } from '@/features/chat/hooks/useConversations'
 import { useCreateConversation } from '@/features/chat/hooks/useCreateConversation'
@@ -13,33 +12,30 @@ import { useRenameConversation } from '@/features/chat/hooks/useRenameConversati
 import type { Conversation } from '@/features/chat/types'
 import { useLayoutContext } from '@/contexts/LayoutContext'
 import { useToast } from '@/contexts/ToastContext'
-import { getApiErrorMessage } from '@/services/errorHandler'
-import type { ApiError } from '@/types'
+import { getApiErrorMessage, resolveErrorMessage } from '@/services/errorHandler'
 
 interface ChatOutletContext {
   sidebarWidth: number
   sidebarCollapsed: boolean
 }
 
-function resolveErrorMessage(error: unknown): string {
-  if (error && typeof error === 'object' && 'message' in error) {
-    return String((error as ApiError).message)
-  }
-  return 'Something went wrong. Please try again.'
+interface ChatLocationState {
+  initialQuestion?: string
 }
 
 export default function ChatPage() {
   const navigate = useNavigate()
+  const location = useLocation()
   const [searchParams, setSearchParams] = useSearchParams()
   const { sidebarWidth, sidebarCollapsed } = useOutletContext<ChatOutletContext>()
   const { setChatRouteActive, closeConversationDrawer, setMobileChatPanel } = useLayoutContext()
   const selectedConversationId = searchParams.get('conversation')
   const { showSuccess, showError } = useToast()
 
-  const [renameTarget, setRenameTarget] = useState<Conversation | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<Conversation | null>(null)
-  const [renameError, setRenameError] = useState<string | null>(null)
   const [deleteError, setDeleteError] = useState<string | null>(null)
+  const [pendingQuestion, setPendingQuestion] = useState<string | null>(null)
+  const bootstrapStarted = useRef(false)
 
   const { data, isLoading, isError, error } = useConversations()
   const createConversation = useCreateConversation()
@@ -52,6 +48,37 @@ export default function ChatPage() {
     setChatRouteActive(true)
     return () => setChatRouteActive(false)
   }, [setChatRouteActive])
+
+  // Dashboard "Ask anything" deep-link: create a conversation and hand the
+  // question to ChatArea once. Clears location state so refresh does not re-ask.
+  useEffect(() => {
+    const state = location.state as ChatLocationState | null
+    const question = state?.initialQuestion?.trim()
+    if (!question || bootstrapStarted.current) return
+
+    bootstrapStarted.current = true
+    let cancelled = false
+
+    async function bootstrap() {
+      try {
+        const conversation = await createConversation.mutateAsync()
+        if (cancelled) return
+        setPendingQuestion(question!)
+        navigate(`/chat?conversation=${conversation.id}`, {
+          replace: true,
+          state: {},
+        })
+      } catch (mutationError) {
+        bootstrapStarted.current = false
+        showError(getApiErrorMessage(mutationError))
+      }
+    }
+
+    void bootstrap()
+    return () => {
+      cancelled = true
+    }
+  }, [location.state, createConversation, navigate, showError])
 
   function handleSelectConversation(conversationId: string) {
     setSearchParams({ conversation: conversationId })
@@ -90,31 +117,12 @@ export default function ChatPage() {
     setMobileChatPanel,
   ])
 
-  function openRename(conversation: Conversation) {
-    setRenameError(null)
-    setRenameTarget(conversation)
-  }
-
-  function closeRename() {
-    if (renameConversation.isPending) return
-    setRenameTarget(null)
-    setRenameError(null)
-  }
-
-  async function handleRenameSave(title: string) {
-    if (!renameTarget) return
-    setRenameError(null)
+  async function handleInlineRename(conversationId: string, title: string) {
     try {
-      await renameConversation.mutateAsync({
-        conversationId: renameTarget.id,
-        title,
-      })
-      setRenameTarget(null)
+      await renameConversation.mutateAsync({ conversationId, title })
       showSuccess('Conversation renamed.')
     } catch (mutationError) {
-      const message = getApiErrorMessage(mutationError)
-      setRenameError(message)
-      showError(message)
+      showError(getApiErrorMessage(mutationError))
     }
   }
 
@@ -160,24 +168,20 @@ export default function ChatPage() {
             selectedId={selectedConversationId}
             isLoading={isLoading}
             isCreating={createConversation.isPending}
-            error={isError ? resolveErrorMessage(error) : null}
+            error={isError ? resolveErrorMessage(error, 'Something went wrong. Please try again.') : null}
             onSelect={handleSelectConversation}
             onCreate={() => void handleCreateConversation()}
-            onRename={openRename}
+            onRename={(conversationId, title) => void handleInlineRename(conversationId, title)}
             onDelete={openDelete}
           />
         }
-        chatArea={<ChatArea conversationId={selectedConversationId} />}
-      />
-
-      <RenameConversationModal
-        conversation={renameTarget}
-        isOpen={renameTarget !== null}
-        isSaving={renameConversation.isPending}
-        error={renameError}
-        onClose={closeRename}
-        onSave={(title) => void handleRenameSave(title)}
-      />
+        chatArea={
+          <ChatArea
+            conversationId={selectedConversationId}
+            initialQuestion={pendingQuestion}
+            onInitialQuestionConsumed={() => setPendingQuestion(null)}
+          />
+        }      />
 
       <DeleteConversationDialog
         conversation={deleteTarget}

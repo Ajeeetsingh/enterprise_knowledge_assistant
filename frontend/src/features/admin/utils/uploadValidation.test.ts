@@ -13,12 +13,12 @@ describe('validateDocumentFile', () => {
   })
 
   it('rejects unsupported file types', () => {
-    expect(validateDocumentFile(createFile('notes.exe', 100))).toBe('Unsupported file type.')
+    expect(validateDocumentFile(createFile('notes.exe', 100))).toMatch(/Unsupported file type/)
   })
 
   it('rejects files over the size limit', () => {
-    expect(validateDocumentFile(createFile('large.pdf', 51 * 1024 * 1024))).toBe(
-      'File exceeds the 50MB limit.',
+    expect(validateDocumentFile(createFile('large.pdf', 51 * 1024 * 1024))).toMatch(
+      /File exceeds the 50 MB upload limit/,
     )
   })
 
@@ -48,7 +48,7 @@ describe('validateDocumentFileSelection', () => {
       createFile('big.pdf', 51 * 1024 * 1024),
     ]
 
-    expect(validateDocumentFileSelection(files)).toBe('big.pdf exceed(s) the 50MB limit.')
+    expect(validateDocumentFileSelection(files)).toMatch(/^big\.pdf:/)
   })
 
   it('accepts valid batches', () => {
