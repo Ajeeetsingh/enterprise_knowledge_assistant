@@ -13,4 +13,4 @@ npm run build    # production bundle in dist/
 
 Configure `VITE_API_BASE_URL` via `.env` (see `.env.example`).
 
-Project-wide setup, architecture, and deployment: repository root [README.md](../README.md) and [docs/](../docs/).
+Project-wide docs: repository root [README.md](../README.md), full reference [docs/PROJECT_OVERVIEW.md](../docs/PROJECT_OVERVIEW.md), and other guides under [docs/](../docs/).

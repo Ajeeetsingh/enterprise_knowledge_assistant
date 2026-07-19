@@ -37,6 +37,7 @@ py scripts/measure_performance.py --full
 
 ## Documentation
 
+- **[docs/PROJECT_OVERVIEW.md](../../docs/PROJECT_OVERVIEW.md)** — full product & system reference
 - **[docs/TESTING.md](../../docs/TESTING.md)** — automated tests, manual checklist, evaluation entry points
 - **[docs/ARCHITECTURE.md](../../docs/ARCHITECTURE.md)** — ingestion and retrieval pipelines
 - **[docs/DEVELOPMENT.md](../../docs/DEVELOPMENT.md)** — local setup

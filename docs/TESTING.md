@@ -1,5 +1,8 @@
 # Testing
 
+Product context: [PROJECT_OVERVIEW.md](PROJECT_OVERVIEW.md) (§17 Testing and evaluation).  
+Local setup before manual checks: [DEVELOPMENT.md](DEVELOPMENT.md).
+
 ## Automated suites
 
 ### Backend

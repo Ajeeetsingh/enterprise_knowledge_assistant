@@ -2,6 +2,9 @@
 
 Production-oriented deployment for a single-organisation portfolio or demo host.
 
+Product and architecture context: [PROJECT_OVERVIEW.md](PROJECT_OVERVIEW.md) · [ARCHITECTURE.md](ARCHITECTURE.md).  
+Local development setup: [DEVELOPMENT.md](DEVELOPMENT.md).
+
 ## What this guide covers
 
 - Environment configuration

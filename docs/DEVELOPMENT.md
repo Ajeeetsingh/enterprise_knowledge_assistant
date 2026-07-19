@@ -2,6 +2,9 @@
 
 Local setup for engineers working on Enterprise Knowledge Assistant.
 
+Product and architecture context: [PROJECT_OVERVIEW.md](PROJECT_OVERVIEW.md) · [ARCHITECTURE.md](ARCHITECTURE.md).  
+Production deploy steps: [DEPLOYMENT.md](DEPLOYMENT.md) (do not use this file for production hosting).
+
 ## Prerequisites
 
 - Python **3.12+**
@@ -66,7 +69,7 @@ python scripts/seed_database.py --roles
 python scripts/seed_database.py --admin
 ```
 
-This creates system roles and a local admin (`admin@example.com`). **These credentials are for local development only** — see [DEPLOYMENT.md](DEPLOYMENT.md) for production bootstrap.
+This creates system roles and a local admin (`admin@example.com`). **These credentials are for local development only.** Production bootstrap is documented in [DEPLOYMENT.md](DEPLOYMENT.md).
 
 ### Optional demo data
 
@@ -82,7 +85,7 @@ Convenience wrapper used by the manual checklist:
 python scripts/setup_manual_testing.py
 ```
 
-Demo accounts (password `DemoPass1!`) include HR, Finance, Employee, and Quiet Employee (`quiet@example.com`) — an **Employee** user with no seeded activity for analytics tests. Demo seeding is never automatic on application start.
+Demo accounts (password `DemoPass1!`) include HR, Finance, Employee, and Quiet Employee (`quiet@example.com`) — an **Employee** user with no seeded activity for analytics tests. Demo seeding is never automatic on application start. Account table: [TESTING.md](TESTING.md).
 
 ## Run the app
 
@@ -123,17 +126,18 @@ backend/app/          FastAPI application (api, auth, ingestion, rag, services)
 backend/alembic/      Schema migrations
 frontend/src/         React application (pages, features, layouts)
 scripts/              Seeding and local setup helpers
-docs/                 Architecture, development, deployment, testing
-docker-compose.yml    Local development stack
-docker-compose.prod.yml  Production-oriented API + Postgres
+docs/                 PROJECT_OVERVIEW, architecture, development, deployment, testing
+docker-compose.yml    Local development Postgres (+ optional backend)
 ```
+
+Production Compose layout and volumes: [DEPLOYMENT.md](DEPLOYMENT.md).
 
 ## Public registration (local)
 
 With roles seeded, open `/register`, create an account, then sign in. The backend always assigns **Employee**. Promote users from `/admin/users`.
 
-## Notes
+## Local notes
 
-- `docker-compose.yml` forces `APP_ENV=development` and publishes Postgres — use it for local work only.
-- Rate limiting is in-memory (single process); fine for local/demo, not multi-worker clusters.
+- `docker-compose.yml` forces `APP_ENV=development` and publishes Postgres — local work only.
 - Dev-only UI routes (`/auth-debug`, `/design-system`, …) are stripped from production builds.
+- Multi-worker / production rate-limiting and other host constraints: see [DEPLOYMENT.md](DEPLOYMENT.md#known-deployment-limitations) and [PROJECT_OVERVIEW.md §19](PROJECT_OVERVIEW.md#19-known-limitations).
