@@ -24,8 +24,8 @@ cp frontend/.env.example frontend/.env
 
 Edit `.env`:
 
-- `DATABASE_URL` — for host-run backend talking to Compose Postgres, use `localhost:5432`
-- `JWT_SECRET` — any non-empty value is fine in `APP_ENV=development`
+- `DATABASE_URL` - for host-run backend talking to Compose Postgres, use `localhost:5432`
+- `JWT_SECRET` - any non-empty value is fine in `APP_ENV=development`
 - `GROQ_API_KEY` (or another LLM provider) when you want live answers
 
 Edit `frontend/.env`:
@@ -89,14 +89,14 @@ Demo accounts (password `DemoPass1!`) include HR, Finance, Employee, and Quiet E
 
 ## Run the app
 
-Terminal 1 — API:
+Terminal 1 - API:
 
 ```bash
 cd backend
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-Terminal 2 — UI:
+Terminal 2 - UI:
 
 ```bash
 cd frontend

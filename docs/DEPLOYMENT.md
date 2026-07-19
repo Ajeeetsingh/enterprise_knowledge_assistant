@@ -18,9 +18,9 @@ This is **not** a multi-region SaaS / Kubernetes guide.
 
 ## Architecture of a typical deploy
 
-1. **PostgreSQL** — private network only  
-2. **Backend** (FastAPI / Uvicorn) — public HTTPS reverse-proxy in front  
-3. **Frontend** — static build hosted separately (CDN, object storage, or nginx), with `VITE_API_BASE_URL` baked in at build time  
+1. **PostgreSQL** - private network only  
+2. **Backend** (FastAPI / Uvicorn) - public HTTPS reverse-proxy in front  
+3. **Frontend** - static build hosted separately (CDN, object storage, or nginx), with `VITE_API_BASE_URL` baked in at build time  
 
 ## Environment variables
 
@@ -125,7 +125,7 @@ Losing `backend_storage` requires re-ingestion or index rebuild from searchable 
 
 ## Health checks
 
-- `GET /health` — liveness for Compose / load balancers  
+- `GET /health` - liveness for Compose / load balancers  
 - Optional readiness: confirm DB connectivity in your host’s monitoring  
 
 ## Deployment checklist

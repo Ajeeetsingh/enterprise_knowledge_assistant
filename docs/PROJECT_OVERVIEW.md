@@ -1,4 +1,4 @@
-# Enterprise Knowledge Assistant — Project Overview
+# Enterprise Knowledge Assistant - Project Overview
 
 This document is the detailed reference for the **implemented** product: what it is, who it is for, how the system works end-to-end, and how the major pieces fit together.
 
