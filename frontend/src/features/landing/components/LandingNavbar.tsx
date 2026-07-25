@@ -6,18 +6,24 @@ import { cn } from '@/utils/cn'
 import LandingDevTools from './LandingDevTools'
 import { ctaNavGhostClass, ctaNavPrimaryClass } from './ctaStyles'
 
+const SECTION_LINKS = [
+  { href: '#features', label: 'Features' },
+  { href: '#how-it-works', label: 'How it works' },
+  { href: '#security', label: 'Security' },
+] as const
+
 export default function LandingNavbar() {
   const { isAuthenticated, isLoading } = useAuth()
   const showDashboard = !isLoading && isAuthenticated
 
   return (
-    <header className="sticky top-0 z-40 border-b border-border-subtle bg-[color-mix(in_srgb,var(--bg-canvas)_82%,transparent)] backdrop-blur-md">
+    <header className="sticky top-0 z-40 border-b border-white/50 bg-[rgba(255,255,255,0.72)] backdrop-blur-xl backdrop-saturate-150">
       <div className="mx-auto flex h-14 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
         <Link
           to="/"
           className={cn(
-            'group flex min-w-0 items-center gap-2.5 rounded-md text-foreground',
-            'focus-visible:outline-none focus-visible:shadow-[0_0_0_3px_var(--accent-muted)]',
+            'group flex min-w-0 items-center gap-2.5 rounded-xl text-[#111827]',
+            'focus-visible:outline-none focus-visible:shadow-[0_0_0_3px_rgb(109_40_217_/_0.25)]',
           )}
         >
           <img
@@ -28,11 +34,26 @@ export default function LandingNavbar() {
             className="size-7 shrink-0"
           />
           <span className="truncate text-sm font-semibold tracking-tight sm:text-[15px]">
-            Enterprise Knowledge Assistant
+            Knowra
           </span>
         </Link>
 
         <nav aria-label="Primary" className="flex items-center gap-2 sm:gap-3">
+          <div className="mr-1 hidden items-center gap-4 lg:flex">
+            {SECTION_LINKS.map((link) => (
+              <a
+                key={link.href}
+                href={link.href}
+                className={cn(
+                  'text-sm font-medium text-[#4B5563] transition-colors hover:text-[#111827]',
+                  'focus-visible:outline-none focus-visible:shadow-[0_0_0_3px_rgb(109_40_217_/_0.25)]',
+                )}
+              >
+                {link.label}
+              </a>
+            ))}
+          </div>
+
           {import.meta.env.DEV && <LandingDevTools />}
 
           {showDashboard ? (
@@ -44,8 +65,8 @@ export default function LandingNavbar() {
               <Link to="/login" className={cn(ctaNavGhostClass, 'hidden sm:inline-flex')}>
                 Sign In
               </Link>
-              <Link to="/register" className={ctaNavPrimaryClass}>
-                Get Started
+              <Link to="/demo" className={ctaNavPrimaryClass}>
+                Try the Demo
               </Link>
             </>
           )}

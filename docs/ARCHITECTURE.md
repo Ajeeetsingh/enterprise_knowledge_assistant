@@ -1,6 +1,6 @@
 # Architecture
 
-Enterprise Knowledge Assistant is a layered monolithic application: a React SPA talks to a FastAPI API that owns authentication, document ingestion, RAG retrieval, and administration. PostgreSQL stores application data; uploaded files and vector/BM25 indexes live on local filesystem storage (or Docker volumes).
+Knowra is a layered monolithic application: a React SPA talks to a FastAPI API that owns authentication, document ingestion, RAG retrieval, and administration. PostgreSQL stores application data; uploaded files and vector/BM25 indexes live on local filesystem storage (or Docker volumes).
 
 For a product-level explanation (features, roles, citation UX, limitations), see [PROJECT_OVERVIEW.md](PROJECT_OVERVIEW.md). Production hosting steps live only in [DEPLOYMENT.md](DEPLOYMENT.md).
 
@@ -52,7 +52,13 @@ Multi-file upload, content checksums, and tenant-scoped duplicate detection prev
 ## Retrieval / answer pipeline
 
 ```
-Question → authorized source filenames (fail-closed ACL)
+Question
+  → QueryRouter (backend/app/query_router/)
+       • UNSAFE → boundary response
+       • PRODUCT_HELP → curated local answer
+       • GENERAL_QUERY → configured LLM (capped history)
+       • DOCUMENT_QUERY → continue below
+  → authorized source filenames (fail-closed ACL)
   → query intelligence (expand / multi-query)
   → hybrid retrieve (dense FAISS + sparse BM25 + RRF)
       constrained to authorized sources
@@ -61,7 +67,9 @@ Question → authorized source filenames (fail-closed ACL)
   → LLM generation → answer + citations
 ```
 
-Entry: `RagService` → `EnterpriseRAG` (`backend/app/rag/`).
+Entry: `ConversationChatService` → `QueryRouter` → (DOCUMENT only) `RagService` → `EnterpriseRAG` (`backend/app/rag/`).
+
+Zero accessible documents on a DOCUMENT route returns a curated message and skips retrieval. Contextual follow-ups may inherit the prior route when the current turn is ambiguous; they never change ACL. Citations are produced only for document-grounded RAG answers.
 
 Authorized sources are computed from document ACL (visibility / allowed roles / owner) **before** retrieval and applied as a source filter. An empty authorized set retrieves nothing. Orphan index entries without a database row are denied.
 
@@ -94,7 +102,7 @@ Privileged roles are assigned only by admins (or seed scripts in development).
 - Authenticated dashboard (workspace summary), chat (suggested questions, citations), documents, profile
 - Document viewer: cited page navigation + text-layer passage highlighting (progressive enhancement)
 - Admin portal (`/admin/*`): users, documents, uploads, analytics, reports, monitoring
-- Admin Collections UI is a local preview (not server-persisted); Admin home metrics are placeholder
+- Admin Collections UI is a local preview (not server-persisted); Admin home metrics use live monitoring resource APIs
 - Dev-only routes (`auth-debug`, design-system, etc.) are compiled out of production builds via `import.meta.env.DEV`
 
 ## Persistence

@@ -2,7 +2,7 @@
 
 
 class EKAError(Exception):
-    """Base exception for Enterprise Knowledge Assistant."""
+    """Base exception for Knowra."""
 
 
 class ServiceError(EKAError):

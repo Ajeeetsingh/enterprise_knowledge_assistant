@@ -32,7 +32,7 @@ export default function DashboardPage() {
         <p className="text-sm text-muted sm:text-base">{greeting.subtitle}</p>
       </header>
 
-      <section aria-label="Ask the knowledge assistant" className="w-full">
+      <section aria-label="Ask Knowra" className="w-full">
         <DashboardAskBar />
       </section>
 

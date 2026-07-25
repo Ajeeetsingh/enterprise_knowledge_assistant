@@ -4,7 +4,7 @@ import type { ExportConversationModel, ExportMessageModel } from './buildExportM
 import { formatConfidencePercent, formatExportDateTime } from './formatters'
 import type { ExportOptions } from './types'
 
-const APP_NAME = 'Enterprise Knowledge Assistant'
+const APP_NAME = 'Knowra'
 
 interface PdfPalette {
   background: string

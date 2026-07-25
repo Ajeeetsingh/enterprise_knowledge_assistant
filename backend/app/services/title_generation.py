@@ -35,8 +35,8 @@ FALLBACK_TITLE = "New Conversation"
 DEFAULT_TITLE_TIMEOUT_SECONDS = 8.0
 
 _TITLE_SYSTEM_PROMPT = (
-    "You generate short titles for conversations in an enterprise knowledge "
-    "assistant. Given the user's first question, respond with ONLY a "
+    "You generate short titles for conversations in Knowra. "
+    "Given the user's first question, respond with ONLY a "
     "concise title of 4-6 words that captures the topic.\n"
     "Rules:\n"
     "- Use Title Case.\n"

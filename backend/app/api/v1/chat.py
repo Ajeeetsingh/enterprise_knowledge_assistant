@@ -9,6 +9,8 @@ import uuid
 from fastapi import APIRouter, Depends, Request
 
 from app.audit.service import AuditService
+from app.auth.dependencies import user_has_permission
+from app.auth.permissions import Permission
 from app.auth.retrieval_authorization import RetrievalAuthorizationService
 from app.auth.security import get_current_user
 from app.core.exceptions import (
@@ -313,7 +315,10 @@ def get_suggested_questions(
             query_id=query_id,
         )
 
-    suggestions = service.get_suggestions(authorized_sources)
+    suggestions = service.get_suggestions(
+        authorized_sources,
+        can_upload=user_has_permission(current_user, Permission.DOCUMENT_CREATE),
+    )
     return SuggestedQuestionsResponse(
         items=[
             SuggestedQuestionResponse(text=question.text, source=question.source or None)

@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 
 import { Badge, Button, Card, Input } from '@/components/ui'
 import { useAuth } from '@/contexts/AuthContext'
+import { GUEST_POST_AUTH_PATH, shouldOfferGuestContinue } from '@/features/demo'
 import type { ApiError } from '@/types'
 import { toApiError } from '@/utils/apiError'
 
@@ -60,7 +61,10 @@ function validateFields(email: string, password: string): FieldErrors {
   return errors
 }
 
-function resolveRedirectPath(from: string | undefined): string {
+export function resolveRedirectPath(from: string | undefined): string {
+  if (shouldOfferGuestContinue()) {
+    return GUEST_POST_AUTH_PATH
+  }
   if (!from || from === '/login') {
     return '/dashboard'
   }
@@ -188,6 +192,7 @@ export default function LoginPage() {
         New here?{' '}
         <Link
           to="/register"
+          state={locationState?.from ? { from: locationState.from } : undefined}
           className="font-medium text-accent transition-colors hover:text-accent-hover hover:underline"
         >
           Create an account

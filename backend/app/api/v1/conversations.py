@@ -4,9 +4,10 @@ from __future__ import annotations
 
 import uuid
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, Query, Request, status
 
 from app.auth.security import get_current_user
+from app.core.rate_limit import enforce_rate_limit
 from app.db.models import User
 from app.dependencies import get_conversation_service
 from app.mappers.conversations import (
@@ -26,9 +27,13 @@ from app.schemas.conversations import (
     ConversationResponse,
 )
 from app.schemas.errors import ErrorResponse
+from app.schemas.guest_import import GuestImportRequest
 from app.services.conversation_service import ConversationService
 
 router = APIRouter()
+
+GUEST_IMPORT_RATE_LIMIT = 10
+GUEST_IMPORT_RATE_WINDOW_SECONDS = 60
 
 _CONVERSATION_ERROR_RESPONSES: dict[int, dict[str, object]] = {
     401: {
@@ -46,6 +51,10 @@ _CONVERSATION_ERROR_RESPONSES: dict[int, dict[str, object]] = {
     422: {
         "model": ErrorResponse,
         "description": "Invalid conversation data.",
+    },
+    429: {
+        "model": ErrorResponse,
+        "description": "Too many import attempts.",
     },
 }
 
@@ -69,6 +78,40 @@ def create_conversation(
     """Create a conversation for the authenticated user."""
     conversation = conversation_service.create_conversation(
         current_user,
+        title=body.title,
+    )
+    return map_to_conversation_response(conversation)
+
+
+@router.post(
+    "/import-guest",
+    response_model=ConversationResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Import a guest demo conversation",
+    description=(
+        "Create a new authenticated conversation from temporary guest demo "
+        "history. Messages are stored as plain conversational text without "
+        "citations or document provenance. Does not run RAG."
+    ),
+    responses=_CONVERSATION_ERROR_RESPONSES,
+)
+def import_guest_conversation(
+    body: GuestImportRequest,
+    request: Request,
+    current_user: User = Depends(get_current_user),
+    conversation_service: ConversationService = Depends(get_conversation_service),
+) -> ConversationResponse:
+    """Import bounded guest history into a new owned conversation."""
+    enforce_rate_limit(
+        request,
+        bucket="guest-import",
+        max_calls=GUEST_IMPORT_RATE_LIMIT,
+        window_seconds=GUEST_IMPORT_RATE_WINDOW_SECONDS,
+        detail="Too many import attempts. Please try again later.",
+    )
+    conversation = conversation_service.import_guest_conversation(
+        current_user,
+        [(item.role, item.content) for item in body.messages],
         title=body.title,
     )
     return map_to_conversation_response(conversation)

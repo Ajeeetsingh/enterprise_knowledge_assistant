@@ -28,11 +28,11 @@ export default function AuthLayout() {
             height={34}
             className="size-9"
           />
-          <span className="sr-only">Enterprise Knowledge Assistant home</span>
+          <span className="sr-only">Knowra home</span>
         </Link>
 
         <h1 className="font-display text-lg font-semibold tracking-tight text-foreground sm:text-xl">
-          Enterprise Knowledge Assistant
+          Knowra
         </h1>
         <p className="mt-1.5 text-sm text-muted">
           {isRegister ? 'Create your account' : 'Sign in to your account'}

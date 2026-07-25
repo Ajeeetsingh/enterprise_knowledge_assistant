@@ -25,7 +25,7 @@ from app.evaluation.schemas import AnswerMatchMode, BenchmarkRunConfig
 
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="Run the Enterprise Knowledge Assistant retrieval benchmark.",
+        description="Run the Knowra retrieval benchmark.",
     )
     parser.add_argument(
         "--dataset",

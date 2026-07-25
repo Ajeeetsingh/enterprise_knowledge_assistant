@@ -1,32 +1,12 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 
 import { useAuth } from '@/contexts/AuthContext'
 import { cn } from '@/utils/cn'
 
-import ProductPreview from './ProductPreview'
+import HeroKnowledgeAnimation from './HeroKnowledgeAnimation'
+import { Reveal } from './ScrollReveal'
 import { ctaPrimaryClass, ctaSecondaryClass } from './ctaStyles'
-
-function RevealItem({
-  visible,
-  delayMs,
-  className,
-  children,
-}: {
-  visible: boolean
-  delayMs: number
-  className?: string
-  children: ReactNode
-}) {
-  return (
-    <div
-      className={cn('landing-reveal', visible && 'is-visible', className)}
-      style={{ transitionDelay: visible ? `${delayMs}ms` : undefined }}
-    >
-      {children}
-    </div>
-  )
-}
 
 export default function HeroSection() {
   const { isAuthenticated, isLoading } = useAuth()
@@ -39,40 +19,46 @@ export default function HeroSection() {
   }, [])
 
   return (
-    <section className="relative overflow-hidden px-4 pb-16 pt-10 sm:px-6 sm:pb-20 sm:pt-14 lg:px-8">
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-0 h-[28rem] bg-[radial-gradient(ellipse_at_top,var(--accent-muted),transparent_60%)]"
-      />
+    <section className="hero-section relative overflow-hidden px-4 pb-8 pt-10 sm:px-6 sm:pb-10 sm:pt-12 lg:px-8 lg:pb-12">
+      {/* Decorative wave + light-trail layers sit behind CTAs */}
+      <HeroKnowledgeAnimation />
 
-      <div className="relative mx-auto max-w-6xl">
-        <div className="mx-auto max-w-3xl text-center">
-          <RevealItem visible={entered} delayMs={0}>
-            <p className="inline-flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-accent">
+      <div className="relative z-10 mx-auto max-w-6xl">
+        <div className="mx-auto flex max-w-[24rem] flex-col items-center text-center sm:max-w-2xl lg:max-w-3xl">
+          <Reveal visible={entered} delayMs={0}>
+            <p
+              className={cn(
+                'inline-flex items-center gap-2 rounded-full',
+                'border border-[rgba(109,40,217,0.14)] bg-[#ECE9FE]',
+                'px-3.5 py-1.5 text-[11px] font-bold uppercase tracking-[0.08em]',
+                'text-[#6D28D9]',
+              )}
+            >
               <span
                 aria-hidden
-                className="inline-block size-1.5 rounded-full bg-accent shadow-[0_0_0_3px_var(--accent-muted)]"
+                className="inline-block size-1.5 rounded-full bg-[#6D28D9]"
               />
               AI-Powered Knowledge Platform
             </p>
-          </RevealItem>
+          </Reveal>
 
-          <RevealItem visible={entered} delayMs={80} className="mt-5">
-            <h1 className="font-display text-[1.85rem] font-semibold leading-[1.15] tracking-tight text-foreground sm:text-4xl sm:leading-[1.12] lg:text-[2.65rem]">
-              Ask anything. Get answers from your organisation&apos;s knowledge.
+          <Reveal visible={entered} delayMs={90} className="mt-6 sm:mt-7">
+            <h1
+              aria-label="Ask anything. Get answers from your organisation's knowledge."
+              className="hero-headline font-display text-[1.85rem] font-extrabold leading-[1.12] tracking-[-0.03em] sm:text-4xl sm:leading-[1.1] lg:text-[2.85rem]"
+            >
+              Ask anything. Get answers
+              <br />
+              from your organisation&apos;s
+              <br />
+              <span className="hero-knowledge-gradient">knowledge.</span>
             </h1>
-          </RevealItem>
+          </Reveal>
 
-          <RevealItem visible={entered} delayMs={160} className="mt-4">
-            <p className="mx-auto max-w-xl text-base leading-relaxed text-muted sm:text-lg">
-              Search policies, procedures, and institutional knowledge in seconds — not folders.
-            </p>
-          </RevealItem>
-
-          <RevealItem
+          <Reveal
             visible={entered}
-            delayMs={240}
-            className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row"
+            delayMs={180}
+            className="mt-4 flex flex-col items-center justify-center gap-3 sm:mt-5 sm:flex-row"
           >
             {showDashboard ? (
               <Link to="/dashboard" className={ctaPrimaryClass}>
@@ -80,20 +66,22 @@ export default function HeroSection() {
               </Link>
             ) : (
               <>
-                <Link to="/register" className={ctaPrimaryClass}>
-                  Get Started
+                <Link to="/demo" className={ctaPrimaryClass}>
+                  Try Knowra
+                  <span aria-hidden className="text-base leading-none">
+                    →
+                  </span>
                 </Link>
                 <Link to="/login" className={ctaSecondaryClass}>
                   Sign In
                 </Link>
               </>
             )}
-          </RevealItem>
+          </Reveal>
         </div>
 
-        <RevealItem visible={entered} delayMs={340} className="mt-12 sm:mt-14">
-          <ProductPreview />
-        </RevealItem>
+        {/* Compact flow zone — aurora + cards sit immediately under CTA */}
+        <div className="hero-flow-spacer" aria-hidden="true" />
       </div>
     </section>
   )

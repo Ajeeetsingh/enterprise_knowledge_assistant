@@ -91,6 +91,28 @@ export async function askQuestion(body: ChatRequest): Promise<ChatResponse> {
   })
 }
 
+export interface GuestImportMessagePayload {
+  role: 'user' | 'assistant'
+  content: string
+}
+
+export interface GuestImportRequest {
+  messages: GuestImportMessagePayload[]
+  title?: string | null
+}
+
+export async function importGuestConversation(
+  body: GuestImportRequest,
+): Promise<Conversation> {
+  return request(async () => {
+    const { data } = await apiClient.post<Conversation>(
+      '/conversations/import-guest',
+      body,
+    )
+    return data
+  })
+}
+
 export async function getSuggestedQuestions(): Promise<SuggestedQuestionsResponse> {
   return request(async () => {
     const { data } = await apiClient.get<SuggestedQuestionsResponse>(

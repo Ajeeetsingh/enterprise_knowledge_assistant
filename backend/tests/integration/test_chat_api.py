@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import uuid
 from types import SimpleNamespace
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 from fastapi.testclient import TestClient
@@ -16,7 +16,12 @@ from app.dependencies import get_db, get_rag_service_dep
 from app.main import app
 from app.schemas.chat import QUESTION_MAX_LENGTH
 from app.core.exceptions import RagInitializationError, RagRetrievalError
-from tests.integration.chat_helpers import ask_payload, create_conversation
+from tests.integration.chat_helpers import (
+    add_public_searchable_document,
+    ask_payload,
+    create_conversation,
+    force_document_query_router,
+)
 from tests.integration.conftest import access_token_for, bearer_headers
 
 ASK_URL = "/api/v1/chat/ask"
@@ -72,13 +77,21 @@ def mock_rag_service() -> MagicMock:
 def chat_client(
     db_session: Session,
     mock_rag_service: MagicMock,
+    active_user: User,
 ) -> TestClient:
     def override_get_db():
         yield db_session
 
+    add_public_searchable_document(db_session, active_user, filename="hr_policy.txt")
     app.dependency_overrides[get_db] = override_get_db
     app.dependency_overrides[get_rag_service_dep] = lambda: mock_rag_service
-    with TestClient(app) as test_client:
+    with (
+        patch(
+            "app.services.conversation_chat_service.get_query_router",
+            return_value=force_document_query_router(),
+        ),
+        TestClient(app) as test_client,
+    ):
         yield test_client
     app.dependency_overrides.clear()
 
@@ -114,7 +127,7 @@ def test_authenticated_request_returns_answer_response(
     call_args = mock_rag_service.answer_question.call_args[0]
     assert payload["question"] in call_args[0]
     assert call_args[1] == "Employee"
-    assert call_args[2] == frozenset()
+    assert call_args[2] == frozenset({"hr_policy.txt"})
 
 
 def test_role_forwarded_for_admin_user(

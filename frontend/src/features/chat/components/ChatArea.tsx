@@ -26,8 +26,9 @@ export interface ChatAreaProps {
 // the real list is fetched dynamically via useSuggestedQuestions.
 const FALLBACK_PROMPTS = [
   'What can this assistant help me with?',
-  'How do I upload a document for the assistant to use?',
-  'What kinds of questions can I ask once documents are added?',
+  'How does document access work?',
+  'How are answers sourced?',
+  'What document formats are supported?',
 ]
 
 interface ChatEmptyStateProps {

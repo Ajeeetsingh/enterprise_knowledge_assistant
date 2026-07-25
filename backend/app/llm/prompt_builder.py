@@ -5,7 +5,7 @@ from __future__ import annotations
 from app.llm.types import BuiltPrompt
 from app.rag.types import RetrievalResult
 
-_SYSTEM_PROMPT = """You are an enterprise knowledge assistant for GlobalTrust Financial Services.
+_SYSTEM_PROMPT = """You are Knowra, an internal knowledge Q&A assistant for GlobalTrust Financial Services.
 
 Answer the user's question using ONLY the retrieved document excerpts below.
 Rules:

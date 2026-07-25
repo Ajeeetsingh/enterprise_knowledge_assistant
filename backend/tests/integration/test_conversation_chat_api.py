@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import uuid
 from types import SimpleNamespace
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 from fastapi.testclient import TestClient
@@ -15,7 +15,14 @@ from app.db.repositories.message_repository import MessageRepository
 from app.dependencies import get_db, get_rag_service_dep
 from app.main import app
 from tests.constants import TEST_PASSWORD_HASH
-from tests.integration.chat_helpers import ASK_URL, CONVERSATIONS_URL, ask_payload, create_conversation
+from tests.integration.chat_helpers import (
+    ASK_URL,
+    CONVERSATIONS_URL,
+    add_public_searchable_document,
+    ask_payload,
+    create_conversation,
+    force_document_query_router,
+)
 from tests.integration.conftest import access_token_for, bearer_headers
 
 
@@ -48,13 +55,21 @@ def mock_rag_service() -> MagicMock:
 def chat_client(
     db_session: Session,
     mock_rag_service: MagicMock,
+    active_user: User,
 ) -> TestClient:
     def override_get_db():
         yield db_session
 
+    add_public_searchable_document(db_session, active_user, filename="hr_policy.txt")
     app.dependency_overrides[get_db] = override_get_db
     app.dependency_overrides[get_rag_service_dep] = lambda: mock_rag_service
-    with TestClient(app) as test_client:
+    with (
+        patch(
+            "app.services.conversation_chat_service.get_query_router",
+            return_value=force_document_query_router(),
+        ),
+        TestClient(app) as test_client,
+    ):
         yield test_client
     app.dependency_overrides.clear()
 

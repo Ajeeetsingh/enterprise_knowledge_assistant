@@ -28,17 +28,20 @@ export default function ContinueWorkPanel({
   return (
     <section
       className={cn(
+        'dashboard-panel',
         'rounded-[var(--radius-lg)] border border-border-subtle bg-surface-raised',
         'p-5 shadow-elevation-sm',
       )}
       aria-labelledby="dashboard-continue-heading"
     >
-      <h2
-        id="dashboard-continue-heading"
-        className="text-sm font-semibold tracking-tight text-foreground"
-      >
-        Continue your work
-      </h2>
+      <div className="dashboard-panel__header">
+        <h2 id="dashboard-continue-heading" className="dashboard-panel__title">
+          Continue your work
+        </h2>
+        <Link to="/chat" className="dashboard-panel__view-all">
+          View all →
+        </Link>
+      </div>
 
       {isLoading ? (
         <ul className="mt-4 space-y-3" aria-busy="true" aria-label="Loading conversations">
@@ -54,14 +57,14 @@ export default function ContinueWorkPanel({
           You haven&apos;t asked anything yet — try the box above.
         </p>
       ) : (
-        <ul className="mt-3 divide-y divide-border-subtle">
+        <ul className="mt-3 space-y-0.5">
           {recent.map((conversation) => (
             <li key={conversation.id}>
               <Link
                 to={`/chat?conversation=${conversation.id}`}
                 className={cn(
+                  'dashboard-panel__row',
                   'flex items-center justify-between gap-3 py-3 text-sm',
-                  'rounded-md transition-colors hover:text-accent',
                   'focus-visible:outline-none focus-visible:shadow-[0_0_0_3px_var(--accent-muted)]',
                 )}
               >

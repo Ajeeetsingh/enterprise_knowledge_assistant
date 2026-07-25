@@ -11,7 +11,7 @@ const model = buildExportModel(fixtureConversation, fixtureMessages, now)
 describe('generateText', () => {
   it('renders a readable plain-text transcript', () => {
     const text = generateText(model, DEFAULT_EXPORT_OPTIONS)
-    expect(text).toContain('ENTERPRISE KNOWLEDGE ASSISTANT')
+    expect(text).toContain('KNOWRA')
     expect(text).toContain('Title: Remote work policy questions')
     expect(text).toContain('You')
     expect(text).toContain('Assistant')

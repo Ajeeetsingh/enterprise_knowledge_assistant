@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useLocation, useNavigate, useOutletContext, useSearchParams } from 'react-router-dom'
+import { useQueryClient } from '@tanstack/react-query'
 
 import ChatArea from '@/features/chat/components/ChatArea'
 import ConversationList from '@/features/chat/components/ConversationList'
@@ -9,7 +10,17 @@ import { useConversations } from '@/features/chat/hooks/useConversations'
 import { useCreateConversation } from '@/features/chat/hooks/useCreateConversation'
 import { useDeleteConversation } from '@/features/chat/hooks/useDeleteConversation'
 import { useRenameConversation } from '@/features/chat/hooks/useRenameConversation'
+import { chatQueryKeys } from '@/features/chat/hooks/queryKeys'
+import * as chatApi from '@/features/chat/services/chatApi'
 import type { Conversation } from '@/features/chat/types'
+import {
+  GuestContinuePrompt,
+  GUEST_STORAGE_KEY,
+  clearGuestImportPending,
+  clearGuestSession,
+  loadGuestSession,
+  shouldOfferGuestContinue,
+} from '@/features/demo'
 import { useLayoutContext } from '@/contexts/LayoutContext'
 import { useToast } from '@/contexts/ToastContext'
 import { getApiErrorMessage, resolveErrorMessage } from '@/services/errorHandler'
@@ -26,6 +37,7 @@ interface ChatLocationState {
 export default function ChatPage() {
   const navigate = useNavigate()
   const location = useLocation()
+  const queryClient = useQueryClient()
   const [searchParams, setSearchParams] = useSearchParams()
   const { sidebarWidth, sidebarCollapsed } = useOutletContext<ChatOutletContext>()
   const { setChatRouteActive, closeConversationDrawer, setMobileChatPanel } = useLayoutContext()
@@ -35,7 +47,11 @@ export default function ChatPage() {
   const [deleteTarget, setDeleteTarget] = useState<Conversation | null>(null)
   const [deleteError, setDeleteError] = useState<string | null>(null)
   const [pendingQuestion, setPendingQuestion] = useState<string | null>(null)
+  const [showGuestContinue, setShowGuestContinue] = useState(() => shouldOfferGuestContinue())
+  const [guestImportError, setGuestImportError] = useState<string | null>(null)
+  const [isImportingGuest, setIsImportingGuest] = useState(false)
   const bootstrapStarted = useRef(false)
+  const importStarted = useRef(false)
 
   const { data, isLoading, isError, error } = useConversations()
   const createConversation = useCreateConversation()
@@ -157,8 +173,72 @@ export default function ChatPage() {
     }
   }
 
+  async function handleContinueGuest() {
+    if (isImportingGuest || importStarted.current) return
+    setGuestImportError(null)
+
+    const session = loadGuestSession()
+    const importable = session.messages
+      .filter((message) => message.role === 'user' || message.role === 'assistant')
+      .map((message) => ({
+        role: message.role as 'user' | 'assistant',
+        content: message.content,
+      }))
+
+    if (importable.length === 0) {
+      clearGuestSession()
+      clearGuestImportPending()
+      setShowGuestContinue(false)
+      return
+    }
+
+    importStarted.current = true
+    setIsImportingGuest(true)
+    try {
+      const conversation = await chatApi.importGuestConversation({
+        messages: importable,
+        title: 'Guest conversation',
+      })
+      clearGuestSession()
+      clearGuestImportPending()
+      setShowGuestContinue(false)
+      await queryClient.invalidateQueries({ queryKey: chatQueryKeys.conversations() })
+      setSearchParams({ conversation: conversation.id })
+      showSuccess('Guest conversation imported.')
+    } catch (importError) {
+      importStarted.current = false
+      setGuestImportError(
+        resolveErrorMessage(importError, 'Could not import your guest conversation. Please try again.'),
+      )
+    } finally {
+      setIsImportingGuest(false)
+    }
+  }
+
+  function handleStartFresh() {
+    clearGuestSession()
+    clearGuestImportPending()
+    setShowGuestContinue(false)
+    setGuestImportError(null)
+    // Ensure stale storage key is gone even if clear failed silently.
+    try {
+      sessionStorage.removeItem(GUEST_STORAGE_KEY)
+    } catch {
+      // ignore
+    }
+  }
+
   return (
     <>
+      {showGuestContinue && (
+        <GuestContinuePrompt
+          isImporting={isImportingGuest}
+          error={guestImportError}
+          onContinue={() => void handleContinueGuest()}
+          onStartFresh={handleStartFresh}
+          onRetry={() => void handleContinueGuest()}
+        />
+      )}
       <ChatLayout
         sidebarWidth={sidebarWidth}
         sidebarCollapsed={sidebarCollapsed}
@@ -181,7 +261,8 @@ export default function ChatPage() {
             initialQuestion={pendingQuestion}
             onInitialQuestionConsumed={() => setPendingQuestion(null)}
           />
-        }      />
+        }
+      />
 
       <DeleteConversationDialog
         conversation={deleteTarget}

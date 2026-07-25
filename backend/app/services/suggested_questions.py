@@ -99,9 +99,21 @@ _WORD_RE = re.compile(r"[A-Za-z0-9']+")
 
 # Generic onboarding prompts shown when no authorized, indexed documents
 # exist yet — never cached, since they never depend on corpus state.
-ONBOARDING_QUESTIONS: tuple[str, ...] = (
+# Prefer product-help questions that the query router can answer without RAG.
+# Upload prompts are only included when the caller can upload.
+ONBOARDING_QUESTIONS_BASE: tuple[str, ...] = (
     "What can this assistant help me with?",
-    "How do I upload a document for the assistant to use?",
+    "How does document access work?",
+    "How are answers sourced?",
+    "What document formats are supported?",
+)
+
+ONBOARDING_UPLOAD_QUESTION = "How do I upload a document for the assistant to use?"
+
+# Backward-compatible alias used by older tests / imports.
+ONBOARDING_QUESTIONS: tuple[str, ...] = (
+    ONBOARDING_QUESTIONS_BASE[0],
+    ONBOARDING_UPLOAD_QUESTION,
     "What kinds of questions can I ask once documents are added?",
 )
 
@@ -260,8 +272,8 @@ def _deterministic_questions_for_profile(
 
 
 _QUESTION_SYSTEM_PROMPT_TEMPLATE = (
-    "You generate short, natural questions for an enterprise knowledge "
-    "assistant's suggested-questions panel. You will be given a numbered "
+    "You generate short, natural questions for Knowra's suggested-questions "
+    "panel. You will be given a numbered "
     "list of documents, each with a title and a few section headings taken "
     "directly from that document. For each document, write up to {per_document} "
     "short question(s) or request(s) (4-14 words each) that a curious "
@@ -449,10 +461,18 @@ def _diversify(pool: list[SuggestedQuestion], *, limit: int) -> list[SuggestedQu
     return (first_pass + remainder)[:limit]
 
 
-def _onboarding_suggestions(limit: int) -> list[SuggestedQuestion]:
+def _onboarding_suggestions(
+    limit: int,
+    *,
+    can_upload: bool = False,
+) -> list[SuggestedQuestion]:
+    prompts: list[str] = list(ONBOARDING_QUESTIONS_BASE)
+    if can_upload:
+        # Prefer upload guidance for roles that can actually upload.
+        prompts.insert(1, ONBOARDING_UPLOAD_QUESTION)
     return [
         SuggestedQuestion(text=text, source="", document_title="")
-        for text in ONBOARDING_QUESTIONS[:limit]
+        for text in prompts[:limit]
     ]
 
 
@@ -520,6 +540,7 @@ class SuggestedQuestionService:
         authorized_sources: frozenset[str] | None,
         *,
         limit: int = DEFAULT_SUGGESTION_LIMIT,
+        can_upload: bool = False,
     ) -> list[SuggestedQuestion]:
         """Return up to *limit* suggestions the caller is authorized to see.
 
@@ -530,6 +551,8 @@ class SuggestedQuestionService:
                 computed set (an empty ``frozenset()`` when nothing is
                 authorized).
             limit: Maximum number of suggestions to return.
+            can_upload: When falling back to onboarding prompts, include
+                upload guidance only if the user may upload documents.
 
         Returns:
             Up to *limit* document-grounded suggestions, diversified across
@@ -542,7 +565,7 @@ class SuggestedQuestionService:
 
         selected = _diversify(pool, limit=limit)
         if not selected:
-            return _onboarding_suggestions(limit)
+            return _onboarding_suggestions(limit, can_upload=can_upload)
         return selected
 
 

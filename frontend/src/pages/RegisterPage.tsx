@@ -1,10 +1,15 @@
 import { type FormEvent, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 
 import { Button, Card, Input } from '@/components/ui'
+import { GUEST_POST_AUTH_PATH, isGuestImportPending } from '@/features/demo'
 import * as authApi from '@/services/authApi'
 import type { ApiError } from '@/types'
 import { toApiError } from '@/utils/apiError'
+
+interface RegisterLocationState {
+  from?: string
+}
 
 interface FieldErrors {
   full_name?: string
@@ -81,6 +86,8 @@ function validateFields(
 
 export default function RegisterPage() {
   const navigate = useNavigate()
+  const location = useLocation()
+  const locationState = location.state as RegisterLocationState | null
 
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
@@ -109,10 +116,13 @@ export default function RegisterPage() {
         password,
         full_name: fullName.trim(),
       })
+      const returnFrom =
+        locationState?.from ?? (isGuestImportPending() ? GUEST_POST_AUTH_PATH : undefined)
       navigate('/login', {
         replace: true,
         state: {
           registrationSuccess: 'Account created successfully. You can now sign in.',
+          ...(returnFrom ? { from: returnFrom } : {}),
         },
       })
     } catch (error) {
@@ -243,6 +253,11 @@ export default function RegisterPage() {
         Already have an account?{' '}
         <Link
           to="/login"
+          state={
+            locationState?.from || isGuestImportPending()
+              ? { from: locationState?.from ?? GUEST_POST_AUTH_PATH }
+              : undefined
+          }
           className="font-medium text-accent transition-colors hover:text-accent-hover hover:underline"
         >
           Sign in

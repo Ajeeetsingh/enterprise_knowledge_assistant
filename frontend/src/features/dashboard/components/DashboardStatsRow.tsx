@@ -9,6 +9,13 @@ export interface DashboardStatsRowProps {
   isLoading: boolean
 }
 
+const STAT_ACCENTS = {
+  documents: 'dashboard-stat-card--indigo',
+  conversations: 'dashboard-stat-card--purple',
+  questions: 'dashboard-stat-card--sky',
+  collections: 'dashboard-stat-card--amber',
+} as const
+
 export default function DashboardStatsRow({ summary, isLoading }: DashboardStatsRowProps) {
   if (isLoading || !summary) {
     return (
@@ -18,7 +25,7 @@ export default function DashboardStatsRow({ summary, isLoading }: DashboardStats
         aria-label="Loading workspace stats"
       >
         {Array.from({ length: 4 }, (_, index) => (
-          <div key={index} className="metric-card space-y-3">
+          <div key={index} className="metric-card dashboard-stat-card space-y-3">
             <Skeleton className="h-3 w-24" variant="text" />
             <Skeleton className="h-7 w-14" />
           </div>
@@ -32,21 +39,25 @@ export default function DashboardStatsRow({ summary, isLoading }: DashboardStats
       label: 'Documents available',
       value: summary.documents_available,
       icon: 'documents' as const,
+      accent: STAT_ACCENTS.documents,
     },
     {
       label: 'Conversations',
       value: summary.conversations,
       icon: 'ai' as const,
+      accent: STAT_ACCENTS.conversations,
     },
     {
       label: 'Questions asked',
       value: summary.questions_asked,
       icon: 'search' as const,
+      accent: STAT_ACCENTS.questions,
     },
     {
       label: 'Collections',
       value: summary.collections,
       icon: 'collections' as const,
+      accent: STAT_ACCENTS.collections,
     },
   ]
 
@@ -59,7 +70,7 @@ export default function DashboardStatsRow({ summary, isLoading }: DashboardStats
           value={card.value}
           icon={card.icon}
           size="secondary"
-          className={cn('!p-4')}
+          className={cn('!p-4 dashboard-stat-card', card.accent)}
         />
       ))}
     </div>

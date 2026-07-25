@@ -21,7 +21,7 @@ export default function QuickActionsGrid({ user }: QuickActionsGridProps) {
     {
       to: '/chat',
       label: 'Ask a question',
-      description: 'Open the knowledge assistant',
+      description: 'Open Knowra',
       icon: <NavIcon name="chat" className="size-5 text-accent" />,
       show: true,
     },

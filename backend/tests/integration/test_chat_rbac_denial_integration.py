@@ -73,6 +73,12 @@ class TestChatRbacDenialIntegration:
         db_session: Session,
     ) -> None:
         """End-to-end guard against empty assistant content on RBAC denial."""
+        from tests.integration.chat_helpers import add_public_searchable_document
+
+        # Ensure DOCUMENT_QUERY reaches RAG (zero accessible docs short-circuits
+        # before category RBAC). Category denial still applies on the finance route.
+        add_public_searchable_document(db_session, active_user)
+
         role_name = active_user.roles[0].name
         route = route_query(FINANCE_QUESTION)
         access = check_access(validate_role(role_name), route.category)
@@ -81,7 +87,7 @@ class TestChatRbacDenialIntegration:
         engine_response = rbac_denial_rag_service.answer_question(
             FINANCE_QUESTION,
             role_name,
-            frozenset(),
+            frozenset({"integration_public.txt"}),
         )
         assert engine_response.answer == ""
         assert engine_response.message.strip()

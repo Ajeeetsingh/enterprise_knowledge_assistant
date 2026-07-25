@@ -13,7 +13,8 @@ from app.ingestion.chunker import DocumentChunk
 from app.ingestion.semantic_chunking.types import ChunkMetadata, ChunkType
 from app.llm.types import LLMGenerationResult
 from app.services.suggested_questions import (
-    ONBOARDING_QUESTIONS,
+    ONBOARDING_QUESTIONS_BASE,
+    ONBOARDING_UPLOAD_QUESTION,
     SuggestedQuestion,
     SuggestedQuestionService,
     _build_pool,
@@ -455,8 +456,9 @@ class TestSuggestedQuestionService:
 
         suggestions = service.get_suggestions(frozenset())
 
-        assert [q.text for q in suggestions] == list(ONBOARDING_QUESTIONS[:3])
+        assert [q.text for q in suggestions] == list(ONBOARDING_QUESTIONS_BASE[:3])
         assert all(q.source == "" for q in suggestions)
+        assert ONBOARDING_UPLOAD_QUESTION not in [q.text for q in suggestions]
 
     def test_get_suggestions_falls_back_to_onboarding_when_no_documents(self) -> None:
         class _Store:
@@ -466,7 +468,18 @@ class TestSuggestedQuestionService:
 
         suggestions = service.get_suggestions(frozenset())
 
-        assert [q.text for q in suggestions] == list(ONBOARDING_QUESTIONS[:3])
+        assert [q.text for q in suggestions] == list(ONBOARDING_QUESTIONS_BASE[:3])
+
+    def test_onboarding_includes_upload_prompt_when_can_upload(self) -> None:
+        class _Store:
+            chunks: list = []
+
+        service = SuggestedQuestionService(_Store())
+        suggestions = service.get_suggestions(frozenset(), can_upload=True)
+
+        texts = [q.text for q in suggestions]
+        assert texts[0] == ONBOARDING_QUESTIONS_BASE[0]
+        assert ONBOARDING_UPLOAD_QUESTION in texts
 
     def test_get_suggestions_respects_limit(self) -> None:
         sample_chunks = [

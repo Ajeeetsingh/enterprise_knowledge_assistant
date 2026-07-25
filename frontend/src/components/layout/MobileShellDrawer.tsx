@@ -54,7 +54,7 @@ export default function MobileShellDrawer() {
         aria-label="Application menu"
       >
         <div className="flex h-14 shrink-0 items-center justify-between border-b border-border-subtle px-4">
-          <span className="font-display text-sm font-semibold text-accent">Knowledge Assistant</span>
+          <span className="font-display text-sm font-semibold text-accent">Knowra</span>
           <Button
             variant="ghost"
             size="sm"
@@ -83,10 +83,10 @@ export default function MobileShellDrawer() {
                       onClick={closeMobileShell}
                       className={({ isActive }) =>
                         cn(
-                          'flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition-all duration-200 ease-out',
+                          'sidebar-nav-link flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition-all duration-200 ease-out',
                           'focus-visible:outline-none focus-visible:shadow-[0_0_0_3px_var(--accent-muted)]',
                           isActive
-                            ? 'bg-accent-muted text-accent [&_svg]:text-accent'
+                            ? 'sidebar-nav-link--active bg-accent-muted font-semibold text-[#4F46E5] [&_svg]:text-[#4F46E5]'
                             : 'text-muted hover:bg-overlay [&_svg]:text-muted',
                         )
                       }

@@ -32,7 +32,7 @@ export default function DesignSystemPage() {
               Design System
             </h1>
             <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
-              Enterprise Knowledge Assistant — UI component showcase
+              Knowra — UI component showcase
             </p>
           </div>
           <Button variant="ghost" size="sm" onClick={toggleTheme}>

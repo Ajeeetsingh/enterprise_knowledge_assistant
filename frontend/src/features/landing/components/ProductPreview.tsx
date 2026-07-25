@@ -14,21 +14,19 @@ const EXAMPLE_CITATIONS = [
 export default function ProductPreview({ className }: { className?: string }) {
   return (
     <div
-      className={cn(
-        'relative mx-auto w-full max-w-3xl',
-        className,
-      )}
+      className={cn('relative mx-auto w-full max-w-3xl', className)}
       aria-label="Product preview"
     >
       <div
         aria-hidden
-        className="pointer-events-none absolute -inset-6 -z-10 rounded-[28px] bg-[radial-gradient(ellipse_at_center,var(--accent-muted),transparent_70%)] opacity-80"
+        className="pointer-events-none absolute -inset-4 -z-10 rounded-[28px] border border-accent/15 bg-surface/40 shadow-elevation-md sm:-inset-6"
       />
 
       <div
         className={cn(
           'overflow-hidden rounded-[var(--radius-lg)] border border-border-default',
           'bg-surface shadow-elevation-md',
+          'ring-1 ring-accent/10',
         )}
       >
         <div className="flex items-center gap-3 border-b border-border-subtle bg-surface-raised px-4 py-3">
@@ -39,7 +37,7 @@ export default function ProductPreview({ className }: { className?: string }) {
           </div>
           <div className="flex min-w-0 items-center gap-2 text-xs text-muted">
             <NavIcon name="chat" className="size-3.5 text-accent" />
-            <span className="truncate font-medium text-foreground">Knowledge Assistant</span>
+            <span className="truncate font-medium text-foreground">Knowra</span>
             <span className="hidden text-subtle sm:inline">· Leave policy</span>
           </div>
         </div>

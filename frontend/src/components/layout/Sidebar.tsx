@@ -80,11 +80,11 @@ function NavSection({
                 onClick={onCloseMobile}
                 className={({ isActive }) =>
                   cn(
-                    'flex items-center text-sm font-medium transition-all duration-200 ease-out',
+                    'sidebar-nav-link flex items-center text-sm font-medium transition-all duration-200 ease-out',
                     'focus-visible:outline-none focus-visible:shadow-[0_0_0_3px_var(--accent-muted)]',
                     collapsed ? 'justify-center rounded-md px-2 py-2.5' : 'gap-3 rounded-md px-3 py-2.5',
                     isActive
-                      ? 'bg-accent-muted text-accent [&_svg]:text-accent'
+                      ? 'sidebar-nav-link--active bg-accent-muted font-semibold text-[#4F46E5] [&_svg]:text-[#4F46E5]'
                       : 'text-muted hover:bg-overlay [&_svg]:text-muted',
                   )
                 }
@@ -137,7 +137,7 @@ export default function Sidebar({
           )}
           aria-hidden={collapsed}
         >
-          {collapsed ? 'EKA' : 'Knowledge Assistant'}
+          {collapsed ? 'K' : 'Knowra'}
         </span>
       </div>
 

@@ -1,6 +1,6 @@
 # Backend Scripts
 
-Operational and diagnostic scripts for the Enterprise Knowledge Assistant.  
+Operational and diagnostic scripts for Knowra.  
 Production retrieval benchmarks use `app.evaluation.benchmark` (preferred) or the unified CLI below.
 
 ## Benchmarking
@@ -22,6 +22,7 @@ py scripts/compare_benchmarks.py --latest
 | Script | Purpose |
 |--------|---------|
 | `measure_performance.py` | Unified profiler (`--embedding`, `--retrieval`, `--reranker`, `--query`, `--full`) |
+| `measure_query_router_perf.py` | Approximate query-router overhead (exact / semantic / deterministic paths) |
 
 ```bash
 cd backend

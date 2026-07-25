@@ -15,7 +15,7 @@ _DEFAULT_JWT_SECRET = "change-me-in-production"
 
 
 class Settings(BaseSettings):
-    """Central settings for the Enterprise Knowledge Assistant backend."""
+    """Central settings for the Knowra backend."""
 
     model_config = SettingsConfigDict(
         env_file=(".env", "../.env"),
@@ -24,7 +24,7 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    app_name: str = "Enterprise Knowledge Assistant"
+    app_name: str = "Knowra"
     app_version: str = "0.1.0"
     app_env: str = "development"
     debug: bool = False

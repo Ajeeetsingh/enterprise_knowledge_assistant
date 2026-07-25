@@ -2,7 +2,7 @@
 
 from fastapi import APIRouter
 
-from app.api.v1 import analytics_ai, analytics_errors, analytics_knowledge, analytics_monitoring, analytics_users, audit, auth, chat, conversations, documents, health, monitoring, reports, roles, user_roles, users, workspace
+from app.api.v1 import analytics_ai, analytics_errors, analytics_knowledge, analytics_monitoring, analytics_users, audit, auth, chat, conversations, demo, documents, health, monitoring, reports, roles, user_roles, users, workspace
 
 # Liveness/readiness probes for Docker and orchestrators (no /api/v1 prefix).
 health_router = APIRouter()
@@ -12,6 +12,7 @@ health_router.include_router(health.router, tags=["health"])
 api_v1_router = APIRouter()
 api_v1_router.include_router(auth.router, prefix="/auth", tags=["auth"])
 api_v1_router.include_router(chat.router, prefix="/chat", tags=["chat"])
+api_v1_router.include_router(demo.router, prefix="/demo", tags=["demo"])
 api_v1_router.include_router(
     conversations.router,
     prefix="/conversations",

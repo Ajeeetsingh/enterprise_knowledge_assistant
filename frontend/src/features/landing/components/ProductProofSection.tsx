@@ -1,6 +1,7 @@
 import { cn } from '@/utils/cn'
 
 import { useRevealOnScroll } from '../hooks/useRevealOnScroll'
+import { Reveal } from './ScrollReveal'
 
 /**
  * Capability callouts — not external customer metrics.
@@ -28,50 +29,41 @@ export default function ProductProofSection() {
   return (
     <section
       ref={ref}
-      className="px-4 py-16 sm:px-6 sm:py-20 lg:px-8"
+      className="relative overflow-hidden px-4 py-16 sm:px-6 sm:py-20 lg:px-8"
       aria-labelledby="landing-proof-heading"
     >
-      <div className="mx-auto max-w-6xl">
-        <div
-          className={cn(
-            'landing-reveal overflow-hidden rounded-[var(--radius-lg)] border border-border-default',
-            'bg-surface-raised shadow-elevation-md',
-            isVisible && 'is-visible',
-          )}
-        >
-          <div className="border-b border-border-subtle px-6 py-8 text-center sm:px-10 sm:py-10">
+      <div aria-hidden className="landing-section-glow" />
+
+      <div className="relative mx-auto max-w-6xl">
+        <Reveal visible={isVisible} className={cn('landing-proof-shell')}>
+          <div className="border-b border-[rgba(99,102,241,0.1)] px-6 py-10 text-center sm:px-10 sm:py-12">
             <h2
               id="landing-proof-heading"
-              className="font-display text-2xl font-semibold tracking-tight text-foreground sm:text-3xl"
+              className="landing-section-title font-display text-2xl tracking-tight sm:text-3xl"
             >
               Why teams use this
             </h2>
-            <p className="mx-auto mt-3 max-w-2xl text-base text-muted">
+            <p className="mx-auto mt-3 max-w-2xl text-base text-[#475569]">
               A retrieval stack designed for accuracy, traceability, and controlled access —
               not another chatbot wrapping a search box.
             </p>
           </div>
 
-          <ul className="grid divide-y divide-border-subtle sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+          <ul className="grid divide-y divide-[rgba(99,102,241,0.1)] sm:grid-cols-3 sm:divide-x sm:divide-y-0">
             {CAPABILITIES.map((item, index) => (
-              <li
+              <Reveal
                 key={item.label}
-                className={cn(
-                  'landing-reveal px-6 py-8 text-center sm:px-8',
-                  isVisible && 'is-visible',
-                )}
-                style={{
-                  transitionDelay: isVisible ? `${140 + index * 80}ms` : undefined,
-                }}
+                as="li"
+                visible={isVisible}
+                delayMs={140 + index * 90}
+                className="px-6 py-9 text-center sm:px-8"
               >
-                <p className="font-display text-3xl font-semibold tracking-tight text-accent sm:text-4xl">
-                  {item.label}
-                </p>
-                <p className="mt-3 text-sm leading-relaxed text-muted">{item.detail}</p>
-              </li>
+                <p className="landing-proof-label">{item.label}</p>
+                <p className="mt-3 text-sm leading-relaxed text-[#475569]">{item.detail}</p>
+              </Reveal>
             ))}
           </ul>
-        </div>
+        </Reveal>
       </div>
     </section>
   )

@@ -37,7 +37,7 @@ function renderMessage(message: ExportMessageModel, options: ExportOptions): str
 
 export function generateText(model: ExportConversationModel, options: ExportOptions): string {
   const lines: string[] = []
-  lines.push('ENTERPRISE KNOWLEDGE ASSISTANT — CONVERSATION EXPORT')
+  lines.push('KNOWRA — CONVERSATION EXPORT')
   lines.push(RULE)
   lines.push(`Title: ${model.title}`)
   lines.push(`Exported: ${formatExportDateTime(model.exportedAtIso)}`)

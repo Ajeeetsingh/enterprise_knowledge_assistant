@@ -1,6 +1,6 @@
 # Frontend
 
-React + TypeScript + Vite application for Enterprise Knowledge Assistant.
+React + TypeScript + Vite application for Knowra.
 
 ## Commands
 

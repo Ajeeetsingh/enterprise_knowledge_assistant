@@ -14,6 +14,8 @@ Design constraints:
 from __future__ import annotations
 
 import uuid
+from collections.abc import Sequence
+from typing import Literal
 
 from sqlalchemy.orm import Session
 
@@ -30,6 +32,12 @@ from app.db.models.message import Message, MessageRole
 from app.db.models.user import User
 from app.db.repositories.conversation_repository import ConversationRepository
 from app.db.repositories.message_repository import MessageRepository
+from app.schemas.guest_import import (
+    GUEST_IMPORT_DEFAULT_TITLE,
+    GUEST_IMPORT_MAX_MESSAGE_CHARS,
+    GUEST_IMPORT_MAX_MESSAGES,
+    GUEST_IMPORT_MAX_TOTAL_CHARS,
+)
 from app.services.context_builder import (
     DEFAULT_CONTEXT_WINDOW,
     MAX_CONTEXT_CHARACTERS,
@@ -37,6 +45,8 @@ from app.services.context_builder import (
     ContextBuilder,
     ConversationContext,
 )
+
+GuestImportRole = Literal["user", "assistant"]
 
 logger = get_logger(__name__)
 
@@ -116,6 +126,120 @@ class ConversationService:
             extra={"conversation_id": str(conversation.id), "user_id": str(user.id)},
         )
         return conversation
+
+    def import_guest_conversation(
+        self,
+        user: User,
+        messages: Sequence[tuple[GuestImportRole, str]],
+        *,
+        title: str | None = GUEST_IMPORT_DEFAULT_TITLE,
+    ) -> Conversation:
+        """Atomically create a conversation and persist guest turns as plain text.
+
+        Security boundaries:
+        - Only ``user`` / ``assistant`` roles are accepted.
+        - Client-supplied IDs, timestamps, citations, confidence scores, and
+          authorization metadata are never accepted (callers must strip them).
+        - Imported assistant turns are stored with empty citations and no
+          confidence score — never as trusted RAG/document answers.
+        - All validation runs before any database write; failures roll back.
+
+        Args:
+            user: Authenticated owner of the new conversation.
+            messages: Chronological ``(role, content)`` pairs.
+            title: Conversation title (defaults to ``Guest conversation``).
+
+        Returns:
+            The newly created conversation with imported messages.
+
+        Raises:
+            MessageValidationError: When the payload is empty, oversized, or
+                contains invalid roles/content.
+            ConversationValidationError: When the title is invalid.
+        """
+        cleaned = self._validate_guest_import_messages(messages)
+        clean_title = self._normalize_title(title) or GUEST_IMPORT_DEFAULT_TITLE
+
+        db = self._conversation_repo._db
+        conversation = Conversation(
+            id=uuid.uuid4(),
+            user_id=user.id,
+            title=clean_title,
+        )
+        try:
+            db.add(conversation)
+            db.flush()
+
+            for role, content in cleaned:
+                message = Message(
+                    id=uuid.uuid4(),
+                    conversation_id=conversation.id,
+                    role=(
+                        MessageRole.USER.value
+                        if role == "user"
+                        else MessageRole.ASSISTANT.value
+                    ),
+                    content=content,
+                    confidence_score=None,
+                )
+                # Never attach citations or document provenance on import.
+                message.citations = []
+                db.add(message)
+
+            db.commit()
+            db.refresh(conversation)
+        except Exception:
+            db.rollback()
+            raise
+
+        logger.info(
+            "conversation.guest_import",
+            extra={
+                "conversation_id": str(conversation.id),
+                "user_id": str(user.id),
+                "message_count": len(cleaned),
+            },
+        )
+        return conversation
+
+    @staticmethod
+    def _validate_guest_import_messages(
+        messages: Sequence[tuple[GuestImportRole, str]],
+    ) -> list[tuple[GuestImportRole, str]]:
+        """Validate guest import turns before any persistence."""
+        if not messages:
+            raise MessageValidationError("Imported history must not be empty.")
+        if len(messages) > GUEST_IMPORT_MAX_MESSAGES:
+            raise MessageValidationError(
+                f"Imported history must not exceed {GUEST_IMPORT_MAX_MESSAGES} messages."
+            )
+
+        cleaned: list[tuple[GuestImportRole, str]] = []
+        total_chars = 0
+        for role, content in messages:
+            if role not in {"user", "assistant"}:
+                raise MessageValidationError(
+                    "Imported messages may only use roles 'user' or 'assistant'."
+                )
+            if not content or not str(content).strip():
+                raise MessageValidationError(
+                    "Message content must not be empty or blank."
+                )
+            text = str(content).strip()
+            if len(text) > GUEST_IMPORT_MAX_MESSAGE_CHARS:
+                raise MessageValidationError(
+                    f"Message content must not exceed "
+                    f"{GUEST_IMPORT_MAX_MESSAGE_CHARS} characters."
+                )
+            total_chars += len(text)
+            cleaned.append((role, text))  # type: ignore[arg-type]
+
+        if total_chars > GUEST_IMPORT_MAX_TOTAL_CHARS:
+            raise MessageValidationError(
+                f"Imported history exceeds maximum of "
+                f"{GUEST_IMPORT_MAX_TOTAL_CHARS} characters."
+            )
+        return cleaned
 
     def get_conversation(
         self,

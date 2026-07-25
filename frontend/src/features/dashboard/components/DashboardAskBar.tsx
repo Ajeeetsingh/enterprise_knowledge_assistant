@@ -28,10 +28,10 @@ export default function DashboardAskBar() {
       </label>
       <div
         className={cn(
-          'flex items-end gap-3 rounded-[var(--radius-lg)] border border-border-default',
-          'bg-surface-raised px-4 py-3.5 shadow-elevation-sm',
+          'dashboard-ask-bar',
+          'flex items-end gap-3 rounded-[var(--radius-lg)]',
+          'bg-surface-raised px-4 py-3.5',
           'transition-[border-color,box-shadow] duration-200',
-          'focus-within:border-accent focus-within:shadow-[0_0_0_3px_var(--accent-muted)]',
         )}
       >
         <input
@@ -41,17 +41,21 @@ export default function DashboardAskBar() {
           onChange={(event) => setValue(event.target.value)}
           placeholder="Ask anything about your organisation's knowledge…"
           className={cn(
-            'min-w-0 flex-1 bg-transparent text-[15px] text-foreground outline-none',
+            'dashboard-ask-bar__input',
+            'min-w-0 flex-1 border-none bg-transparent shadow-none',
+            'text-[15px] text-foreground outline-none',
+            'focus:outline-none focus:ring-0',
             'placeholder:text-subtle',
           )}
           autoComplete="off"
         />
+        <kbd className="dashboard-ask-bar__kbd hidden sm:inline-flex">⌘K</kbd>
         <button
           type="submit"
           disabled={!canSend}
           aria-label="Ask question"
           className={cn(
-            'chat-send-button',
+            'dashboard-ask-bar__send',
             !canSend && 'cursor-not-allowed',
           )}
         >

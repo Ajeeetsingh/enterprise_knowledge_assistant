@@ -1,4 +1,4 @@
-# Enterprise Knowledge Assistant - Project Overview
+# Knowra - Project Overview
 
 This document is the detailed reference for the **implemented** product: what it is, who it is for, how the system works end-to-end, and how the major pieces fit together.
 
@@ -16,7 +16,7 @@ It describes the codebase as it exists today. It does not document planned featu
 
 ## 1. Project overview
 
-**Enterprise Knowledge Assistant** is an AI-powered internal knowledge platform. Organisations upload policy manuals, handbooks, reports, and other files; the system builds a searchable knowledge base; authenticated users ask natural-language questions and receive answers grounded in retrieved document evidence, with citations back to the source.
+**Knowra** is an AI-powered internal knowledge platform. Organisations upload policy manuals, handbooks, reports, and other files; the system builds a searchable knowledge base; authenticated users ask natural-language questions and receive answers grounded in retrieved document evidence, with citations back to the source.
 
 ### Problem
 
@@ -92,7 +92,7 @@ Access permissions change the **evidence set**. The same question asked by two r
 
 ## 3. Complete feature overview
 
-### Knowledge assistant
+### Knowra chat
 
 | Capability | Status |
 |------------|--------|
@@ -155,7 +155,7 @@ Access permissions change the **evidence set**. The same question asked by two r
 | App monitoring page | Business summary + runtime metrics (`/monitoring`) |
 | Audit log API | Searchable audit events |
 
-**Not fully productized:** the Admin home dashboard uses placeholder/mock metrics; Admin **Collections** UI is a local preview and is **not** persisted by a collections backend API.
+**Not fully productized:** Admin **Collections** UI is a local preview and is **not** persisted by a collections backend API.
 
 ### Public product surfaces
 
@@ -315,7 +315,34 @@ Successful indexed documents typically reach status **`searchable`**.
 
 ## 7. RAG and retrieval pipeline
 
-Entry path: chat service → `RagService` → `EnterpriseRAG` (`backend/app/rag/`).
+Entry path: chat service → **query router** → (optional) `RagService` → `EnterpriseRAG` (`backend/app/rag/`).
+
+### Assistant query routing (above RAG)
+
+Before retrieval, `ConversationChatService` classifies each turn via `backend/app/query_router/`:
+
+```
+User query
+  → lightweight UNSAFE screen (high-confidence harmful intent only)
+  → PRODUCT_HELP catalogue (exact + semantic match)
+  → DOCUMENT vs GENERAL classification
+       (deterministic signals first; constrained LLM only if ambiguous)
+  → contextual follow-up inheritance (prior turn only, when current turn is weak)
+  → selected response path
+```
+
+| Route | Response path |
+|-------|----------------|
+| **PRODUCT_HELP** | Curated local answer (role / document / upload aware). No RAG, no citations. |
+| **DOCUMENT_QUERY** | Secure RAG with fail-closed ACL. Citations only on this path. |
+| **GENERAL_QUERY** | Configured LLM (small recent history window). No RAG, no citations. |
+| **UNSAFE** | Concise boundary message. No RAG, no general generation. |
+
+**Zero-document behaviour:** organization-specific DOCUMENT questions with an empty authorized source set return a curated “no accessible documents” message and **do not** fall back to general LLM knowledge.
+
+**Contextual follow-ups:** ambiguous continuations (“What about adoptive parents?”, “Can you give me an example?”) may inherit the previous route. Strong current-turn signals always override (e.g. a general definition after a policy question). Conversation history never expands document authorization.
+
+**Citations:** only document-grounded RAG answers include sources. Product, general, unsafe, and zero-document messages never invent citations.
 
 ### Query lifecycle (actual order)
 
@@ -323,7 +350,8 @@ Entry path: chat service → `RagService` → `EnterpriseRAG` (`backend/app/rag/
 User question
   → authenticate + require knowledge:query
   → resolve authorized source filenames (document ACL; empty set = retrieve nothing)
-  → query processing (classify, expand, entities, multi-query, strategy)
+  → QueryRouter (PRODUCT / GENERAL / UNSAFE short-circuit, or DOCUMENT)
+  → [DOCUMENT only] query processing (classify, expand, entities, multi-query, strategy)
   → per query: HybridRetriever
         • dense FAISS gather
         • sparse BM25 gather
@@ -481,12 +509,12 @@ Routes from `frontend/src/app/router.tsx` (production-relevant):
 | `/` | Landing |
 | `/login`, `/register` | Authentication |
 | `/dashboard` | Workspace home |
-| `/chat` | Knowledge assistant conversations |
+| `/chat` | Knowra conversations |
 | `/documents` | Document library |
 | `/documents/:documentId` | Document viewer |
 | `/profile` | Profile |
 | `/monitoring` | Admin monitoring summary |
-| `/admin` | Admin portal home (placeholder metrics) |
+| `/admin` | Admin portal home (live inventory metrics from monitoring APIs) |
 | `/admin/users` | User management |
 | `/admin/documents`, `/admin/uploads` | Admin document ops |
 | `/admin/collections` | Collections preview (not server-persisted) |
@@ -558,6 +586,7 @@ enterprise_knowledge_assistant/
 │   │   ├── db/            # Models, repositories, session
 │   │   ├── ingestion/     # Upload → index pipeline
 │   │   ├── rag/           # Hybrid retrieval, rerank, engine
+│   │   ├── query_router/  # PRODUCT / DOCUMENT / GENERAL / UNSAFE routing
 │   │   ├── evaluation/    # Benchmarks & golden datasets
 │   │   ├── analytics/     # Admin analytics backends
 │   │   └── ...
@@ -645,8 +674,9 @@ Architectural boundaries of the current release (not a punch list of unfinished 
 | Stateless logout | Tokens remain valid until expiry unless rotated/secret changed |
 | No distributed ingestion workers | Pipeline runs in-process with the API |
 | Admin Collections UI | Local preview only — no collections persistence API |
-| Admin home metrics | Placeholder / mock on `/admin` (live analytics live under `/admin/analytics/*`) |
 | Category RAG map vs permission matrix | Two complementary mechanisms; ACL + authorized sources remain decisive for evidence |
+| Product-help semantic threshold (0.78) | Tuned for precision; uncommon paraphrases may miss and fall through to DOCUMENT/GENERAL |
+| Follow-up inheritance cues | Compact phrase patterns — novel continuations may use the safe DOCUMENT default |
 
 ---
 

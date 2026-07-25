@@ -1,4 +1,4 @@
-# Enterprise Knowledge Assistant — Backend
+# Knowra — Backend
 # Production/runtime dependencies
 fastapi>=0.115.0
 uvicorn[standard]>=0.32.0

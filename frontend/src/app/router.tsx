@@ -10,6 +10,7 @@ import {
   AdminUsersPage,
 } from '@/features/admin'
 import { AIAnalyticsPage, ErrorAnalyticsPage, KnowledgeAnalyticsPage, SystemMonitoringPage, UserAnalyticsPage } from '@/features/analytics'
+import { GuestDemoPage } from '@/features/demo'
 import DocumentViewerPage from '@/features/document-viewer/pages/DocumentViewerPage'
 import { ReportsPage } from '@/features/reports'
 import AppLayout from '@/layouts/AppLayout'
@@ -36,6 +37,7 @@ const router = createBrowserRouter([
     element: <RootLayout />,
     children: [
       { index: true, element: <HomePage /> },
+      { path: 'demo', element: <GuestDemoPage /> },
       ...(import.meta.env.DEV
         ? [{ path: 'design-system', element: <DesignSystemPage /> }]
         : []),

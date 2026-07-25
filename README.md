@@ -1,4 +1,4 @@
-# Enterprise Knowledge Assistant
+# Knowra
 
 An AI-powered enterprise knowledge platform that turns organisational documents into a secure, searchable knowledge base, so employees can ask natural-language questions and receive grounded answers with citations.
 
@@ -14,7 +14,7 @@ In most organisations, knowledge is scattered across PDFs, handbooks, policies, 
 
 ## The solution
 
-Enterprise Knowledge Assistant ingests documents, builds a hybrid search index, and answers questions with retrieved evidence — while **backend authorization** decides what each user may see.
+Knowra ingests documents, builds a hybrid search index, and answers questions with retrieved evidence — while **backend authorization** decides what each user may see.
 
 ```
 Upload → parse → chunk → embeddings + BM25

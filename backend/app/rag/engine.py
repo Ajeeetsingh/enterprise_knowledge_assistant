@@ -32,6 +32,7 @@ from app.rag.query_processing.strategy import (
 from app.rag.retriever import SemanticRetriever
 from app.rag.router import route_query
 from app.rag.types import CITATION_EXCERPT_LENGTH, Citation, QueryResponse, RetrievalResult
+from app.query_router.messages import INSUFFICIENT_DOCUMENT_EVIDENCE_MESSAGE
 
 logger = get_logger(__name__)
 
@@ -751,7 +752,7 @@ class EnterpriseRAG:
                 role=normalized_role,
                 routed_category=route.category,
                 route_confidence=route.confidence,
-                answer="No relevant documents found for this query.",
+                answer=INSUFFICIENT_DOCUMENT_EVIDENCE_MESSAGE,
                 sources_used=[],
                 citations=[],
                 confidence_score=0.0,

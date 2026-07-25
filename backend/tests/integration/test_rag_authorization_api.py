@@ -25,8 +25,9 @@ from app.db.models.document import Document as DocumentModel
 from app.dependencies import get_db, get_rag_service_dep
 from app.documents.visibility import DocumentVisibility
 from app.main import app
+from app.query_router import ZERO_ACCESSIBLE_DOCUMENTS_MESSAGE
 from tests.constants import TEST_PASSWORD_HASH
-from tests.integration.chat_helpers import ask_payload, create_conversation
+from tests.integration.chat_helpers import ask_payload, create_conversation, force_document_query_router
 from tests.integration.conftest import access_token_for, bearer_headers
 
 ASK_URL = "/api/v1/chat/ask"
@@ -141,7 +142,13 @@ def chat_client(
 
     app.dependency_overrides[get_db] = override_get_db
     app.dependency_overrides[get_rag_service_dep] = lambda: mock_rag_service
-    with TestClient(app) as test_client:
+    with (
+        patch(
+            "app.services.conversation_chat_service.get_query_router",
+            return_value=force_document_query_router(),
+        ),
+        TestClient(app) as test_client,
+    ):
         yield test_client
     app.dependency_overrides.clear()
 
@@ -220,6 +227,12 @@ class TestAuthorizedSourcesForwarded:
             visibility=DocumentVisibility.RESTRICTED,
             allowed_roles=["HR"],
         )
+        _add_doc(
+            db_session,
+            filename="public.txt",
+            uploader=hr_user,
+            visibility=DocumentVisibility.PUBLIC,
+        )
 
         token = access_token_for(active_user)
         _post_chat(
@@ -232,6 +245,7 @@ class TestAuthorizedSourcesForwarded:
         authorized = call_args[0][2] if len(call_args[0]) >= 3 else call_args[1].get("authorized_sources")
         # Employee must not have access to HR-only restricted doc
         assert "hr_only.txt" not in authorized
+        assert "public.txt" in authorized
 
     def test_hr_user_gets_hr_restricted_doc(
         self,
@@ -362,13 +376,13 @@ class TestAuthorizedSourcesForwarded:
 # ---------------------------------------------------------------------------
 
 class TestEmptyAndNoDBScenarios:
-    def test_no_db_documents_still_calls_answer_question(
+    def test_no_db_documents_returns_zero_accessible_message(
         self,
         chat_client: TestClient,
         mock_rag_service: MagicMock,
         active_user: User,
     ) -> None:
-        """With no DB docs, authorized_sources is an empty frozenset (filesystem files pass through at retriever level)."""
+        """DOCUMENT_QUERY with zero authorized docs short-circuits without RAG."""
         token = access_token_for(active_user)
         response = _post_chat(
             chat_client,
@@ -376,15 +390,24 @@ class TestEmptyAndNoDBScenarios:
             "Leave policy?",
         )
         assert response.status_code == 200
-        mock_rag_service.answer_question.assert_called_once()
+        assert response.json()["answer"] == ZERO_ACCESSIBLE_DOCUMENTS_MESSAGE
+        assert response.json()["citations"] == []
+        mock_rag_service.answer_question.assert_not_called()
 
     def test_chat_response_structure_unchanged(
         self,
         chat_client: TestClient,
         mock_rag_service: MagicMock,
         active_user: User,
+        db_session: Session,
     ) -> None:
         """Phase 6.6 extends the public response with conversation_id."""
+        _add_doc(
+            db_session,
+            filename="public.txt",
+            uploader=active_user,
+            visibility=DocumentVisibility.PUBLIC,
+        )
         token = access_token_for(active_user)
         response = _post_chat(
             chat_client,

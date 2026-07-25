@@ -30,6 +30,8 @@ from app.db.models import (  # noqa: F401
 from app.db.repositories.message_repository import MessageRepository
 from app.rag.answer_generator import UNAVAILABLE_MESSAGE
 from app.rag.types import Citation
+from app.query_router import QueryRouter, QueryRoute
+from app.query_router.knowledge_classifier import KnowledgeRouteResult
 from app.services.conversation_chat_service import (
     ConversationChatService,
     resolve_assistant_content,
@@ -96,7 +98,35 @@ def other_user(db_session: Session) -> User:
 
 @pytest.fixture
 def chat_service(db_session: Session) -> ConversationChatService:
-    return ConversationChatService(build_conversation_service(db_session))
+    """Force DOCUMENT_QUERY so Phase 2 general routing does not divert RAG tests."""
+    return _force_document_chat_service(db_session)
+
+
+def _force_document_chat_service(
+    db_session: Session,
+    *,
+    title_llm_provider: object | None = None,
+) -> ConversationChatService:
+    matcher = MagicMock()
+    matcher.match_and_answer.return_value = None
+    classifier = MagicMock()
+    classifier.classify.return_value = KnowledgeRouteResult(
+        QueryRoute.DOCUMENT_QUERY,
+        0.95,
+        "test_force_document",
+        ("test",),
+    )
+    router = QueryRouter(
+        product_matcher=matcher,
+        knowledge_classifier=classifier,
+        llm_provider=False,
+    )
+    return ConversationChatService(
+        build_conversation_service(db_session),
+        title_llm_provider=title_llm_provider,  # type: ignore[arg-type]
+        query_router=router,
+        llm_provider=False,
+    )
 
 
 @pytest.fixture
@@ -219,7 +249,7 @@ class TestConversationChatServiceAsk:
             "What about adoptive parents?",
             "Employee",
             rag,
-            frozenset(),
+            frozenset({"hr_policy.txt"}),
         )
 
         assert rag.answer_question.call_args[0][0] == "What about adoptive parents?"
@@ -246,7 +276,7 @@ class TestConversationChatServiceAsk:
                 "What is our maternity leave policy?",
                 "Employee",
                 rag,
-                None,
+                frozenset({"hr_policy.txt"}),
             )
 
         messages = MessageRepository(db_session).list_for_conversation(conversation.id)
@@ -365,7 +395,7 @@ class TestConversationChatServiceAsk:
             "What is the quantum computing roadmap?",
             "Employee",
             rag,
-            None,
+            frozenset({"knowledge.txt"}),
         )
 
         messages = MessageRepository(db_session).list_for_conversation(conversation.id)
@@ -380,7 +410,7 @@ class TestConversationChatServiceAsk:
         """No LLM provider wired in ⇒ deterministic fallback runs, and the
         generated title is persisted after the first user message."""
         conv_service = build_conversation_service(db_session)
-        chat_service = ConversationChatService(conv_service)
+        chat_service = _force_document_chat_service(db_session)
         conv = conv_service.create_conversation(owner)
         assert conv.title is None
 
@@ -393,7 +423,7 @@ class TestConversationChatServiceAsk:
             "What are the main types of commercial paper issuers?",
             "Employee",
             rag,
-            None,
+            frozenset({"issuers.txt"}),
         )
 
         updated = conv_service.get_conversation(owner, conv.id)
@@ -429,20 +459,20 @@ class TestConversationChatServiceAsk:
         owner: User,
     ) -> None:
         conv_service = build_conversation_service(db_session)
-        chat_service = ConversationChatService(conv_service)
+        chat_service = _force_document_chat_service(db_session)
         conv = conv_service.create_conversation(owner)
 
         rag = MagicMock()
         rag.answer_question.return_value = _rag_response()
 
         chat_service.ask_question(
-            owner, conv.id, "Explain Project Phoenix.", "Employee", rag, None
+            owner, conv.id, "Explain Project Phoenix.", "Employee", rag, frozenset({"doc.txt"})
         )
         first_title = conv_service.get_conversation(owner, conv.id).title
         assert first_title == "Project Phoenix"
 
         chat_service.ask_question(
-            owner, conv.id, "What about the budget?", "Employee", rag, None
+            owner, conv.id, "What about the budget?", "Employee", rag, frozenset({"doc.txt"})
         )
         second_title = conv_service.get_conversation(owner, conv.id).title
         assert second_title == "Project Phoenix"
@@ -456,14 +486,17 @@ class TestConversationChatServiceAsk:
         conv_service = build_conversation_service(db_session)
         broken_provider = MagicMock()
         broken_provider.generate_sync.side_effect = RuntimeError("provider down")
-        chat_service = ConversationChatService(conv_service, title_llm_provider=broken_provider)
+        chat_service = _force_document_chat_service(
+            db_session,
+            title_llm_provider=broken_provider,
+        )
         conv = conv_service.create_conversation(owner)
 
         rag = MagicMock()
         rag.answer_question.return_value = _rag_response()
 
         result = chat_service.ask_question(
-            owner, conv.id, "Explain Project Phoenix.", "Employee", rag, None
+            owner, conv.id, "Explain Project Phoenix.", "Employee", rag, frozenset({"doc.txt"})
         )
 
         assert result.answer == "16 weeks of paid leave."
@@ -479,7 +512,10 @@ class TestConversationChatServiceAsk:
         conv_service = build_conversation_service(db_session)
         llm_provider = MagicMock()
         llm_provider.generate_sync.return_value = SimpleNamespace(answer="Money Market Funds")
-        chat_service = ConversationChatService(conv_service, title_llm_provider=llm_provider)
+        chat_service = _force_document_chat_service(
+            db_session,
+            title_llm_provider=llm_provider,
+        )
         conv = conv_service.create_conversation(owner)
 
         rag = MagicMock()
@@ -491,7 +527,7 @@ class TestConversationChatServiceAsk:
             "How do money market funds work?",
             "Employee",
             rag,
-            None,
+            frozenset({"mmf.txt"}),
         )
 
         llm_provider.generate_sync.assert_called_once()
@@ -520,7 +556,7 @@ class TestConversationChatServiceAsk:
             "What is the quantum computing roadmap?",
             "Employee",
             rag,
-            None,
+            frozenset({"knowledge.txt"}),
         )
 
         messages = MessageRepository(db_session).list_for_conversation(conversation.id)

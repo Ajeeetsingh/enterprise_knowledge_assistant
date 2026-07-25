@@ -1,6 +1,6 @@
 # Development
 
-Local setup for engineers working on Enterprise Knowledge Assistant.
+Local setup for engineers working on Knowra.
 
 Product and architecture context: [PROJECT_OVERVIEW.md](PROJECT_OVERVIEW.md) · [ARCHITECTURE.md](ARCHITECTURE.md).  
 Production deploy steps: [DEPLOYMENT.md](DEPLOYMENT.md) (do not use this file for production hosting).

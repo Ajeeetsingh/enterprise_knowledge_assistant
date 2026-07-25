@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "description": "Golden evaluation dataset for the Enterprise Knowledge Assistant GTFS corpus.",
+  "description": "Golden evaluation dataset for the Knowra GTFS corpus.",
   "metadata": {
     "corpus": "GTFS enterprise documents",
     "primary_document": "GTFS-EXEC-001_Company_Overview.pdf",

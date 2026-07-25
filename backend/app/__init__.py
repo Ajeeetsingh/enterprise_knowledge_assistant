@@ -1,1 +1,1 @@
-"""Enterprise Knowledge Assistant backend application."""
+"""Knowra backend application."""
