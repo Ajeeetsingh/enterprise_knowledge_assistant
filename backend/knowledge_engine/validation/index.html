@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Knowra — Knowledge Engine Validation Console</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="page">
+      <header class="hero">
+        <p class="eyebrow">Developer only · Phase 13 Engineering Dashboard</p>
+        <h1 id="title">Knowledge Intelligence Engine</h1>
+        <p id="subtitle" class="subtitle">Validation console</p>
+        <div class="meta-row">
+          <span class="pill" id="phase-pill">Phase —</span>
+          <span class="pill" id="mode-pill">Mode —</span>
+          <span class="pill" id="version-pill">Version —</span>
+          <span class="pill muted" id="generated-pill">Generated —</span>
+        </div>
+        <ul class="decision-list" id="decision-questions"></ul>
+      </header>
+
+      <section class="grid stats" id="stats-grid" aria-label="Summary statistics"></section>
+
+      <section class="panel">
+        <div class="panel-header">
+          <h2>Phase 13 roadmap</h2>
+          <p class="hint">13.1–13.7 approved · 13.8 active</p>
+        </div>
+        <div class="roadmap" id="roadmap"></div>
+      </section>
+
+      <section class="panel" id="registry-section">
+        <div class="panel-header">
+          <h2>Knowledge Registry</h2>
+          <p class="hint">Phase 13.2 organizational layer (Shadow Mode)</p>
+        </div>
+        <div class="grid stats" id="registry-stats"></div>
+        <div class="split" style="margin-top: 1rem">
+          <article>
+            <h3 class="subhead">Registry checklist</h3>
+            <ul class="checklist" id="registry-checklist"></ul>
+          </article>
+          <article>
+            <h3 class="subhead">Collections</h3>
+            <div id="registry-collections" class="chip-row"></div>
+            <h3 class="subhead" style="margin-top: 1rem">Knowledge health</h3>
+            <div id="registry-health" class="chip-row"></div>
+            <h3 class="subhead" style="margin-top: 1rem">Coverage</h3>
+            <ul class="notes" id="registry-coverage"></ul>
+          </article>
+        </div>
+        <div class="split" style="margin-top: 1rem">
+          <article>
+            <h3 class="subhead">Taxonomy paths</h3>
+            <ul class="notes" id="registry-taxonomy"></ul>
+          </article>
+          <article>
+            <h3 class="subhead">Canonical aliases</h3>
+            <ul class="notes" id="registry-aliases"></ul>
+          </article>
+        </div>
+        <div class="split" style="margin-top: 1rem">
+          <article>
+            <h3 class="subhead">Version groups</h3>
+            <ul class="notes" id="registry-versions"></ul>
+          </article>
+          <article>
+            <h3 class="subhead">Duplicate candidates</h3>
+            <ul class="notes" id="registry-duplicates"></ul>
+          </article>
+        </div>
+        <div class="split" style="margin-top: 1rem">
+          <article>
+            <h3 class="subhead">Documents without collections</h3>
+            <ul class="notes" id="registry-missing-collections"></ul>
+          </article>
+          <article>
+            <h3 class="subhead">Documents requiring manual review</h3>
+            <ul class="notes" id="registry-manual-review"></ul>
+          </article>
+        </div>
+        <div class="table-wrap" style="margin-top: 1rem">
+          <table>
+            <thead>
+              <tr>
+                <th>Document</th>
+                <th>Knowledge ID</th>
+                <th>Collection</th>
+                <th>Taxonomy</th>
+                <th>Version</th>
+                <th>Health</th>
+                <th>Review</th>
+              </tr>
+            </thead>
+            <tbody id="registry-entries-body"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="split">
+        <article class="panel">
+          <div class="panel-header">
+            <h2>Validation checklist</h2>
+            <p class="hint">Expand any item for details</p>
+          </div>
+          <ul class="checklist" id="checklist"></ul>
+        </article>
+        <article class="panel">
+          <div class="panel-header">
+            <h2>Phase 13.1 approval gate</h2>
+          </div>
+          <p class="hint" id="approval-note"></p>
+          <ul class="approval-list" id="approval-gate"></ul>
+          <p class="approval-banner" id="approval-banner"></p>
+        </article>
+      </section>
+
+      <section class="panel">
+        <div class="panel-header">
+          <h2>Capability comparison</h2>
+          <p class="hint">Legacy ingestion vs Knowledge Engine</p>
+        </div>
+        <div class="table-wrap">
+          <table class="compare-table">
+            <thead>
+              <tr>
+                <th>Feature</th>
+                <th>Legacy</th>
+                <th>Knowledge Engine</th>
+              </tr>
+            </thead>
+            <tbody id="capability-body"></tbody>
+          </table>
+        </div>
+        <ul class="notes" id="compare-notes"></ul>
+      </section>
+
+      <section class="panel">
+        <div class="panel-header">
+          <h2>Confidence explanation</h2>
+          <p class="hint">Never treat heuristic scores as calibrated AI confidence</p>
+        </div>
+        <div id="confidence-panel"></div>
+      </section>
+
+      <section class="panel" id="relationships-section">
+        <div class="panel-header">
+          <h2>Relationship Explorer</h2>
+          <p class="hint">Phase 13.3 — Shadow Mode edges between Registry entries</p>
+        </div>
+        <p class="hint" id="relationship-confidence-note"></p>
+        <div class="grid stats" id="relationship-stats"></div>
+        <div class="split" style="margin-top: 1rem">
+          <article>
+            <h3 class="subhead">Relationship checklist</h3>
+            <ul class="checklist" id="relationship-checklist"></ul>
+          </article>
+          <article>
+            <h3 class="subhead">Relationship types</h3>
+            <div id="relationship-types" class="chip-row"></div>
+            <h3 class="subhead" style="margin-top: 1rem">Confidence distribution</h3>
+            <div id="relationship-confidence" class="chip-row"></div>
+            <h3 class="subhead" style="margin-top: 1rem">Coverage</h3>
+            <ul class="notes" id="relationship-coverage"></ul>
+          </article>
+        </div>
+        <div class="split" style="margin-top: 1rem">
+          <article>
+            <h3 class="subhead">Top connected documents</h3>
+            <ul class="notes" id="relationship-top"></ul>
+          </article>
+          <article>
+            <h3 class="subhead">Documents without relationships</h3>
+            <ul class="notes" id="relationship-without"></ul>
+          </article>
+        </div>
+        <div class="table-wrap" style="margin-top: 1rem">
+          <table>
+            <thead>
+              <tr>
+                <th>Source</th>
+                <th>Type</th>
+                <th>Target</th>
+                <th>Confidence</th>
+                <th>Evidence source</th>
+                <th>Evidence</th>
+              </tr>
+            </thead>
+            <tbody id="relationship-edges-body"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel" id="hybrid-index-section">
+        <div class="panel-header">
+          <h2>Hybrid Knowledge Index</h2>
+          <p class="hint">Phase 13.4 — Shadow Mode indexes over Knowledge Objects, Registry, and Relationships</p>
+        </div>
+        <div class="grid stats" id="hybrid-index-summary"></div>
+        <div class="split" style="margin-top: 1rem">
+          <article>
+            <h3 class="subhead">Index checklist</h3>
+            <ul class="checklist" id="hybrid-index-checklist"></ul>
+          </article>
+          <article>
+            <h3 class="subhead">Performance</h3>
+            <ul class="notes" id="hybrid-index-performance"></ul>
+            <h3 class="subhead" style="margin-top: 1rem">Coverage / health</h3>
+            <ul class="notes" id="hybrid-index-coverage"></ul>
+          </article>
+        </div>
+        <h3 class="subhead" style="margin-top: 1rem">Per-index statistics</h3>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Index</th>
+                <th>Keys</th>
+                <th>Documents</th>
+                <th>Entries</th>
+                <th>Memory (est.)</th>
+              </tr>
+            </thead>
+            <tbody id="hybrid-index-stats-body"></tbody>
+          </table>
+        </div>
+        <div class="split" style="margin-top: 1rem">
+          <article>
+            <h3 class="subhead">Index Explorer</h3>
+            <p class="hint">Select a document to inspect index references</p>
+            <label class="hint" for="hybrid-index-doc-select">Document</label>
+            <select id="hybrid-index-doc-select"></select>
+            <pre class="code-block" id="hybrid-index-explorer"></pre>
+          </article>
+          <article>
+            <h3 class="subhead">Lookup Explorer</h3>
+            <p class="hint">Sample offline lookups (does not affect production)</p>
+            <ul class="notes" id="hybrid-index-lookups"></ul>
+          </article>
+        </div>
+      </section>
+
+      <section class="panel" id="query-planner-section">
+        <div class="panel-header">
+          <h2>Intelligent Query Planner</h2>
+          <p class="hint">Phase 13.5 — Shadow Mode execution plans only (no retrieval)</p>
+        </div>
+        <div class="grid stats" id="query-planner-summary"></div>
+        <div class="split" style="margin-top: 1rem">
+          <article>
+            <h3 class="subhead">Planner checklist</h3>
+            <ul class="checklist" id="query-planner-checklist"></ul>
+          </article>
+          <article>
+            <h3 class="subhead">Planning metrics</h3>
+            <ul class="notes" id="query-planner-metrics"></ul>
+            <h3 class="subhead" style="margin-top: 1rem">Diagnostics</h3>
+            <ul class="notes" id="query-planner-diagnostics"></ul>
+          </article>
+        </div>
+        <div class="split" style="margin-top: 1rem">
+          <article>
+            <h3 class="subhead">Intent distribution</h3>
+            <div id="query-planner-intents" class="chip-row"></div>
+            <h3 class="subhead" style="margin-top: 1rem">Strategy distribution</h3>
+            <div id="query-planner-strategies" class="chip-row"></div>
+          </article>
+          <article>
+            <h3 class="subhead">Interactive Planner</h3>
+            <p class="hint" id="query-planner-note"></p>
+            <label class="hint" for="query-planner-select">Sample query</label>
+            <select id="query-planner-select"></select>
+            <label class="hint" for="query-planner-input">Or type a sample query</label>
+            <div class="planner-input-row">
+              <input id="query-planner-input" type="text" placeholder="latest HR leave policy" />
+              <button type="button" id="query-planner-run" class="icon-button">Plan</button>
+            </div>
+            <pre class="code-block" id="query-planner-output"></pre>
+          </article>
+        </div>
+      </section>
+
+      <section class="panel" id="knowledge-execution-section">
+        <div class="panel-header">
+          <h2>Knowledge Execution Engine</h2>
+          <p class="hint">Phase 13.6 — Shadow Mode plan execution over Hybrid Indexes (no FAISS/BM25/LLM)</p>
+        </div>
+        <div class="grid stats" id="knowledge-execution-summary"></div>
+        <div class="split" style="margin-top: 1rem">
+          <article>
+            <h3 class="subhead">Execution checklist</h3>
+            <ul class="checklist" id="knowledge-execution-checklist"></ul>
+          </article>
+          <article>
+            <h3 class="subhead">Provider metrics</h3>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Provider</th>
+                    <th>Success rate</th>
+                    <th>Fail rate</th>
+                    <th>Avg ms</th>
+                    <th>Avg evidence</th>
+                  </tr>
+                </thead>
+                <tbody id="knowledge-execution-providers-body"></tbody>
+              </table>
+            </div>
+          </article>
+        </div>
+        <div class="split" style="margin-top: 1rem">
+          <article>
+            <h3 class="subhead">Execution Explorer</h3>
+            <p class="hint" id="knowledge-execution-note"></p>
+            <label class="hint" for="knowledge-execution-select">Sample query</label>
+            <select id="knowledge-execution-select"></select>
+            <pre class="code-block" id="knowledge-execution-output"></pre>
+          </article>
+          <article>
+            <h3 class="subhead">Evidence Inspector</h3>
+            <label class="hint" for="knowledge-execution-candidate-select">Candidate</label>
+            <select id="knowledge-execution-candidate-select"></select>
+            <pre class="code-block" id="knowledge-execution-candidate"></pre>
+          </article>
+        </div>
+      </section>
+
+      <section class="panel" id="knowledge-graph-section">
+        <div class="panel-header">
+          <h2>Knowledge Graph</h2>
+          <p class="hint">Phase 13.7 — Shadow Mode typed graph with traversal and expansion (no retrieval)</p>
+        </div>
+        <div class="grid stats" id="knowledge-graph-summary"></div>
+        <div class="split" style="margin-top: 1rem">
+          <article>
+            <h3 class="subhead">Graph checklist</h3>
+            <ul class="checklist" id="knowledge-graph-checklist"></ul>
+          </article>
+          <article>
+            <h3 class="subhead">Diagnostics</h3>
+            <ul class="notes" id="knowledge-graph-diagnostics"></ul>
+          </article>
+        </div>
+        <div class="split" style="margin-top: 1rem">
+          <article>
+            <h3 class="subhead">Graph Explorer</h3>
+            <label class="hint" for="knowledge-graph-node-select">Node</label>
+            <select id="knowledge-graph-node-select"></select>
+            <pre class="code-block" id="knowledge-graph-node-output"></pre>
+          </article>
+          <article>
+            <h3 class="subhead">Traversal Explorer</h3>
+            <label class="hint" for="knowledge-graph-traversal-select">Sample</label>
+            <select id="knowledge-graph-traversal-select"></select>
+            <pre class="code-block" id="knowledge-graph-traversal-output"></pre>
+          </article>
+        </div>
+        <div style="margin-top: 1rem">
+          <h3 class="subhead">Expansion Viewer</h3>
+          <label class="hint" for="knowledge-graph-expansion-select">Candidate query</label>
+          <select id="knowledge-graph-expansion-select"></select>
+          <pre class="code-block" id="knowledge-graph-expansion-output"></pre>
+        </div>
+      </section>
+
+      <section class="panel" id="knowledge-orchestration-section">
+        <div class="panel-header">
+          <h2>Worker Orchestration</h2>
+          <p class="hint">Phase 13.8 — Shadow Mode plugin workers coordinating existing providers (no AI agents)</p>
+        </div>
+        <div class="grid stats" id="knowledge-orchestration-summary"></div>
+        <div class="split" style="margin-top: 1rem">
+          <article>
+            <h3 class="subhead">Orchestration checklist</h3>
+            <ul class="checklist" id="knowledge-orchestration-checklist"></ul>
+          </article>
+          <article>
+            <h3 class="subhead">Diagnostics</h3>
+            <ul class="notes" id="knowledge-orchestration-diagnostics"></ul>
+          </article>
+        </div>
+        <div style="margin-top: 1rem">
+          <h3 class="subhead">Worker Registry</h3>
+          <p class="hint">Registered workers · capabilities · priority · health</p>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Worker</th>
+                  <th>Priority</th>
+                  <th>Capabilities</th>
+                  <th>Depends on</th>
+                  <th>Health</th>
+                </tr>
+              </thead>
+              <tbody id="knowledge-orchestration-workers"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="split" style="margin-top: 1rem">
+          <article>
+            <h3 class="subhead">Execution Explorer</h3>
+            <label class="hint" for="knowledge-orchestration-query-select">Query</label>
+            <select id="knowledge-orchestration-query-select"></select>
+            <pre class="code-block" id="knowledge-orchestration-output"></pre>
+          </article>
+          <article>
+            <h3 class="subhead">Evidence contribution</h3>
+            <label class="hint" for="knowledge-orchestration-worker-select">Worker evidence</label>
+            <select id="knowledge-orchestration-worker-select"></select>
+            <pre class="code-block" id="knowledge-orchestration-worker-output"></pre>
+          </article>
+        </div>
+        <div class="split" style="margin-top: 1rem">
+          <article>
+            <h3 class="subhead">Merger</h3>
+            <pre class="code-block" id="knowledge-orchestration-merger"></pre>
+          </article>
+          <article>
+            <h3 class="subhead">Execution timeline / graph</h3>
+            <pre class="code-block" id="knowledge-orchestration-timeline"></pre>
+          </article>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-header">
+          <h2>Documents processed</h2>
+          <p class="hint">Click a row to inspect the full Knowledge Object</p>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Document</th>
+                <th>Type</th>
+                <th>Departments</th>
+                <th>Confidence</th>
+                <th>Summary</th>
+                <th>Entities</th>
+                <th>Topics</th>
+                <th>Time (ms)</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="documents-body">
+              <tr>
+                <td colspan="9" class="empty">No validation data yet. Run the Phase 13.1 validation script.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-header">
+          <h2>Validation history</h2>
+          <p class="hint">Compare previous offline validation runs</p>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Run date</th>
+                <th>Documents</th>
+                <th>Success</th>
+                <th>Failures</th>
+                <th>Avg confidence</th>
+                <th>Avg time (ms)</th>
+                <th>Checklist</th>
+              </tr>
+            </thead>
+            <tbody id="history-body"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="split">
+        <article class="panel">
+          <div class="panel-header">
+            <h2>Known issues</h2>
+          </div>
+          <ul class="issues" id="issues"></ul>
+        </article>
+        <article class="panel">
+          <div class="panel-header">
+            <h2>Resolved issues</h2>
+          </div>
+          <ul class="issues" id="resolved-issues"></ul>
+        </article>
+      </section>
+
+      <footer class="footer">
+        <p>
+          This console is for developers only. It is not part of the production
+          React frontend and must never be exposed as a user-facing surface.
+        </p>
+      </footer>
+    </div>
+
+    <div class="drawer-backdrop" id="drawer-backdrop" hidden></div>
+    <aside class="drawer" id="inspector" aria-hidden="true" hidden>
+      <div class="drawer-header">
+        <div>
+          <p class="eyebrow">Knowledge Object Inspector</p>
+          <h2 id="inspector-title">Document</h2>
+        </div>
+        <button type="button" class="icon-button" id="inspector-close" aria-label="Close inspector">✕</button>
+      </div>
+      <div class="drawer-body" id="inspector-body"></div>
+    </aside>
+
+    <script src="app.js"></script>
+  </body>
+</html>
