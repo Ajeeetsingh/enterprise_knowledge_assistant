@@ -167,6 +167,7 @@ class MetadataAwareRetriever:
                     fusion_score=candidate.fusion_score,
                     fusion_explanation=candidate.fusion_explanation,
                     source_retrievers=candidate.source_retrievers,
+                    bm25_score=getattr(candidate, "bm25_score", None),
                 )
             )
 

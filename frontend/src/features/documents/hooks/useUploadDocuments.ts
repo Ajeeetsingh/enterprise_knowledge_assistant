@@ -150,13 +150,15 @@ export function useUploadDocuments() {
   const [items, setItems] = useState<BatchUploadItem[]>([])
   const [isUploading, setIsUploading] = useState(false)
   const uploadingRef = useRef(false)
+  const lastDomainIdRef = useRef<string | null>(null)
 
   const uploadFiles = useCallback(
-    async (files: File[]): Promise<UploadDocumentsResult> => {
-      if (uploadingRef.current || files.length === 0) {
+    async (files: File[], domainId: string): Promise<UploadDocumentsResult> => {
+      if (uploadingRef.current || files.length === 0 || !domainId) {
         return emptyResult(files.length)
       }
 
+      lastDomainIdRef.current = domainId
       uploadingRef.current = true
       setIsUploading(true)
 
@@ -170,6 +172,7 @@ export function useUploadDocuments() {
         uploadableCount: uploadable.length,
         concurrency: MAX_CONCURRENT_UPLOADS,
         filenames: files.map((file) => file.name),
+        domainId,
       })
 
       await mapWithConcurrency(
@@ -179,7 +182,7 @@ export function useUploadDocuments() {
           setItems(working)
 
           try {
-            const result = await documentApi.uploadDocument(item.file)
+            const result = await documentApi.uploadDocument(item.file, domainId)
             const lifecycle = lifecycleStateFromUploadResponse(result)
             working = working.map((row) =>
               row.id === item.id
@@ -258,8 +261,9 @@ export function useUploadDocuments() {
     const failedFiles = items
       .filter((item) => item.status === 'failed')
       .map((item) => item.file)
-    if (failedFiles.length === 0) return null
-    return uploadFiles(failedFiles)
+    const domainId = lastDomainIdRef.current
+    if (failedFiles.length === 0 || !domainId) return null
+    return uploadFiles(failedFiles, domainId)
   }, [items, uploadFiles])
 
   const reset = useCallback(() => {

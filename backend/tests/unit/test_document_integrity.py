@@ -13,8 +13,9 @@ from sqlalchemy.pool import StaticPool
 from tests.constants import TEST_PASSWORD_HASH
 from app.core.exceptions import DocumentIntegrityError, DuplicateDocumentError
 from app.db.base import Base
-from app.db.models import Document, Role, User  # noqa: F401
+from app.db.models import Document, KnowledgeDomain, Role, User  # noqa: F401
 from app.db.repositories.document_repository import DocumentRepository
+from tests.helpers.knowledge_domains import domain_upload_kwargs
 from app.documents.checksum import Sha256ChecksumProvider
 from app.documents.dispatcher import LifecycleEventCollector
 from app.documents.events import DuplicateDetected
@@ -298,6 +299,7 @@ def test_upload_exact_duplicate_raises_conflict(
         content=content,
         uploaded_by=uploader_id,
         requesting_user=uploader,
+        **domain_upload_kwargs(db_session),
     )
 
     with pytest.raises(DuplicateDocumentError) as exc_info:
@@ -308,6 +310,7 @@ def test_upload_exact_duplicate_raises_conflict(
             content=content,
             uploaded_by=uploader_id,
             requesting_user=uploader,
+            **domain_upload_kwargs(db_session),
         )
 
     assert exc_info.value.code == "DUPLICATE_DOCUMENT"
@@ -334,6 +337,7 @@ def test_duplicate_omits_existing_id_when_requester_unauthorized(
         content_type="text/plain",
         content=content,
         uploaded_by=uploader_id,
+        **domain_upload_kwargs(db_session),
     )
     # Make the stored document private so a different non-owner cannot read it.
     stored = repository.find_by_filename("secret.txt", tenant_id="default")
@@ -363,6 +367,7 @@ def test_duplicate_omits_existing_id_when_requester_unauthorized(
             content=content,
             uploaded_by=outsider.id,
             requesting_user=outsider,
+            **domain_upload_kwargs(db_session),
         )
 
     assert exc_info.value.code == "DUPLICATE_DOCUMENT"
@@ -384,6 +389,7 @@ def test_upload_same_content_renamed_is_duplicate(
         content_type="text/plain",
         content=content,
         uploaded_by=uploader_id,
+        **domain_upload_kwargs(db_session),
     )
 
     with pytest.raises(DuplicateDocumentError) as exc_info:
@@ -393,6 +399,7 @@ def test_upload_same_content_renamed_is_duplicate(
             content_type="text/plain",
             content=content,
             uploaded_by=uploader_id,
+            **domain_upload_kwargs(db_session),
         )
 
     assert "renamed.txt has already been uploaded." == exc_info.value.public_message
@@ -412,6 +419,7 @@ def test_upload_same_filename_different_content_still_conflicts(
         content_type="text/plain",
         content=b"original content",
         uploaded_by=uploader_id,
+        **domain_upload_kwargs(db_session),
     )
 
     with pytest.raises(DocumentIntegrityError) as exc_info:
@@ -421,6 +429,7 @@ def test_upload_same_filename_different_content_still_conflicts(
             content_type="text/plain",
             content=b"different content",
             uploaded_by=uploader_id,
+            **domain_upload_kwargs(db_session),
         )
 
     assert not isinstance(exc_info.value, DuplicateDocumentError)
@@ -456,6 +465,7 @@ def test_upload_maps_unique_constraint_race_to_duplicate_error(
                 content_type="text/plain",
                 content=b"race content",
                 uploaded_by=uploader_id,
+                **domain_upload_kwargs(db_session),
             )
 
     assert exc_info.value.code == "DUPLICATE_DOCUMENT"

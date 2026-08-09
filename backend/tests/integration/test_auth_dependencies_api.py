@@ -55,6 +55,7 @@ def test_hr_user_can_upload_with_document_create_permission(
         UPLOAD_URL,
         headers=bearer_headers(token),
         files={"file": ("policy.txt", b"Annual leave policy", "text/plain")},
+        data={"domain_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"},
     )
 
     assert response.status_code == 200
@@ -70,6 +71,7 @@ def test_employee_upload_denied_without_document_create(
         UPLOAD_URL,
         headers=bearer_headers(token),
         files={"file": ("policy.txt", b"content", "text/plain")},
+        data={"domain_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"},
     )
 
     assert response.status_code == 403

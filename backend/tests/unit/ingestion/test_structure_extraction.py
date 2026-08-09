@@ -278,6 +278,54 @@ maintaining the financial discipline and risk management standards expected of a
         tables = detect_tables(lines, StructureExtractionSettings())
         assert tables == []
 
+    def test_history_table_stops_before_mission_vision_sections(self):
+        """Stacked tables must not absorb following numbered sections.
+
+        Regression: Company Profile Period Milestone table previously extended
+        through 1.4 Mission / 1.5 Vision, so those bodies never became chunks.
+        """
+        text = """<<<PAGE:9>>>
+Period Milestone
+1873 Founded as Apex Savings & Trust, Hartford,
+Connecticut
+1897 National bank charter granted; renamed Apex
+National Bank, N.A.
+1911 Head office relocated to New York City
+<<<PAGE:10>>>
+1.4 Mission
+To steward our clients' financial lives with precision, integrity, and durability - providing
+dependable access to capital, safekeeping of deposits, and advice that improves long-term
+financial outcomes for households, businesses, and institutions.
+1.5 Vision
+To be the most trusted and operationally resilient bank in every market we serve - where
+clients receive the same standard of judgment, transparency, and service whether they
+enter a branch in Charlotte, a corporate office in Singapore, or a mobile application at
+midnight.
+1.6 Core Values
+Value Definition Observable Behaviour
+Integrity First The regulated obligation
+precedes the commercial
+opportunity.
+Escalate concerns before
+deadlines; never suppress
+adverse information.
+"""
+        doc = _extract(text, "COMPANY_PROFILE.pdf")
+        blob = "\n".join(block.text for block in doc.blocks)
+        # Mission/Vision bodies must appear outside any table block.
+        table_blob = "\n".join(
+            block.text for block in doc.blocks if block.block_type.value == "table"
+        )
+        assert "To steward our clients" not in table_blob
+        assert "most trusted and operationally resilient" not in table_blob
+        assert "To steward our clients" in blob
+        assert "most trusted and operationally resilient" in blob
+        headings = [
+            block.text for block in doc.blocks if block.block_type.value == "heading"
+        ]
+        assert any("1.4 Mission" in h for h in headings)
+        assert any("1.5 Vision" in h for h in headings)
+
     def test_false_positive_prose_becomes_paragraphs(self):
         text = """<<<PAGE:9>>>
 Banking; Treasury operations; DFSA-regulated entity; Islamic

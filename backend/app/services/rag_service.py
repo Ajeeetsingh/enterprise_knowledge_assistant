@@ -161,12 +161,26 @@ class RagService:
         engine = self._ensure_initialized()
 
         try:
-            return engine.query(
-                normalized_question,
-                normalized_role,
-                authorized_sources,
-                conversation_history=conversation_history,
+            from app.rag.observability.collector import get_active_trace, trace_question
+
+            diagnostics_on = bool(
+                getattr(self._settings, "rag_diagnostics_enabled", False)
             )
+            # If a caller already opened a trace (e.g. offline script), reuse it.
+            if get_active_trace() is not None or not diagnostics_on:
+                return engine.query(
+                    normalized_question,
+                    normalized_role,
+                    authorized_sources,
+                    conversation_history=conversation_history,
+                )
+            with trace_question(normalized_question):
+                return engine.query(
+                    normalized_question,
+                    normalized_role,
+                    authorized_sources,
+                    conversation_history=conversation_history,
+                )
         except RuntimeError as exc:
             message = str(exc).lower()
             if "index not built" in message or "not initialized" in message:

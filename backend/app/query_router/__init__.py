@@ -15,6 +15,10 @@ from app.query_router.general_responder import (
     GeneralQueryResponder,
     format_general_conversation_history,
 )
+from app.query_router.document_catalog import (
+    DocumentRouteCatalog,
+    build_document_route_catalog,
+)
 from app.query_router.knowledge_classifier import KnowledgeRouteClassifier, KnowledgeRouteResult
 from app.query_router.messages import (
     ANSWER_KIND_DOCUMENT_GROUNDED,
@@ -45,7 +49,9 @@ __all__ = [
     "ANSWER_KIND_PRODUCT_HELP",
     "ANSWER_KIND_UNSAFE",
     "ConversationRouteHints",
+    "DocumentRouteCatalog",
     "DEFAULT_SEMANTIC_THRESHOLD",
+    "build_document_route_catalog",
     "GENERAL_HISTORY_MAX_CHARS",
     "GENERAL_HISTORY_MAX_MESSAGES",
     "INSUFFICIENT_DOCUMENT_EVIDENCE_MESSAGE",

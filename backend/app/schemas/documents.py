@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import uuid
 from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -84,6 +85,30 @@ class DocumentSummaryResponse(BaseModel):
         ...,
         description="UUID of the user who uploaded the document.",
         examples=["f47ac10b-58cc-4372-a567-0e02b2c3d479"],
+    )
+    domain_id: uuid.UUID | None = Field(
+        default=None,
+        description="Knowledge Domain ID, or null for legacy uncategorized documents.",
+    )
+    domain_name: str | None = Field(
+        default=None,
+        description=(
+            "Knowledge Domain display name. Null when the document has no domain "
+            "(legacy / uncategorized)."
+        ),
+        examples=["Finance"],
+    )
+
+
+class DocumentDomainUpdateRequest(BaseModel):
+    """Request body for assigning or clearing a document's Knowledge Domain."""
+
+    domain_id: uuid.UUID | None = Field(
+        default=None,
+        description=(
+            "Knowledge Domain ID to assign. Null clears the assignment "
+            "(document becomes uncategorized)."
+        ),
     )
 
 

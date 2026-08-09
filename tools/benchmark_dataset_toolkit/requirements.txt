@@ -1,0 +1,10 @@
+# Knowra Benchmark Dataset Toolkit
+# System dependency (not pip): Pandoc + a PDF engine
+# (chrome/edge recommended on Windows; xelatex optional).
+# https://pandoc.org/installing.html
+
+PyYAML>=6.0.1
+rich>=13.7.0
+click>=8.1.7
+pymupdf>=1.24.0
+

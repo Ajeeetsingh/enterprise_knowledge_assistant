@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+import re
 import time
 
 from app.rag.hybrid.config import HybridRetrievalSettings
 from app.rag.metadata_retrieval.config import MetadataRetrievalSettings
 from app.rag.query_processing.classifier import classify_query
 from app.rag.query_processing.config import QueryProcessingSettings
+from app.rag.query_processing.enterprise_expansion import expand_from_understanding
 from app.rag.query_processing.expander import expand_query, generate_retrieval_queries
 from app.rag.query_processing.metrics import log_query_processing
 from app.rag.query_processing.registry import StrategySpec, get_rules
@@ -17,6 +19,7 @@ from app.rag.query_processing.schemas import (
     RetrievalStrategy,
 )
 from app.rag.query_processing.strategy import select_strategy
+from app.rag.query_processing.understanding import understand_query
 from app.rag.reranking.config import RerankingSettings
 
 
@@ -25,10 +28,42 @@ def _predict_confidence(
     *,
     query_count: int,
     rules_applied: int,
+    understanding_confidence: float = 0.0,
 ) -> float:
     boost = min(0.15, rules_applied * 0.02)
     multi_query_boost = 0.05 if query_count > 1 else 0.0
-    return round(min(0.95, classification_confidence + boost + multi_query_boost), 4)
+    understanding_boost = min(0.1, understanding_confidence * 0.1)
+    return round(
+        min(0.95, classification_confidence + boost + multi_query_boost + understanding_boost),
+        4,
+    )
+
+
+def _merge_retrieval_queries(
+    *groups: tuple[str, ...],
+    max_queries: int,
+    original_query: str,
+) -> tuple[str, ...]:
+    """Deduplicate retrieval queries, keeping the original question first."""
+    ordered: list[str] = []
+    seen: set[str] = set()
+
+    def _add(query: str) -> None:
+        key = re.sub(r"\s+", " ", query.strip().lower())
+        if not key or key in seen:
+            return
+        seen.add(key)
+        ordered.append(query.strip())
+
+    _add(original_query)
+    for group in groups:
+        for query in group:
+            if len(ordered) >= max_queries:
+                break
+            _add(query)
+        if len(ordered) >= max_queries:
+            break
+    return tuple(ordered or (original_query,))
 
 
 class QueryProcessor:
@@ -80,7 +115,9 @@ class QueryProcessor:
 
         try:
             classification = classify_query(query)
-            normalized, expanded, detected_entities, rules_applied = expand_query(
+            understanding = understand_query(query, classification=classification)
+
+            normalized, expanded, detected_entities, legacy_rules = expand_query(
                 query,
                 registry=self._registry,
                 settings=self._settings,
@@ -93,7 +130,8 @@ class QueryProcessor:
                 reranking_settings=self._reranking_settings,
                 settings=self._settings,
             )
-            retrieval_queries = generate_retrieval_queries(
+
+            legacy_queries = generate_retrieval_queries(
                 original_query=query,
                 normalized_query=normalized,
                 expanded_query=expanded,
@@ -102,10 +140,41 @@ class QueryProcessor:
                 registry=self._registry,
                 settings=self._settings,
             )
+
+            enterprise_queries: tuple[str, ...] = ()
+            enterprise_rules: tuple[str, ...] = ()
+            expansion_strategy = "legacy_rules"
+            if self._settings.query_expansion_enabled or self._settings.multi_query_enabled:
+                enterprise_queries, enterprise_rules, expansion_strategy = expand_from_understanding(
+                    original_query=query,
+                    understanding=understanding,
+                    max_queries=self._settings.max_generated_queries,
+                )
+
+            retrieval_queries = _merge_retrieval_queries(
+                enterprise_queries,
+                legacy_queries,
+                max_queries=self._settings.max_generated_queries,
+                original_query=query,
+            )
+
+            # Prefer enterprise understanding entities when richer.
+            merged_entities = tuple(
+                dict.fromkeys([*understanding.entities, *detected_entities])
+            )
+            rules_applied = tuple(dict.fromkeys([*enterprise_rules, *legacy_rules]))
+
+            # Surface a compact expanded string for telemetry (not used as LLM prompt).
+            if len(retrieval_queries) > 1:
+                expanded_for_retrieval = " | ".join(retrieval_queries[1:4])
+            else:
+                expanded_for_retrieval = expanded
+
             confidence = _predict_confidence(
                 classification.confidence,
                 query_count=len(retrieval_queries),
                 rules_applied=len(rules_applied),
+                understanding_confidence=understanding.confidence,
             )
             latency_ms = round((time.perf_counter() - started) * 1000, 3)
             metrics = QueryProcessingMetrics(
@@ -114,20 +183,26 @@ class QueryProcessor:
                 generated_query_count=len(retrieval_queries),
                 retrieval_strategy=strategy.name,
                 processing_latency_ms=latency_ms,
+                expansion_strategy=expansion_strategy,
+                understanding_intent=understanding.intent,
             )
             outcome = QueryProcessingOutcome(
                 original_query=query,
                 normalized_query=normalized,
-                expanded_query=expanded,
+                expanded_query=expanded_for_retrieval,
                 retrieval_queries=retrieval_queries,
                 classification=classification,
-                detected_entities=detected_entities,
+                detected_entities=merged_entities,
                 strategy=strategy,
                 expansion_rules_applied=rules_applied,
                 confidence_prediction=confidence,
                 metrics=metrics,
+                understanding_intent=understanding.intent,
+                understanding_concepts=understanding.concepts,
+                understanding_likely_documents=understanding.likely_documents,
+                expansion_strategy=expansion_strategy,
             )
-            log_query_processing(outcome, metrics=metrics)
+            log_query_processing(outcome, metrics=metrics, understanding=understanding)
             return outcome
         except Exception as exc:
             latency_ms = round((time.perf_counter() - started) * 1000, 3)

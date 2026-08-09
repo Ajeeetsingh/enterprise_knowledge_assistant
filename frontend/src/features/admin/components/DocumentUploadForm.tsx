@@ -3,6 +3,7 @@ import { type ChangeEvent, type DragEvent, type FormEvent, useEffect, useId, use
 import Button from '@/components/ui/Button'
 import StatusBadge from '@/components/ui/StatusBadge'
 import { SUPPORTED_DOCUMENT_ACCEPT, SUPPORTED_DOCUMENT_EXTENSIONS } from '@/features/documents/constants'
+import { KnowledgeDomainField } from '@/features/knowledge-domains'
 import type { BatchUploadItem, BatchUploadItemStatus } from '@/features/documents/hooks/useUploadDocuments'
 import {
   countValidSelectedFiles,
@@ -21,7 +22,7 @@ export interface DocumentUploadFormProps {
   resetKey?: number
   uploadProgress?: BatchUploadItem[]
   summary?: string | null
-  onUpload: (files: File[]) => void
+  onUpload: (files: File[], domainId: string) => void
   onRetryFailed?: () => void
 }
 
@@ -57,16 +58,19 @@ export default function DocumentUploadForm({
   const [selectedFiles, setSelectedFiles] = useState<SelectedUploadFile[]>([])
   const [selectionNotice, setSelectionNotice] = useState<string | null>(null)
   const [isDragActive, setIsDragActive] = useState(false)
+  const [domainId, setDomainId] = useState<string | null>(null)
 
   const isBusy = isUploading
   const showingProgress = Boolean(uploadProgress && uploadProgress.length > 0)
   const validCount = countValidSelectedFiles(selectedFiles)
   const failedCount = uploadProgress?.filter((item) => item.status === 'failed').length ?? 0
+  const canUpload = validCount > 0 && Boolean(domainId)
 
   useEffect(() => {
     setSelectedFiles([])
     setSelectionNotice(null)
     setIsDragActive(false)
+    setDomainId(null)
     if (fileInputRef.current) fileInputRef.current.value = ''
   }, [resetKey])
 
@@ -125,7 +129,11 @@ export default function DocumentUploadForm({
       setSelectionNotice('Please select at least one valid file to upload.')
       return
     }
-    onUpload(validFiles)
+    if (!domainId) {
+      setSelectionNotice('Please select a Knowledge Domain.')
+      return
+    }
+    onUpload(validFiles, domainId)
   }
 
   return (
@@ -189,6 +197,14 @@ export default function DocumentUploadForm({
               </p>
             )}
           </div>
+        )}
+
+        {!showingProgress && (
+          <KnowledgeDomainField
+            value={domainId}
+            disabled={isBusy}
+            onChange={setDomainId}
+          />
         )}
 
         {showingProgress ? (
@@ -262,7 +278,7 @@ export default function DocumentUploadForm({
             <Button
               type="submit"
               isLoading={isUploading}
-              disabled={isUploading || validCount === 0}
+              disabled={isUploading || !canUpload}
             >
               {validCount > 1 ? `Upload ${validCount} files` : 'Upload'}
             </Button>

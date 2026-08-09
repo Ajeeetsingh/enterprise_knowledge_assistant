@@ -22,6 +22,21 @@ vi.mock('@/features/documents/hooks/useDocuments', () => ({
   useDocuments: vi.fn(),
 }))
 
+vi.mock('@/features/knowledge-domains', async () => {
+  const actual = await vi.importActual<typeof import('@/features/knowledge-domains')>(
+    '@/features/knowledge-domains',
+  )
+  return {
+    ...actual,
+    useKnowledgeDomains: () => ({
+      data: [],
+      isLoading: false,
+      isError: false,
+      error: null,
+    }),
+  }
+})
+
 vi.mock('@/features/documents/hooks/useUploadDocuments', () => ({
   useUploadDocuments: () => ({
     items: [],
@@ -30,6 +45,7 @@ vi.mock('@/features/documents/hooks/useUploadDocuments', () => ({
     retryFailed: vi.fn(),
     reset: vi.fn(),
   }),
+  formatUploadBatchSummary: vi.fn(),
 }))
 
 vi.mock('@/features/documents/hooks/useDeleteDocument', () => ({
@@ -61,6 +77,7 @@ describe('DocumentsPage upload permissions', () => {
     mockUseDocuments.mockReturnValue({
       data: { items: [], total: 0, limit: 50, offset: 0 },
       isLoading: false,
+      isFetching: false,
       isError: false,
       error: null,
     } as ReturnType<typeof useDocuments>)

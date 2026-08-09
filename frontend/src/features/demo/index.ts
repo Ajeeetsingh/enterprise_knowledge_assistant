@@ -5,6 +5,7 @@ export {
   GUEST_POST_AUTH_PATH,
   GUEST_STORAGE_KEY,
   GUEST_TRANSITION_KEY,
+  GUEST_CONTINUE_READY_KEY,
 } from './constants'
 export {
   loadGuestSession,
@@ -14,8 +15,12 @@ export {
 export {
   markGuestImportPending,
   clearGuestImportPending,
+  clearAllGuestDemoState,
   isGuestImportPending,
   shouldOfferGuestContinue,
+  armGuestContinuePrompt,
+  consumeGuestContinuePrompt,
+  shouldPreserveGuestContinueOnAuth,
 } from './storage/guestTransitionStorage'
 export { default as GuestContinuePrompt } from './components/GuestContinuePrompt'
 export { default as GuestAuthLink } from './components/GuestAuthLink'

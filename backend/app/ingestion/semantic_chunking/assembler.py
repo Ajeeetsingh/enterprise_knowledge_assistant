@@ -145,7 +145,10 @@ def _group_blocks(
         block_size = block_char_count(block)
 
         if block.block_type == BlockType.HEADING:
-            if current and not awaiting_heading_body:
+            # Always flush the previous group. Overwriting while
+            # awaiting_heading_body discarded heading-only sections (e.g. when
+            # a prior table swallowed their body text).
+            if current:
                 flush()
             current = [block]
             current_size = block_size

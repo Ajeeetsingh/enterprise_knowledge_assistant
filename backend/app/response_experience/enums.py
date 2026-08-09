@@ -1,0 +1,67 @@
+"""Response Experience layout and component enums (Phase 5A)."""
+
+from __future__ import annotations
+
+from enum import Enum
+
+
+class ResponseLayoutType(str, Enum):
+    """Presentation layout selected for an answer (not answer content)."""
+
+    DEFINITION = "definition"
+    WORKFLOW = "workflow"
+    COMPARISON = "comparison"
+    HIERARCHY = "hierarchy"
+    POLICY = "policy"
+    GOVERNANCE = "governance"
+    RELATIONSHIP = "relationship"
+    DECISION_GUIDANCE = "decision_guidance"
+    TROUBLESHOOTING = "troubleshooting"
+    REFERENCE_LOOKUP = "reference_lookup"
+    EXECUTIVE_SUMMARY = "executive_summary"
+    EXECUTIVE_REPORT = "executive_report"
+    COMPLIANCE = "compliance"
+    LONG_REPORT = "long_report"
+    LIST_EXTRACTION = "list_extraction"
+    TIMELINE = "timeline"
+    TABLE_HEAVY = "table_heavy"
+    MIXED = "mixed"
+
+
+class ResponseComponent(str, Enum):
+    """Planned UI components — selected in 5A, rendered in 5B."""
+
+    TITLE = "title"
+    EXECUTIVE_SUMMARY = "executive_summary"
+    KEY_TAKEAWAYS = "key_takeaways"
+    DEFINITION = "definition"
+    PURPOSE = "purpose"
+    KEY_CHARACTERISTICS = "key_characteristics"
+    IMPORTANT_NOTES = "important_notes"
+    WARNING = "warning"
+    INFORMATION = "information"
+    CHECKLIST = "checklist"
+    TIMELINE = "timeline"
+    STEPS = "steps"
+    HIERARCHY_TREE = "hierarchy_tree"
+    DECISION_MATRIX = "decision_matrix"
+    COMPARISON_TABLE = "comparison_table"
+    RELATIONSHIP_DIAGRAM = "relationship_diagram"
+    RESPONSIBILITIES = "responsibilities"
+    REQUIREMENTS = "requirements"
+    EXCEPTIONS = "exceptions"
+    SCOPE = "scope"
+    GOVERNANCE = "governance"
+    OBJECTIVE = "objective"
+    OUTCOME = "outcome"
+    RELATED_DOCUMENTS = "related_documents"
+    RELATED_STANDARDS = "related_standards"
+    RELATED_POLICIES = "related_policies"
+    FREQUENTLY_REFERENCED_POLICIES = "frequently_referenced_policies"
+    RECOMMENDATIONS = "recommendations"
+    KEY_DIFFERENCES = "key_differences"
+    OWNER = "owner"
+    REVIEW_CYCLE = "review_cycle"
+    SOURCES = "sources"
+    DETAILED_SECTIONS = "detailed_sections"
+    DIRECT_LIST = "direct_list"

@@ -13,8 +13,9 @@ from sqlalchemy.pool import StaticPool
 from tests.constants import TEST_PASSWORD_HASH
 from app.core.exceptions import DocumentNotFoundError, DocumentStorageError, StorageError
 from app.db.base import Base
-from app.db.models import Document, Role, User  # noqa: F401
+from app.db.models import Document, KnowledgeDomain, Role, User  # noqa: F401
 from app.db.repositories.document_repository import DocumentRepository
+from tests.helpers.knowledge_domains import domain_upload_kwargs
 from app.documents.dispatcher import LifecycleEventCollector
 from app.documents.events import DocumentDeleted, DocumentIndexed, DocumentUploaded
 from app.documents.lifecycle import DocumentLifecycleResult
@@ -113,6 +114,7 @@ def _persist_searchable_document(
     service: DocumentService,
     repository: DocumentRepository,
     uploader_id: uuid.UUID,
+    db_session: Session,
 ) -> uuid.UUID:
     upload_result = service.upload_document(
         repository,
@@ -120,6 +122,7 @@ def _persist_searchable_document(
         content_type="text/plain",
         content=b"Employee handbook.",
         uploaded_by=uploader_id,
+        **domain_upload_kwargs(db_session),
     )
     return uuid.UUID(upload_result.document_id)
 
@@ -132,7 +135,9 @@ def test_delete_document_removes_vectors_storage_and_updates_status(
     vector_store = _mock_vector_store()
     service = _build_service(tmp_path, vector_store=vector_store)
     repository = DocumentRepository(db_session)
-    document_id = _persist_searchable_document(service, repository, uploader_id)
+    document_id = _persist_searchable_document(
+        service, repository, uploader_id, db_session
+    )
 
     result = service.delete_document(
         repository,
@@ -157,7 +162,9 @@ def test_delete_document_emits_lifecycle_event(
     collector = LifecycleEventCollector()
     service = _build_service(tmp_path, event_collector=collector)
     repository = DocumentRepository(db_session)
-    document_id = _persist_searchable_document(service, repository, uploader_id)
+    document_id = _persist_searchable_document(
+        service, repository, uploader_id, db_session
+    )
 
     service.delete_document(repository, document_id, deleted_by=uploader_id)
 
@@ -183,6 +190,7 @@ def test_upload_emits_upload_and_indexed_events(
         content_type="text/plain",
         content=b"Employee handbook.",
         uploaded_by=uploader_id,
+        **domain_upload_kwargs(db_session),
     )
 
     assert any(isinstance(e, DocumentUploaded) for e in collector.history)
@@ -197,7 +205,9 @@ def test_delete_already_deleted_document_is_idempotent(
     vector_store = _mock_vector_store()
     service = _build_service(tmp_path, vector_store=vector_store)
     repository = DocumentRepository(db_session)
-    document_id = _persist_searchable_document(service, repository, uploader_id)
+    document_id = _persist_searchable_document(
+        service, repository, uploader_id, db_session
+    )
 
     first = service.delete_document(repository, document_id, deleted_by=uploader_id)
     second = service.delete_document(repository, document_id, deleted_by=uploader_id)
@@ -232,7 +242,9 @@ def test_delete_raises_when_storage_delete_fails(
 ) -> None:
     service = _build_service(tmp_path)
     repository = DocumentRepository(db_session)
-    document_id = _persist_searchable_document(service, repository, uploader_id)
+    document_id = _persist_searchable_document(
+        service, repository, uploader_id, db_session
+    )
 
     def fail_delete(_relative_path: str) -> None:
         raise StorageError("simulated storage failure")

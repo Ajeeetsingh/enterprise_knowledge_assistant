@@ -3,17 +3,29 @@ import { useNavigate } from 'react-router-dom'
 
 import ActionButton from '@/components/ui/ActionButton'
 import Button from '@/components/ui/Button'
+import type { KnowledgeDomain } from '@/features/knowledge-domains'
 import { cn } from '@/utils/cn'
 
 import { VISIBILITY_NOT_IN_LIST_API } from '../constants'
 import type { Document } from '../types'
 import { prefersReducedMotion } from '../utils/duplicateHighlight'
+import DocumentDomainCell from './DocumentDomainCell'
 import DocumentStatusBadge from './DocumentStatusBadge'
+
+/** Floor width so columns stay readable; narrower viewports scroll horizontally. */
+export const DOCUMENT_TABLE_MIN_WIDTH_PX = 1200
 
 export interface DocumentTableProps {
   documents: Document[]
   isLoading: boolean
   highlightedDocumentId?: string | null
+  domains?: KnowledgeDomain[]
+  canEditDomain?: boolean
+  updatingDomainDocumentId?: string | null
+  onDomainChange?: (
+    document: Document,
+    domainId: string | null,
+  ) => Promise<void> | void
   onView?: (document: Document) => void
   onDownload?: (document: Document) => void
   onDelete: (document: Document) => void
@@ -23,6 +35,10 @@ export default function DocumentTable({
   documents,
   isLoading,
   highlightedDocumentId = null,
+  domains = [],
+  canEditDomain = false,
+  updatingDomainDocumentId = null,
+  onDomainChange,
   onView,
   onDownload,
   onDelete,
@@ -52,7 +68,12 @@ export default function DocumentTable({
 
   if (isLoading) {
     return (
-      <div className="space-y-3" aria-busy="true" aria-label="Loading documents">
+      <div
+        className="min-h-0 min-w-0 flex-1 space-y-3"
+        aria-busy="true"
+        aria-label="Loading documents"
+        data-testid="document-table-loading"
+      >
         {Array.from({ length: 4 }).map((_, index) => (
           <div
             key={index}
@@ -64,39 +85,55 @@ export default function DocumentTable({
   }
 
   return (
-    <div className="overflow-x-auto rounded-lg border border-neutral-200 dark:border-neutral-700">
-      <table className="min-w-full divide-y divide-neutral-200 dark:divide-neutral-700">
+    <div
+      className="document-table-scroll scrollbar-thin min-h-0 min-w-0 w-full flex-1 overflow-auto rounded-lg border border-neutral-200 dark:border-neutral-700"
+      data-testid="document-table-scroll"
+    >
+      {/*
+        Single scrollport: overflow-x + overflow-y auto.
+        Native horizontal scrollbar stays at the bottom of this viewport.
+      */}
+      <table
+        className="document-table w-full divide-y divide-neutral-200 dark:divide-neutral-700"
+        style={{ minWidth: DOCUMENT_TABLE_MIN_WIDTH_PX }}
+      >
         <caption className="sr-only">Uploaded documents</caption>
-        <thead className="bg-neutral-50 dark:bg-neutral-900/60">
+        <thead className="sticky top-0 z-10 bg-neutral-50 dark:bg-neutral-900">
           <tr>
             <th
               scope="col"
-              className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400"
+              className="document-table-col-name px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400"
             >
               Name
             </th>
             <th
               scope="col"
-              className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400"
+              className="document-table-col-domain px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400"
+            >
+              Domain
+            </th>
+            <th
+              scope="col"
+              className="document-table-col-status px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400"
             >
               Status
             </th>
             <th
               scope="col"
-              className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400"
+              className="document-table-col-visibility px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400"
               title={VISIBILITY_NOT_IN_LIST_API}
             >
               Visibility
             </th>
             <th
               scope="col"
-              className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400"
+              className="document-table-col-uploaded px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400"
             >
               Uploaded At
             </th>
             <th
               scope="col"
-              className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400"
+              className="document-table-col-actions px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400"
             >
               Actions
             </th>
@@ -122,23 +159,34 @@ export default function DocumentTable({
                   isHighlighted && 'document-row--highlight',
                 )}
               >
-                <td className="px-4 py-3 text-sm font-medium text-neutral-900 dark:text-neutral-100">
-                  {document.filename}
+                <td className="document-table-col-name px-4 py-3 text-sm font-medium text-neutral-900 dark:text-neutral-100">
+                  <span className="block truncate" title={document.filename}>
+                    {document.filename}
+                  </span>
                 </td>
-                <td className="px-4 py-3">
+                <td className="document-table-col-domain px-4 py-3">
+                  <DocumentDomainCell
+                    document={document}
+                    domains={domains}
+                    canEdit={canEditDomain}
+                    isUpdating={updatingDomainDocumentId === document.document_id}
+                    {...(onDomainChange !== undefined ? { onDomainChange } : {})}
+                  />
+                </td>
+                <td className="document-table-col-status px-4 py-3">
                   <DocumentStatusBadge status={document.status} />
                 </td>
                 <td
-                  className="px-4 py-3 text-sm text-neutral-500 dark:text-neutral-400"
+                  className="document-table-col-visibility px-4 py-3 text-sm text-neutral-500 dark:text-neutral-400"
                   title={VISIBILITY_NOT_IN_LIST_API}
                 >
                   —
                 </td>
-                <td className="px-4 py-3 text-sm text-neutral-600 dark:text-neutral-300">
+                <td className="document-table-col-uploaded px-4 py-3 text-sm text-neutral-600 dark:text-neutral-300">
                   {new Date(document.uploaded_at).toLocaleString()}
                 </td>
-                <td className="px-4 py-3 text-right">
-                  <div className="flex justify-end gap-2">
+                <td className="document-table-col-actions px-4 py-3 text-right">
+                  <div className="inline-flex flex-nowrap items-center justify-end gap-2">
                     <ActionButton onClick={() => handleView(document)}>View</ActionButton>
                     {onDownload && (
                       <ActionButton onClick={() => onDownload(document)}>Download</ActionButton>

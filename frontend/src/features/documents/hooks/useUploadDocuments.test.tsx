@@ -57,10 +57,13 @@ describe('useUploadDocuments', () => {
 
     let summary
     await act(async () => {
-      summary = await result.current.uploadFiles([
-        new File(['a'], 'a.pdf', { type: 'application/pdf' }),
-        new File(['b'], 'b.pdf', { type: 'application/pdf' }),
-      ])
+      summary = await result.current.uploadFiles(
+        [
+          new File(['a'], 'a.pdf', { type: 'application/pdf' }),
+          new File(['b'], 'b.pdf', { type: 'application/pdf' }),
+        ],
+        'domain-1',
+      )
     })
 
     expect(summary).toMatchObject({
@@ -91,10 +94,13 @@ describe('useUploadDocuments', () => {
 
     let summary
     await act(async () => {
-      summary = await result.current.uploadFiles([
-        new File(['fresh'], 'fresh.pdf', { type: 'application/pdf' }),
-        new File(['exists'], 'exists.pdf', { type: 'application/pdf' }),
-      ])
+      summary = await result.current.uploadFiles(
+        [
+          new File(['fresh'], 'fresh.pdf', { type: 'application/pdf' }),
+          new File(['exists'], 'exists.pdf', { type: 'application/pdf' }),
+        ],
+        'domain-1',
+      )
     })
 
     expect(summary).toMatchObject({
@@ -123,9 +129,10 @@ describe('useUploadDocuments', () => {
     })
 
     await act(async () => {
-      await result.current.uploadFiles([
-        new File(['secret'], 'secret.pdf', { type: 'application/pdf' }),
-      ])
+      await result.current.uploadFiles(
+        [new File(['secret'], 'secret.pdf', { type: 'application/pdf' })],
+        'domain-1',
+      )
     })
 
     const duplicate = result.current.items.find((item) => item.status === 'duplicate')
@@ -149,11 +156,14 @@ describe('useUploadDocuments', () => {
 
     let summary
     await act(async () => {
-      summary = await result.current.uploadFiles([
-        new File(['ok'], 'ok.pdf', { type: 'application/pdf' }),
-        new File(['dup'], 'dup.pdf', { type: 'application/pdf' }),
-        new File(['bad'], 'bad.pdf', { type: 'application/pdf' }),
-      ])
+      summary = await result.current.uploadFiles(
+        [
+          new File(['ok'], 'ok.pdf', { type: 'application/pdf' }),
+          new File(['dup'], 'dup.pdf', { type: 'application/pdf' }),
+          new File(['bad'], 'bad.pdf', { type: 'application/pdf' }),
+        ],
+        'domain-1',
+      )
     })
 
     expect(summary).toMatchObject({
@@ -178,10 +188,13 @@ describe('useUploadDocuments', () => {
 
     let summary
     await act(async () => {
-      summary = await result.current.uploadFiles([
-        new File(['a'], 'a.pdf', { type: 'application/pdf' }),
-        new File(['b'], 'b.pdf', { type: 'application/pdf' }),
-      ])
+      summary = await result.current.uploadFiles(
+        [
+          new File(['a'], 'a.pdf', { type: 'application/pdf' }),
+          new File(['b'], 'b.pdf', { type: 'application/pdf' }),
+        ],
+        'domain-1',
+      )
     })
 
     expect(summary).toMatchObject({
@@ -210,10 +223,13 @@ describe('useUploadDocuments', () => {
     })
 
     await act(async () => {
-      await result.current.uploadFiles([
-        new File(['dup'], 'dup.pdf', { type: 'application/pdf' }),
-        new File(['fail'], 'fail.pdf', { type: 'application/pdf' }),
-      ])
+      await result.current.uploadFiles(
+        [
+          new File(['dup'], 'dup.pdf', { type: 'application/pdf' }),
+          new File(['fail'], 'fail.pdf', { type: 'application/pdf' }),
+        ],
+        'domain-1',
+      )
     })
 
     expect(result.current.items.filter((item) => item.status === 'failed')).toHaveLength(1)
@@ -227,6 +243,7 @@ describe('useUploadDocuments', () => {
     expect(documentApi.uploadDocument).toHaveBeenCalledTimes(3)
     expect(documentApi.uploadDocument).toHaveBeenLastCalledWith(
       expect.objectContaining({ name: 'fail.pdf' }),
+      'domain-1',
     )
   })
 
@@ -242,9 +259,10 @@ describe('useUploadDocuments', () => {
 
     let summary
     await act(async () => {
-      summary = await result.current.uploadFiles([
-        new File(['x'], 'conflict.pdf', { type: 'application/pdf' }),
-      ])
+      summary = await result.current.uploadFiles(
+        [new File(['x'], 'conflict.pdf', { type: 'application/pdf' })],
+        'domain-1',
+      )
     })
 
     expect(summary).toMatchObject({

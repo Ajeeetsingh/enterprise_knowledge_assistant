@@ -1,8 +1,14 @@
-# Virtual environments
+# ==================================================
+# Virtual Environments
+# ==================================================
+
 .venv/
 venv/
 
+# ==================================================
 # Python
+# ==================================================
+
 __pycache__/
 *.py[cod]
 *.egg-info/
@@ -13,51 +19,135 @@ __pycache__/
 htmlcov/
 .tox/
 
-# Node / frontend
+# ==================================================
+# Node / Frontend
+# ==================================================
+
 node_modules/
 dist/
 build/
 frontend/dist/
+frontend/coverage/
 node_modules/.vite/
 
-# Environment / secrets — never commit real credentials
+# ==================================================
+# Environment / Secrets
+# Never commit real credentials
+# ==================================================
+
 .env
 .env.local
 .env.*.local
 frontend/.env
 frontend/.env.local
+
 !.env.example
 !frontend/.env.example
+!evaluation/.env.example
 
+# Standalone evaluation utility secrets (evaluation/ source is committable)
+evaluation/.env
+
+# ==================================================
 # IDE / OS
+# ==================================================
+
 .idea/
 .vscode/
 *.swp
 .DS_Store
 Thumbs.db
 
+# ==================================================
 # Logs
+# ==================================================
+
 *.log
 logs/
 
-# Runtime uploads & search indexes (persist locally / in Docker volumes)
+# ==================================================
+# Runtime Uploads & Search Indexes
+# ==================================================
+
 backend/storage/documents/*
 !backend/storage/documents/.gitkeep
+
 backend/storage/indexes/*
 !backend/storage/indexes/.gitkeep
+
+# Generated RAG diagnostic dumps (never commit)
+backend/storage/diagnostics/
+
+# Accidental nested storage when STORAGE_PATH=./backend/storage and cwd=backend/
+backend/backend/
+
+# Local-only evaluation/test data (entire tree — do not commit)
+docs/test_docs/
+
 backend/evaluation_storage/
 backend/trace_output.txt
 
-# Evaluation / benchmark outputs (keep fixtures under backend/tests)
+# ==================================================
+# Evaluation / Benchmark Outputs
+# ==================================================
+
 results/
 data/
+# Frontend seed data is source code, not local-only output
+!frontend/src/features/admin/collections/data/
+
 backend/evaluation_results/
 backend/benchmark_results/
 
-# Model caches (Hugging Face / SentenceTransformers)
+# ==================================================
+# Model Caches
+# ==================================================
+
 .cache/
 **/huggingface/
 **/sentence-transformers/
 
+# ==================================================
 # Docker
+# ==================================================
+
 *.pid
+
+# ==================================================
+# Benchmark Dataset (Generated Test Data)
+# Do NOT commit enterprise benchmark corpus
+# ==================================================
+
+docs/apex_national_bank/
+
+# ==================================================
+# Generated Benchmark Output
+# ==================================================
+
+benchmark/
+
+# ==================================================
+# Benchmark Toolkit Generated Artifacts
+# (Keep toolkit source code in Git)
+# ==================================================
+
+tools/benchmark_dataset_toolkit/conversion.log
+tools/benchmark_dataset_toolkit/conversion_report.json
+tools/benchmark_dataset_toolkit/conversion_failures.json
+tools/benchmark_dataset_toolkit/dataset_manifest.json
+
+tools/benchmark_dataset_toolkit/**/*.tmp
+tools/benchmark_dataset_toolkit/**/*.temp
+
+# ==================================================
+# LaTeX / Pandoc Temporary Files
+# ==================================================
+
+*.aux
+*.toc
+*.out
+*.lof
+*.lot
+*.fls
+*.fdb_latexmk
+*.synctex.gz

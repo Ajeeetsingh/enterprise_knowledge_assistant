@@ -3,7 +3,12 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 
 import { Badge, Button, Card, Input } from '@/components/ui'
 import { useAuth } from '@/contexts/AuthContext'
-import { GUEST_POST_AUTH_PATH, shouldOfferGuestContinue } from '@/features/demo'
+import {
+  GUEST_POST_AUTH_PATH,
+  armGuestContinuePrompt,
+  clearAllGuestDemoState,
+  shouldPreserveGuestContinueOnAuth,
+} from '@/features/demo'
 import type { ApiError } from '@/types'
 import { toApiError } from '@/utils/apiError'
 
@@ -62,9 +67,8 @@ function validateFields(email: string, password: string): FieldErrors {
 }
 
 export function resolveRedirectPath(from: string | undefined): string {
-  if (shouldOfferGuestContinue()) {
-    return GUEST_POST_AUTH_PATH
-  }
+  // Guest continue is handled explicitly in handleSubmit — never hijack a normal
+  // Admin/Employee login just because stale guest sessionStorage remains.
   if (!from || from === '/login') {
     return '/dashboard'
   }
@@ -105,7 +109,14 @@ export default function LoginPage() {
 
     try {
       await login({ email: email.trim(), password })
-      navigate(redirectPath, { replace: true })
+      if (shouldPreserveGuestContinueOnAuth(locationState?.from)) {
+        armGuestContinuePrompt()
+        navigate(GUEST_POST_AUTH_PATH, { replace: true })
+      } else {
+        // Authenticated workspace users must not inherit stale guest demo state.
+        clearAllGuestDemoState()
+        navigate(redirectPath, { replace: true })
+      }
     } catch (error) {
       setSubmitError(resolveLoginErrorMessage(error))
     } finally {

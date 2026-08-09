@@ -101,6 +101,20 @@ class HybridRetriever:
         )
         fusion_latency = round((time.perf_counter() - fusion_started) * 1000, 3)
 
+        # Diagnostics only — never alters returned ranking.
+        try:
+            from app.rag.observability.collector import get_active_trace
+
+            trace = get_active_trace()
+            if trace is not None:
+                trace.record_dense_sparse_fusion(
+                    dense_hits=dense_hits,
+                    sparse_hits=sparse_hits,
+                    fused=fused,
+                )
+        except Exception:  # noqa: BLE001
+            pass
+
         candidates = [
             VectorSearchCandidate(
                 chunk=item.chunk,

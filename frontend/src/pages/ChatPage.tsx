@@ -16,10 +16,11 @@ import type { Conversation } from '@/features/chat/types'
 import {
   GuestContinuePrompt,
   GUEST_STORAGE_KEY,
+  clearAllGuestDemoState,
   clearGuestImportPending,
   clearGuestSession,
+  consumeGuestContinuePrompt,
   loadGuestSession,
-  shouldOfferGuestContinue,
 } from '@/features/demo'
 import { useLayoutContext } from '@/contexts/LayoutContext'
 import { useToast } from '@/contexts/ToastContext'
@@ -47,11 +48,18 @@ export default function ChatPage() {
   const [deleteTarget, setDeleteTarget] = useState<Conversation | null>(null)
   const [deleteError, setDeleteError] = useState<string | null>(null)
   const [pendingQuestion, setPendingQuestion] = useState<string | null>(null)
-  const [showGuestContinue, setShowGuestContinue] = useState(() => shouldOfferGuestContinue())
+  const [showGuestContinue, setShowGuestContinue] = useState(() => consumeGuestContinuePrompt())
   const [guestImportError, setGuestImportError] = useState<string | null>(null)
   const [isImportingGuest, setIsImportingGuest] = useState(false)
   const bootstrapStarted = useRef(false)
   const importStarted = useRef(false)
+
+  // Stale guest storage must never surface for a normal authenticated session.
+  useEffect(() => {
+    if (!showGuestContinue) {
+      clearAllGuestDemoState()
+    }
+  }, [showGuestContinue])
 
   const { data, isLoading, isError, error } = useConversations()
   const createConversation = useCreateConversation()

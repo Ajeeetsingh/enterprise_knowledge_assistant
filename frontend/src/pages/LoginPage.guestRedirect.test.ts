@@ -10,7 +10,7 @@ describe('LoginPage resolveRedirectPath with guest transition', () => {
     sessionStorage.clear()
   })
 
-  it('redirects to /chat when guest continue is pending', () => {
+  it('does not hijack redirect based on stale guest storage alone', () => {
     markGuestImportPending()
     saveGuestSession({
       version: 1,
@@ -18,11 +18,11 @@ describe('LoginPage resolveRedirectPath with guest transition', () => {
       successfulQuestionCount: 1,
       updatedAt: new Date().toISOString(),
     })
-    expect(resolveRedirectPath('/dashboard')).toBe('/chat')
-    expect(resolveRedirectPath(undefined)).toBe('/chat')
+    expect(resolveRedirectPath('/dashboard')).toBe('/dashboard')
+    expect(resolveRedirectPath(undefined)).toBe('/dashboard')
   })
 
-  it('uses default dashboard when no guest continue is pending', () => {
+  it('uses default dashboard when no from path is provided', () => {
     expect(resolveRedirectPath(undefined)).toBe('/dashboard')
     expect(resolveRedirectPath('/documents')).toBe('/documents')
   })

@@ -1,4 +1,6 @@
 export { default as DeleteDocumentDialog } from './DeleteDocumentDialog'
+export { default as DocumentDomainFilters } from './DocumentDomainFilters'
+export { default as DocumentListPagination } from './DocumentListPagination'
 export { default as DocumentStatusBadge } from './DocumentStatusBadge'
 export { default as DocumentTable } from './DocumentTable'
 export { default as DocumentUploadDialog } from './DocumentUploadDialog'

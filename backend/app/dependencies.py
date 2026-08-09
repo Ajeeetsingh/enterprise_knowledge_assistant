@@ -5,11 +5,13 @@ from sqlalchemy.orm import Session
 
 from app.db.session import get_db as _get_db
 from app.db.repositories.document_repository import DocumentRepository
+from app.db.repositories.knowledge_domain_repository import KnowledgeDomainRepository
 from app.services.audit_dependencies import (
     get_audit_repository,
     get_audit_service,
     parse_audit_search_request,
 )
+from app.services.knowledge_domain_service import KnowledgeDomainService
 from app.services.monitoring_dependencies import get_metrics_service, get_monitoring_service
 from app.services.conversation_chat_service import (
     ConversationChatService,
@@ -50,6 +52,20 @@ def get_document_repository(db: Session = Depends(get_db)) -> DocumentRepository
     return DocumentRepository(db)
 
 
+def get_knowledge_domain_repository(
+    db: Session = Depends(get_db),
+) -> KnowledgeDomainRepository:
+    """Return a knowledge-domain repository bound to the current database session."""
+    return KnowledgeDomainRepository(db)
+
+
+def get_knowledge_domain_service(
+    repository: KnowledgeDomainRepository = Depends(get_knowledge_domain_repository),
+) -> KnowledgeDomainService:
+    """Return a knowledge-domain service bound to the current database session."""
+    return KnowledgeDomainService(repository)
+
+
 def get_conversation_service(db: Session = Depends(get_db)) -> ConversationService:
     """Return a conversation service bound to the current database session."""
     return build_conversation_service(db)
@@ -70,6 +86,8 @@ __all__ = [
     "get_db",
     "get_document_repository",
     "get_document_service_dep",
+    "get_knowledge_domain_repository",
+    "get_knowledge_domain_service",
     "get_metrics_service",
     "get_monitoring_service",
     "get_rag_service_dep",

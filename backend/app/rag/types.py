@@ -58,6 +58,8 @@ class RetrievalResult:
     source_retrievers: list[str] | None = None
     reranker_score: float | None = None
     final_rank: int | None = None
+    # Observability-only field (not used for ranking). Populated when available.
+    bm25_score: float | None = None
 
 
 @dataclass
@@ -80,6 +82,8 @@ class QueryResponse:
     confidence_score: float
     access_granted: bool
     message: str
+    # Phase 5A — presentation plan for Phase 5B renderer (optional).
+    response_layout: dict | None = None
 
     def to_dict(self) -> dict:
         return asdict(self)

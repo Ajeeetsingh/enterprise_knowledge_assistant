@@ -10,6 +10,7 @@ import {
 
 import Button from '@/components/ui/Button'
 import StatusBadge from '@/components/ui/StatusBadge'
+import { KnowledgeDomainField } from '@/features/knowledge-domains'
 import { cn } from '@/utils/cn'
 
 import {
@@ -34,7 +35,7 @@ export interface DocumentUploadDialogProps {
   uploadProgress?: BatchUploadItem[]
   summary?: string | null
   onClose: () => void
-  onUpload: (files: File[]) => void
+  onUpload: (files: File[], domainId: string) => void
   onRetryFailed?: () => void
 }
 
@@ -72,17 +73,22 @@ export default function DocumentUploadDialog({
   const [selectedFiles, setSelectedFiles] = useState<SelectedUploadFile[]>([])
   const [selectionNotice, setSelectionNotice] = useState<string | null>(null)
   const [isDragActive, setIsDragActive] = useState(false)
+  const [domainId, setDomainId] = useState<string | null>(null)
+  const [isCreateDomainOpen, setIsCreateDomainOpen] = useState(false)
 
   const showingProgress = Boolean(uploadProgress && uploadProgress.length > 0)
   const validCount = countValidSelectedFiles(selectedFiles)
   const invalidCount = selectedFiles.length - validCount
   const failedCount = uploadProgress?.filter((item) => item.status === 'failed').length ?? 0
+  const canUpload = validCount > 0 && Boolean(domainId)
 
   useEffect(() => {
     if (!isOpen) {
       setSelectedFiles([])
       setSelectionNotice(null)
       setIsDragActive(false)
+      setDomainId(null)
+      setIsCreateDomainOpen(false)
       if (fileInputRef.current) fileInputRef.current.value = ''
     }
   }, [isOpen])
@@ -91,12 +97,14 @@ export default function DocumentUploadDialog({
     if (!isOpen) return
 
     function handleKeyDown(event: KeyboardEvent) {
+      // Create Domain modal owns Escape while it is open (capture listener there).
+      if (isCreateDomainOpen) return
       if (event.key === 'Escape' && !isUploading) onClose()
     }
 
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [isOpen, isUploading, onClose])
+  }, [isOpen, isUploading, isCreateDomainOpen, onClose])
 
   if (!isOpen) return null
 
@@ -155,14 +163,23 @@ export default function DocumentUploadDialog({
       setSelectionNotice('Please select at least one valid file to upload.')
       return
     }
-    onUpload(validFiles)
+    if (!domainId) {
+      setSelectionNotice('Please select a Knowledge Domain.')
+      return
+    }
+    onUpload(validFiles, domainId)
   }
 
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4"
-      onClick={() => {
-        if (!isUploading) onClose()
+      data-testid="document-upload-backdrop"
+      onPointerDown={(event) => {
+        // pointerdown (not click) avoids click-through when Create Domain unmounts
+        // under the cursor after a successful create.
+        if (event.target !== event.currentTarget) return
+        if (isUploading || isCreateDomainOpen) return
+        onClose()
       }}
       role="presentation"
     >
@@ -170,10 +187,12 @@ export default function DocumentUploadDialog({
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
+        data-testid="document-upload-dialog"
         className={cn(
           'w-full max-w-lg rounded-lg border border-neutral-200 bg-white p-6 shadow-lg',
           'dark:border-neutral-700 dark:bg-neutral-900',
         )}
+        onPointerDown={(event) => event.stopPropagation()}
         onClick={(event) => event.stopPropagation()}
       >
         <h2 id={titleId} className="text-lg font-semibold text-neutral-900 dark:text-neutral-50">
@@ -232,6 +251,15 @@ export default function DocumentUploadDialog({
                 </p>
               )}
             </div>
+          )}
+
+          {!showingProgress && (
+            <KnowledgeDomainField
+              value={domainId}
+              disabled={isUploading}
+              onChange={setDomainId}
+              onCreateDialogOpenChange={setIsCreateDomainOpen}
+            />
           )}
 
           {showingProgress ? (
@@ -322,7 +350,7 @@ export default function DocumentUploadDialog({
               <Button
                 type="submit"
                 isLoading={isUploading}
-                disabled={isUploading || validCount === 0}
+                disabled={isUploading || !canUpload}
               >
                 {validCount > 1 ? `Upload ${validCount} files` : 'Upload'}
               </Button>

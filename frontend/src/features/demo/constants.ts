@@ -21,6 +21,13 @@ export const GUEST_STORAGE_KEY = 'eka.guest-demo.v1'
  */
 export const GUEST_TRANSITION_KEY = 'eka.guest-transition.v1'
 
+/**
+ * One-shot flag armed only after a successful login/register that originated
+ * from the guest demo. ChatPage consumes it — stale transition/session keys
+ * alone must never show the continue banner for authenticated users.
+ */
+export const GUEST_CONTINUE_READY_KEY = 'eka.guest-continue-ready.v1'
+
 /** Cap persisted messages (user + assistant). */
 export const GUEST_STORAGE_MAX_MESSAGES = 24
 

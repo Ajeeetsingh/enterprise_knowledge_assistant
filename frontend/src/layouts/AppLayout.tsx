@@ -24,8 +24,11 @@ import {
 export default function AppLayout() {
   const location = useLocation()
   const isChatRoute = location.pathname === '/chat'
+  const isDocumentsListRoute = location.pathname === '/documents'
   const isDocumentViewerRoute = /^\/documents\/[^/]+$/.test(location.pathname)
-  const isFullHeightRoute = isChatRoute || isDocumentViewerRoute
+  // Documents list needs a bounded viewport so the table can scroll internally
+  // (horizontal scrollbar stays in the visible table region).
+  const isFullHeightRoute = isChatRoute || isDocumentViewerRoute || isDocumentsListRoute
   const isDesktopNav = useMinWidthMediaQuery(DESKTOP_MIN)
   const isWideDesktop = useMinWidthMediaQuery(WIDE_DESKTOP_MIN)
 
@@ -166,7 +169,13 @@ export default function AppLayout() {
                 : 'flex-1 overflow-y-auto scrollbar-thin'
             }
           >
-            {isFullHeightRoute ? (
+            {isDocumentsListRoute ? (
+              <AnimatedOutlet className="flex min-h-0 flex-1 flex-col">
+                <PageContainer className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+                  <Outlet />
+                </PageContainer>
+              </AnimatedOutlet>
+            ) : isFullHeightRoute ? (
               <AnimatedOutlet className="flex min-h-0 flex-1 flex-col">
                 <Outlet context={{ sidebarWidth: effectiveSidebarWidth, sidebarCollapsed }} />
               </AnimatedOutlet>

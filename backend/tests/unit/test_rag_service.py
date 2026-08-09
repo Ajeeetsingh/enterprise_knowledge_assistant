@@ -23,6 +23,7 @@ TEST_SETTINGS = Settings(
     documents_path=TEST_DOCUMENTS_PATH,
     indexes_path=BACKEND_ROOT / "storage" / "indexes",
     llm_provider="none",
+    rag_diagnostics_enabled=False,
 )
 
 

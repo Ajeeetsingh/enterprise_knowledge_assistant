@@ -58,6 +58,36 @@ Another paragraph in the same section with more detail.
         assert "Scope" in first
         assert "enterprise scope" in first
 
+    def test_mission_vision_not_swallowed_by_history_table(self):
+        """Mission/Vision must become searchable chunks after a history table."""
+        text = """<<<PAGE:9>>>
+1.3 History
+Apex National Bank traces its origin to Apex Savings & Trust, founded in 1873.
+Period Milestone
+1873 Founded as Apex Savings & Trust, Hartford,
+Connecticut
+1897 National bank charter granted; renamed Apex
+National Bank, N.A.
+<<<PAGE:10>>>
+1.4 Mission
+To steward our clients' financial lives with precision, integrity, and durability.
+1.5 Vision
+To be the most trusted and operationally resilient bank in every market we serve.
+1.6 Core Values
+Client Stewardship comes first for every relationship.
+"""
+        chunks = _chunk(text, source="COMPANY_PROFILE.pdf")
+        joined = "\n".join(c.content for c in chunks)
+        assert "To steward our clients" in joined
+        assert "most trusted and operationally resilient" in joined
+        assert "Client Stewardship" in joined
+        mission_chunks = [c for c in chunks if "To steward our clients" in c.content]
+        vision_chunks = [
+            c for c in chunks if "most trusted and operationally resilient" in c.content
+        ]
+        assert mission_chunks
+        assert vision_chunks
+
     def test_table_kept_whole(self):
         text = """<<<PAGE:1>>>
 Executive Leadership

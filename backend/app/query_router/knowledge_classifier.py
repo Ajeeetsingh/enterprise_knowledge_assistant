@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING
 from app.core.logging import get_logger, log_with_fields
 from app.llm.types import BuiltPrompt, LLMGenerationRequest
 from app.query_router.knowledge_signals import score_document_signals, score_general_signals
+from app.query_router.route_signals import RouteSignalContext
 from app.query_router.types import QueryRoute
 
 if TYPE_CHECKING:
@@ -40,6 +41,8 @@ class KnowledgeRouteResult:
     confidence: float
     method: str
     signals: tuple[str, ...] = ()
+    document_score: float = 0.0
+    general_score: float = 0.0
 
 
 class KnowledgeRouteClassifier:
@@ -48,10 +51,43 @@ class KnowledgeRouteClassifier:
     def __init__(self, llm_provider: "LLMProvider | None" = None) -> None:
         self._llm_provider = llm_provider
 
-    def classify(self, query: str) -> KnowledgeRouteResult:
+    def classify(
+        self,
+        query: str,
+        context: RouteSignalContext | None = None,
+    ) -> KnowledgeRouteResult:
         """Classify *query* as DOCUMENT_QUERY or GENERAL_QUERY."""
-        doc = score_document_signals(query)
-        gen = score_general_signals(query)
+        signal_context = context or RouteSignalContext()
+        # Cheap signals first. Semantic enterprise intent runs only when the
+        # deterministic scores are still ambiguous (keeps routing fast).
+        cheap_doc = score_document_signals(query, signal_context, allow_semantic=False)
+        gen = score_general_signals(query, signal_context)
+
+        if cheap_doc.score >= _HIGH and cheap_doc.score > gen.score:
+            return KnowledgeRouteResult(
+                QueryRoute.DOCUMENT_QUERY,
+                cheap_doc.score,
+                "deterministic_document",
+                cheap_doc.signals,
+                document_score=cheap_doc.score,
+                general_score=gen.score,
+            )
+        # Strong greetings / writing-help / jokes can skip semantic. Definition-like
+        # GENERAL scores must still allow semantic enterprise-intent when the user
+        # has accessible documents (e.g. "What is <org>'s mission?").
+        if gen.score >= _HIGH and gen.score > cheap_doc.score:
+            definitional = "definition_without_org" in gen.signals
+            if not definitional or not signal_context.has_accessible_documents:
+                return KnowledgeRouteResult(
+                    QueryRoute.GENERAL_QUERY,
+                    gen.score,
+                    "deterministic_general",
+                    gen.signals,
+                    document_score=cheap_doc.score,
+                    general_score=gen.score,
+                )
+
+        doc = score_document_signals(query, signal_context, allow_semantic=True)
 
         if doc.score >= _HIGH and doc.score > gen.score:
             return KnowledgeRouteResult(
@@ -59,6 +95,8 @@ class KnowledgeRouteClassifier:
                 doc.score,
                 "deterministic_document",
                 doc.signals,
+                document_score=doc.score,
+                general_score=gen.score,
             )
         if gen.score >= _HIGH and gen.score > doc.score:
             return KnowledgeRouteResult(
@@ -66,6 +104,8 @@ class KnowledgeRouteClassifier:
                 gen.score,
                 "deterministic_general",
                 gen.signals,
+                document_score=doc.score,
+                general_score=gen.score,
             )
 
         if doc.score >= _MILD and doc.score >= gen.score:
@@ -74,6 +114,8 @@ class KnowledgeRouteClassifier:
                 doc.score,
                 "deterministic_document_mild",
                 doc.signals,
+                document_score=doc.score,
+                general_score=gen.score,
             )
         if gen.score >= _MILD and gen.score > doc.score:
             return KnowledgeRouteResult(
@@ -81,18 +123,29 @@ class KnowledgeRouteClassifier:
                 gen.score,
                 "deterministic_general_mild",
                 gen.signals,
+                document_score=doc.score,
+                general_score=gen.score,
             )
 
         if self._llm_provider is not None:
             llm_result = self._classify_with_llm(query)
             if llm_result is not None:
-                return llm_result
+                return KnowledgeRouteResult(
+                    route=llm_result.route,
+                    confidence=llm_result.confidence,
+                    method=llm_result.method,
+                    signals=llm_result.signals,
+                    document_score=doc.score,
+                    general_score=gen.score,
+                )
 
         return KnowledgeRouteResult(
             QueryRoute.DOCUMENT_QUERY,
             0.4,
             "default_document_safe",
             ("ambiguous_default",) + doc.signals + gen.signals,
+            document_score=doc.score,
+            general_score=gen.score,
         )
 
     def _classify_with_llm(self, query: str) -> KnowledgeRouteResult | None:

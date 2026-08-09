@@ -13,8 +13,9 @@ from sqlalchemy.pool import StaticPool
 from tests.constants import TEST_PASSWORD_HASH
 from app.core.exceptions import DocumentIngestionError, DocumentValidationError
 from app.db.base import Base
-from app.db.models import Document, Role, User  # noqa: F401
+from app.db.models import Document, KnowledgeDomain, Role, User  # noqa: F401
 from app.db.repositories.document_repository import DocumentRepository
+from tests.helpers.knowledge_domains import domain_upload_kwargs
 from app.documents.metadata import IndexingStatus
 from app.documents.types import IngestionContext
 from app.ingestion.embedding.base import EmbeddingProvider
@@ -235,6 +236,7 @@ def test_upload_document_returns_business_result(
         content_type="text/plain",
         content=b"Employee handbook.",
         uploaded_by=user.id,
+        **domain_upload_kwargs(session),
     )
 
     assert upload_result.document_id

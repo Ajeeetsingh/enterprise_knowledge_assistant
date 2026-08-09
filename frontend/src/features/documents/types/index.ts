@@ -27,6 +27,17 @@ export interface Document {
   status: DocumentStatus | string
   uploaded_at: string
   uploaded_by: string
+  /** Null for legacy documents uploaded before Knowledge Domains. */
+  domain_id?: string | null
+  /** Null when uncategorized; UI should show a fallback label. */
+  domain_name?: string | null
+}
+
+/** Display label for documents with no Knowledge Domain. */
+export const UNCATEGORIZED_DOMAIN_LABEL = 'Uncategorized'
+
+export function getDocumentDomainLabel(document: Pick<Document, 'domain_name'>): string {
+  return document.domain_name?.trim() || UNCATEGORIZED_DOMAIN_LABEL
 }
 
 export interface DocumentDetail extends Document {

@@ -32,13 +32,16 @@ describe('uploadDocument', () => {
     })
 
     const file = new File(['content'], 'policy.pdf', { type: 'application/pdf' })
-    await uploadDocument(file)
+    await uploadDocument(file, 'domain-1')
 
     expect(apiClient.post).toHaveBeenCalledWith(
       '/documents/upload',
       expect.any(FormData),
       { timeout: UPLOAD_REQUEST_TIMEOUT_MS },
     )
+    const formData = vi.mocked(apiClient.post).mock.calls[0]![1] as FormData
+    expect(formData.get('file')).toBe(file)
+    expect(formData.get('domain_id')).toBe('domain-1')
     expect(UPLOAD_REQUEST_TIMEOUT_MS).toBeGreaterThan(30_000)
   })
 })

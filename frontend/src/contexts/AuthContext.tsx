@@ -10,6 +10,7 @@ import {
 
 import queryClient from '@/app/queryClient'
 import SessionExpiredListener from '@/components/auth/SessionExpiredListener'
+import { clearAllGuestDemoState } from '@/features/demo'
 import { registerUnauthorizedHandler } from '@/services/api'
 import * as authApi from '@/services/authApi'
 import * as authStorage from '@/services/authStorage'
@@ -34,6 +35,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const clearSession = useCallback(() => {
     authStorage.clearTokens()
     queryClient.clear()
+    // Prevent the next account (or the same user after re-login) from inheriting
+    // a previous tab's guest demo migration prompt.
+    clearAllGuestDemoState()
     setUser(null)
   }, [])
 
@@ -109,6 +113,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Sync context when the API client clears tokens after a failed refresh.
   useEffect(() => {
     return registerUnauthorizedHandler(() => {
+      clearAllGuestDemoState()
       setUser(null)
     })
   }, [])

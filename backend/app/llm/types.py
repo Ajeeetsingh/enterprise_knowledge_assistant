@@ -65,3 +65,5 @@ class GenerationOutcome:
     latency_ms: float | None = None
     token_usage: TokenUsage | None = None
     prompt_length: int | None = None
+    # Phase 5A — presentation plan only (no answer mutation).
+    response_layout: dict[str, Any] | None = None

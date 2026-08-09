@@ -14,6 +14,7 @@ from app.db.base import Base
 from app.documents.visibility import DEFAULT_VISIBILITY, DocumentVisibility
 
 if TYPE_CHECKING:
+    from app.db.models.knowledge_domain import KnowledgeDomain
     from app.db.models.user import User
 
 
@@ -149,6 +150,21 @@ class Document(Base):
     """
 
     # ------------------------------------------------------------------ #
+    # Knowledge Domains                                                    #
+    # ------------------------------------------------------------------ #
+    domain_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid(as_uuid=True),
+        ForeignKey("knowledge_domains.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    """FK to the Knowledge Domain this document belongs to.
+
+    Required for new uploads. ``None`` remains valid for legacy documents and
+    for admin clear/reassign flows (``ON DELETE SET NULL`` on domain removal).
+    """
+
+    # ------------------------------------------------------------------ #
     # Relationships                                                        #
     # ------------------------------------------------------------------ #
     uploader: Mapped[User] = relationship(
@@ -156,6 +172,10 @@ class Document(Base):
     )
     owner: Mapped[User | None] = relationship(
         foreign_keys=[owner_id],
+    )
+    knowledge_domain: Mapped[KnowledgeDomain | None] = relationship(
+        back_populates="documents",
+        foreign_keys=[domain_id],
     )
 
     # ------------------------------------------------------------------ #

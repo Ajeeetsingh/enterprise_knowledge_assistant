@@ -7,6 +7,7 @@ import { toApiError } from '@/utils/apiError'
 
 import { UPLOAD_REQUEST_TIMEOUT_MS } from '../constants'
 import type {
+  Document,
   DocumentDeleteResponse,
   DocumentDetail,
   DocumentUploadResponse,
@@ -29,7 +30,7 @@ async function request<T>(operation: () => Promise<T>): Promise<T> {
 export async function getDocuments(
   params: DocumentListParams = {},
 ): Promise<PaginatedDocumentResponse> {
-  const { limit = 50, offset = 0, filename, status } = params
+  const { limit = 50, offset = 0, filename, status, domain_id } = params
 
   return request(async () => {
     const { data } = await apiClient.get<PaginatedDocumentResponse>('/documents', {
@@ -38,6 +39,7 @@ export async function getDocuments(
         offset,
         ...(filename ? { filename } : {}),
         ...(status ? { status } : {}),
+        ...(domain_id ? { domain_id } : {}),
       },
     })
     return data
@@ -51,18 +53,23 @@ export async function getDocument(documentId: string): Promise<DocumentDetail> {
   })
 }
 
-export async function uploadDocument(file: File): Promise<DocumentUploadResponse> {
+export async function uploadDocument(
+  file: File,
+  domainId: string,
+): Promise<DocumentUploadResponse> {
   const startedAt = performance.now()
 
   logUploadTransition('documentApi', 'Uploading', {
     filename: file.name,
     sizeBytes: file.size,
     timeoutMs: UPLOAD_REQUEST_TIMEOUT_MS,
+    domainId,
   })
 
   try {
     const formData = new FormData()
     formData.append('file', file)
+    formData.append('domain_id', domainId)
     const { data, status: httpStatus } = await apiClient.post<DocumentUploadResponse>(
       '/documents/upload',
       formData,
@@ -100,6 +107,18 @@ export async function deleteDocument(documentId: string): Promise<DocumentDelete
     const { data } = await apiClient.delete<DocumentDeleteResponse>(
       `/documents/${documentId}`,
     )
+    return data
+  })
+}
+
+export async function updateDocumentDomain(
+  documentId: string,
+  domainId: string | null,
+): Promise<Document> {
+  return request(async () => {
+    const { data } = await apiClient.patch<Document>(`/documents/${documentId}/domain`, {
+      domain_id: domainId,
+    })
     return data
   })
 }

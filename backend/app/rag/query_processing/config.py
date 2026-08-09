@@ -14,7 +14,7 @@ class QueryProcessingSettings:
     enabled: bool = True
     query_expansion_enabled: bool = True
     multi_query_enabled: bool = True
-    max_generated_queries: int = 4
+    max_generated_queries: int = 8
     entity_normalization_enabled: bool = True
     synonym_expansion_enabled: bool = True
     strategy_selection_enabled: bool = True

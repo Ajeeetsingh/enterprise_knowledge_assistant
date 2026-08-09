@@ -9,7 +9,20 @@ from app.config import get_settings
 from app.db.base import Base
 
 # Import models here so Alembic can detect them:
-from app.db.models import Role, User  # noqa: F401
+from app.db.models import (  # noqa: F401
+    Document,
+    DocumentKnowledgeRecord,
+    KnowledgeAlias,
+    KnowledgeCategory,
+    KnowledgeCollection,
+    KnowledgeDomain,
+    KnowledgeRegistryEntry,
+    KnowledgeRelationship,
+    KnowledgeVersionGroup,
+    RelationshipEvidence,
+    Role,
+    User,
+)
 
 config = context.config
 settings = get_settings()

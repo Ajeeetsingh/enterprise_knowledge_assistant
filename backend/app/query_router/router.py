@@ -141,8 +141,9 @@ class QueryRouter:
                 classification_method=matched.match_type,
             )
 
-        # 3) Current-turn DOCUMENT vs GENERAL.
-        knowledge = self._classifier().classify(query)
+        # 3) Current-turn DOCUMENT vs GENERAL (data-driven + semantic signals).
+        signal_context = context.to_signal_context()
+        knowledge = self._classifier().classify(query, signal_context)
 
         # 4) Ambiguous follow-ups may inherit the previous route; strong
         #    current-turn signals always override inheritance.
@@ -156,8 +157,29 @@ class QueryRouter:
             confidence=knowledge.confidence,
             method=knowledge.method,
             signals=list(knowledge.signals),
+            document_score=knowledge.document_score,
+            general_score=knowledge.general_score,
             has_documents=context.has_accessible_documents,
+            catalog_titles=len(context.document_catalog.titles),
+            org_alias_count=len(context.org_aliases),
         )
+
+        try:
+            from app.query_router.routing_debug import log_routing_stage
+
+            log_routing_stage(
+                question=query,
+                route=knowledge.route.value,
+                method=knowledge.method,
+                confidence=knowledge.confidence,
+                document_score=knowledge.document_score,
+                general_score=knowledge.general_score,
+                signals=knowledge.signals,
+                rag_selected=knowledge.route == QueryRoute.DOCUMENT_QUERY
+                and context.has_accessible_documents,
+            )
+        except Exception:  # noqa: BLE001 — debug logging must never break routing
+            pass
 
         if knowledge.route == QueryRoute.GENERAL_QUERY:
             return RouteDecision(
@@ -212,7 +234,7 @@ class QueryRouter:
         if not looks_like_follow_up(query):
             return knowledge
         # Explicit current-turn DOCUMENT/GENERAL signals always win.
-        if _has_strong_current_override(query):
+        if _has_strong_current_override(query, context):
             return knowledge
         if knowledge.method in {"deterministic_document", "deterministic_general"}:
             return knowledge
@@ -227,10 +249,14 @@ class QueryRouter:
         )
 
 
-def _has_strong_current_override(query: str) -> bool:
+def _has_strong_current_override(
+    query: str,
+    context: UserQueryContext | None = None,
+) -> bool:
     """True when the current turn has strong DOCUMENT or GENERAL signals."""
-    doc = score_document_signals(query)
-    gen = score_general_signals(query)
+    signal_context = context.to_signal_context() if context is not None else None
+    doc = score_document_signals(query, signal_context)
+    gen = score_general_signals(query, signal_context)
     return doc.score >= _STRONG or gen.score >= _STRONG
 
 

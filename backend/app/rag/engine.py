@@ -51,6 +51,12 @@ def _resolve_context_top_k(
     settings = get_settings()
     if category in (QueryCategory.LIST, QueryCategory.TABLE):
         return max(settings.top_k_final, 8)
+    # Multi-aspect definition questions (e.g. mission + vision + values) need a
+    # wider context window: CE often ranks document mastheads above body sections
+    # that still sit inside the rerank pool (mission/vision regression: answers at
+    # CE ranks 9–12 were cut by top_k=5).
+    if category == QueryCategory.DEFINITION:
+        return max(settings.top_k_final, 12)
     return settings.top_k_final
 
 
@@ -91,8 +97,21 @@ def _expand_exhaustive_context(
     focus_source_chunks: list[RetrievalResult] | None = None,
     query: str = "",
 ) -> list[RetrievalResult]:
-    """For list/table queries, include additional chunks from the focus document."""
+    """Optionally expand list/table context from the focus document.
+
+    Exhaustive same-document expansion is only applied for executive-leader and
+    strategic-priority list intents. For other LIST/TABLE queries (e.g. metadata
+    categories), CrossEncoder order is preserved — Phase 3B diagnostics showed
+    generic list expansion reordered CE winners behind unrelated FAISS chunks
+    sorted by chunk_id, dropping the correct evidence from the prompt.
+    """
     if category not in (QueryCategory.LIST, QueryCategory.TABLE) or not reranked:
+        return reranked[:top_k]
+
+    wants_exhaustive = _query_wants_executive_leaders(query) or _query_wants_strategic_priorities(
+        query
+    )
+    if not wants_exhaustive:
         return reranked[:top_k]
 
     source_scores: dict[str, float] = {}
@@ -462,23 +481,64 @@ class EnterpriseRAG:
                     if authorized_sources is not None
                     else None
                 )
+                # Diagnostics only — never alters ranking or return values.
+                try:
+                    from app.rag.observability.collector import get_active_trace
+
+                    _trace = get_active_trace()
+                except Exception:  # noqa: BLE001
+                    _trace = None
+                if _trace is not None:
+                    _trace.set_understanding(
+                        {
+                            "intent": getattr(
+                                query_outcome, "understanding_intent", None
+                            )
+                            or query_outcome.classification.category.value,
+                            "entities": list(query_outcome.detected_entities or ()),
+                            "concepts": list(
+                                getattr(query_outcome, "understanding_concepts", ())
+                                or ()
+                            ),
+                            "likely_documents": list(
+                                getattr(
+                                    query_outcome,
+                                    "understanding_likely_documents",
+                                    (),
+                                )
+                                or ()
+                            ),
+                        }
+                    )
+                    _trace.set_expansion(
+                        list(query_outcome.retrieval_queries),
+                        strategy=getattr(
+                            query_outcome, "expansion_strategy", None
+                        ),
+                    )
+
                 per_query_results: list[list[RetrievalResult]] = []
                 for retrieval_query in query_outcome.retrieval_queries:
-                    per_query_results.append(
-                        strategy_retriever.search(
-                            faiss_store,
-                            self._resolve_bm25_index(),
-                            retrieval_query,
-                            top_k=fetch_k,
-                            allowed_categories=allowed_categories,
-                            allowed_sources=allowed_source_set,
-                        )
+                    if _trace is not None:
+                        _trace.begin_retrieval_query(retrieval_query)
+                    query_hits = strategy_retriever.search(
+                        faiss_store,
+                        self._resolve_bm25_index(),
+                        retrieval_query,
+                        top_k=fetch_k,
+                        allowed_categories=allowed_categories,
+                        allowed_sources=allowed_source_set,
                     )
+                    if _trace is not None:
+                        _trace.record_per_query_metadata_results(query_hits)
+                    per_query_results.append(query_hits)
 
                 candidates = merge_multi_query_results(
                     per_query_results,
                     limit=fetch_k,
                 )
+                if _trace is not None:
+                    _trace.record_merge(candidates)
                 effective_reranker = CrossEncoderReranker(
                     settings=effective_rerank_settings,
                     runtime=self._reranker.runtime,
@@ -489,6 +549,8 @@ class EnterpriseRAG:
                     candidates,
                     top_k=context_top_k,
                 )
+                if _trace is not None:
+                    _trace.record_rerank(reranked)
                 focus_source_chunks = None
                 if query_outcome.classification.category in (
                     QueryCategory.LIST,
@@ -518,6 +580,12 @@ class EnterpriseRAG:
                     focus_source_chunks=focus_source_chunks,
                     query=user_query,
                 )
+                if _trace is not None:
+                    _trace.record_final_context(final_results)
+                    try:
+                        _trace.evaluate_expected(list(faiss_store.chunks))
+                    except Exception:  # noqa: BLE001
+                        pass
                 _log_retrieval_pipeline_debug(
                     query=user_query,
                     category=query_outcome.classification.category.value,
@@ -566,13 +634,22 @@ class EnterpriseRAG:
         explanation = [
             f"Original Query: {outcome.original_query}",
             f"Expanded Query: {outcome.expanded_query}",
-            f"Detected Intent: {outcome.classification.category.value}",
+            f"Detected Intent: {getattr(outcome, 'understanding_intent', None) or outcome.classification.category.value}",
+            f"Classification: {outcome.classification.category.value}",
             f"Retrieval Strategy: {outcome.strategy.name}",
+            f"Expansion Strategy: {getattr(outcome, 'expansion_strategy', None) or 'n/a'}",
             f"Sparse Weight: {outcome.strategy.sparse_weight}",
             f"Dense Weight: {outcome.strategy.dense_weight}",
             f"Metadata Bonus Multiplier: {outcome.strategy.metadata_bonus_multiplier}",
             f"Generated Queries: {len(outcome.retrieval_queries)}",
+            f"Retrieval Queries: {' | '.join(outcome.retrieval_queries)}",
         ]
+        concepts = getattr(outcome, "understanding_concepts", ()) or ()
+        if concepts:
+            explanation.append(f"Detected Concepts: {', '.join(concepts)}")
+        likely_docs = getattr(outcome, "understanding_likely_documents", ()) or ()
+        if likely_docs:
+            explanation.append(f"Likely Documents: {', '.join(likely_docs)}")
         if outcome.detected_entities:
             explanation.append(
                 f"Detected Entities: {', '.join(outcome.detected_entities)}"
@@ -602,6 +679,136 @@ class EnterpriseRAG:
         retrieval_confidence = results[0].confidence if results else 0.0
         used_llm_fallback = False
 
+        answer_plan = None
+        try:
+            from app.answer_planning import plan_answer
+
+            answer_plan = plan_answer(user_query)
+            from app.rag.observability.collector import get_active_trace
+
+            _trace = get_active_trace()
+            if _trace is not None:
+                _trace.record_answer_plan(answer_plan.to_dict())
+        except Exception:  # noqa: BLE001
+            answer_plan = None
+
+        evidence_graph = None
+        try:
+            from app.evidence_organization import organize_evidence
+
+            evidence_graph = organize_evidence(results, answer_plan=answer_plan)
+            from app.rag.observability.collector import get_active_trace
+
+            _trace = get_active_trace()
+            if _trace is not None:
+                _trace.record_evidence_graph(evidence_graph.to_dict())
+        except Exception:  # noqa: BLE001
+            evidence_graph = None
+
+        answer_composition = None
+        try:
+            from app.evidence_composition import compose_answer_evidence
+
+            answer_composition = compose_answer_evidence(
+                evidence_graph,
+                question=user_query,
+                answer_plan=answer_plan,
+            )
+            from app.rag.observability.collector import get_active_trace
+
+            _trace = get_active_trace()
+            if _trace is not None:
+                _trace.record_answer_composition(answer_composition.to_dict())
+        except Exception:  # noqa: BLE001
+            answer_composition = None
+
+        # Phase 4F — synthesis plan (concept composition before prompt generation).
+        answer_synthesis = None
+        try:
+            from app.answer_synthesis import plan_answer_synthesis
+
+            answer_synthesis = plan_answer_synthesis(
+                question=user_query,
+                answer_plan=answer_plan,
+                evidence_graph=evidence_graph,
+                answer_composition=answer_composition,
+            )
+            from app.rag.observability.collector import get_active_trace
+
+            _trace = get_active_trace()
+            if _trace is not None:
+                _trace.record_answer_synthesis(answer_synthesis.to_dict())
+        except Exception:  # noqa: BLE001
+            answer_synthesis = None
+
+        if answer_synthesis is not None and answer_synthesis.is_unsupported:
+            refusal = (
+                answer_synthesis.refusal_message
+                or "I couldn't find this information in the retrieved context."
+            )
+            log_with_fields(
+                logger,
+                logging.INFO,
+                "Synthesis planner refused unsupported factual request",
+                unsupported_concepts=list(answer_synthesis.unsupported_concepts),
+            )
+            try:
+                from app.rag.observability.collector import get_active_trace
+
+                _trace = get_active_trace()
+                if _trace is not None:
+                    _trace.record_model_output(refusal)
+            except Exception:  # noqa: BLE001
+                pass
+            layout_payload = None
+            rendered = refusal
+            try:
+                from app.response_experience import (
+                    finalize_enterprise_markdown,
+                    plan_response_experience,
+                    polish_enterprise_markdown,
+                    render_enterprise_markdown,
+                )
+
+                layout = plan_response_experience(
+                    question=user_query,
+                    answer=refusal,
+                    answer_plan=answer_plan,
+                    evidence_graph=evidence_graph,
+                    answer_synthesis=answer_synthesis,
+                )
+                render_result = render_enterprise_markdown(
+                    layout=layout,
+                    answer=refusal,
+                    question=user_query,
+                    sources=list(sources_used),
+                )
+                polish_result = polish_enterprise_markdown(render_result.markdown)
+                finalize_result = finalize_enterprise_markdown(polish_result.markdown)
+                rendered = finalize_result.markdown
+                layout_payload = layout.to_dict()
+                layout_payload["render"] = render_result.to_dict()
+                layout_payload["polish"] = polish_result.to_dict()
+                layout_payload["finalize"] = finalize_result.to_dict()
+                from app.rag.observability.collector import get_active_trace
+
+                _trace = get_active_trace()
+                if _trace is not None:
+                    _trace.record_response_layout(layout_payload)
+                    _trace.record_markdown_render(render_result.to_dict())
+                    _trace.record_presentation_polish(polish_result.to_dict())
+                    _trace.record_presentation_finalize(finalize_result.to_dict())
+            except Exception:  # noqa: BLE001
+                layout_payload = None
+            return GenerationOutcome(
+                answer=rendered,
+                sources_used=sources_used,
+                retrieval_confidence=0.05,
+                generation_backend="synthesis_unsupported",
+                response_layout=layout_payload,
+            )
+
+        outcome: GenerationOutcome | None = None
         if self._llm_provider is not None:
             provider_label = _provider_display_name(self._llm_provider.provider_name)
             model_label = self._llm_provider.model_name
@@ -610,6 +817,10 @@ class EnterpriseRAG:
                     user_query,
                     results,
                     conversation_history=conversation_history,
+                    answer_plan=answer_plan,
+                    evidence_graph=evidence_graph,
+                    answer_composition=answer_composition,
+                    answer_synthesis=answer_synthesis,
                 )
                 request = LLMGenerationRequest(
                     question=user_query,
@@ -618,6 +829,14 @@ class EnterpriseRAG:
                     prompt=prompt,
                 )
                 llm_result = self._llm_provider.generate_sync(request)
+                try:
+                    from app.rag.observability.collector import get_active_trace
+
+                    _trace = get_active_trace()
+                    if _trace is not None:
+                        _trace.record_model_output(llm_result.answer)
+                except Exception:  # noqa: BLE001
+                    pass
                 log_with_fields(
                     logger,
                     logging.INFO,
@@ -625,7 +844,7 @@ class EnterpriseRAG:
                     provider=provider_label,
                     model=model_label,
                 )
-                return GenerationOutcome(
+                outcome = GenerationOutcome(
                     answer=llm_result.answer,
                     sources_used=sources_used,
                     retrieval_confidence=retrieval_confidence,
@@ -663,19 +882,135 @@ class EnterpriseRAG:
                 )
                 used_llm_fallback = True
 
-        generated = self.answer_generator.generate(user_query, results)
-        if used_llm_fallback:
+        if outcome is None:
+            generated = self.answer_generator.generate(user_query, results)
+            try:
+                from app.rag.observability.collector import get_active_trace
+
+                _trace = get_active_trace()
+                if _trace is not None:
+                    _trace.record_model_output(generated.answer)
+            except Exception:  # noqa: BLE001
+                pass
+            if used_llm_fallback:
+                log_with_fields(
+                    logger,
+                    logging.INFO,
+                    "✓ AnswerGenerator fallback completed successfully",
+                )
+            outcome = GenerationOutcome(
+                answer=generated.answer,
+                sources_used=generated.sources_used,
+                retrieval_confidence=generated.confidence_score,
+                generation_backend="answer_generator",
+            )
+
+        # Phase 4D/4E — GAQA: validate, calibrate confidence, apply reliability overrides.
+        try:
+            from app.gaqa import run_gaqa
+
+            gaqa_report = run_gaqa(
+                question=user_query,
+                answer=outcome.answer,
+                results=results,
+                answer_plan=answer_plan,
+                evidence_graph=evidence_graph,
+                answer_composition=answer_composition,
+            )
+            from app.rag.observability.collector import get_active_trace
+
+            _trace = get_active_trace()
+            if _trace is not None:
+                _trace.record_gaqa_report(gaqa_report.to_dict())
+            from dataclasses import replace
+
+            final_answer = outcome.answer
+            if gaqa_report.recommended_final_answer:
+                final_answer = gaqa_report.recommended_final_answer
+            outcome = replace(
+                outcome,
+                answer=final_answer,
+                retrieval_confidence=round(float(gaqa_report.overall_confidence), 4),
+            )
             log_with_fields(
                 logger,
                 logging.INFO,
-                "✓ AnswerGenerator fallback completed successfully",
+                "GAQA validation completed",
+                confidence_label=gaqa_report.confidence_label,
+                overall_confidence=round(gaqa_report.overall_confidence, 4),
+                answer_completeness=gaqa_report.answer_completeness,
+                intent_coverage=round(gaqa_report.intent_coverage, 4),
+                reliability_score=round(gaqa_report.overall_reliability_score, 4),
+                refusal_reason=gaqa_report.refusal_reason,
+                missing_concepts=list(gaqa_report.missing_concepts),
+                unsupported_claims=gaqa_report.unsupported_claim_count,
+                answer_overridden=bool(gaqa_report.recommended_final_answer),
             )
-        return GenerationOutcome(
-            answer=generated.answer,
-            sources_used=generated.sources_used,
-            retrieval_confidence=generated.confidence_score,
-            generation_backend="answer_generator",
-        )
+        except Exception:  # noqa: BLE001
+            pass
+
+        # Phase 5A/5B — Response Experience layout + Enterprise Markdown render.
+        try:
+            from app.response_experience import (
+                finalize_enterprise_markdown,
+                plan_response_experience,
+                polish_enterprise_markdown,
+                render_enterprise_markdown,
+            )
+            from dataclasses import replace
+
+            layout = plan_response_experience(
+                question=user_query,
+                answer=outcome.answer,
+                answer_plan=answer_plan,
+                evidence_graph=evidence_graph,
+                answer_synthesis=answer_synthesis,
+            )
+            related_docs: list[str] = []
+            if answer_synthesis is not None:
+                related_docs = list(answer_synthesis.supporting_documents or [])
+            render_result = render_enterprise_markdown(
+                layout=layout,
+                answer=outcome.answer,
+                question=user_query,
+                sources=list(outcome.sources_used or []),
+                related_documents=related_docs,
+            )
+            polish_result = polish_enterprise_markdown(render_result.markdown)
+            finalize_result = finalize_enterprise_markdown(polish_result.markdown)
+            layout_payload = layout.to_dict()
+            layout_payload["render"] = render_result.to_dict()
+            layout_payload["polish"] = polish_result.to_dict()
+            layout_payload["finalize"] = finalize_result.to_dict()
+            from app.rag.observability.collector import get_active_trace
+
+            _trace = get_active_trace()
+            if _trace is not None:
+                _trace.record_response_layout(layout_payload)
+                _trace.record_markdown_render(render_result.to_dict())
+                _trace.record_presentation_polish(polish_result.to_dict())
+                _trace.record_presentation_finalize(finalize_result.to_dict())
+            outcome = replace(
+                outcome,
+                answer=finalize_result.markdown,
+                response_layout=layout_payload,
+            )
+            log_with_fields(
+                logger,
+                logging.INFO,
+                "RX Engine layout selected, markdown rendered, polished, and finalized",
+                response_layout=layout.layout.value,
+                expected_render_type=layout.expected_render_type,
+                markdown_template=render_result.template_used,
+                components_rendered=render_result.components_rendered,
+                components_skipped=render_result.components_skipped,
+                polish_transforms=polish_result.transforms_applied,
+                finalize_transforms=finalize_result.transforms_applied,
+            )
+        except Exception:  # noqa: BLE001
+            pass
+
+        return outcome
 
     def query(
         self,
@@ -747,6 +1082,29 @@ class EnterpriseRAG:
                     len(authorized_sources) if authorized_sources is not None else None
                 ),
             )
+            try:
+                from app.query_router.routing_debug import log_rag_retrieval_stage
+
+                log_rag_retrieval_stage(
+                    question=user_query,
+                    chunk_count=0,
+                    top_documents=[],
+                    prompt_context_chars=0,
+                    response_type="document_insufficient",
+                )
+            except Exception:  # noqa: BLE001
+                pass
+            try:
+                from app.rag.observability.collector import get_active_trace
+
+                _trace = get_active_trace()
+                if _trace is not None:
+                    _trace.record_final_answer(
+                        INSUFFICIENT_DOCUMENT_EVIDENCE_MESSAGE,
+                        answer_kind="document_insufficient",
+                    )
+            except Exception:  # noqa: BLE001
+                pass
             return QueryResponse(
                 query=user_query,
                 role=normalized_role,
@@ -783,6 +1141,40 @@ class EnterpriseRAG:
             provider=generated.provider_name,
             model=generated.model,
         )
+        try:
+            from app.query_router.routing_debug import log_rag_retrieval_stage
+
+            top_docs = [
+                {
+                    "source": item.source,
+                    "chunk_id": item.chunk_id,
+                    "score": round(float(item.confidence), 4),
+                    "page": item.page_number,
+                }
+                for item in results[:8]
+            ]
+            prompt_chars = sum(len(item.content or "") for item in results)
+            log_rag_retrieval_stage(
+                question=user_query,
+                chunk_count=len(results),
+                top_documents=top_docs,
+                prompt_context_chars=prompt_chars,
+                response_type=generated.generation_backend,
+            )
+        except Exception:  # noqa: BLE001
+            pass
+
+        try:
+            from app.rag.observability.collector import get_active_trace
+
+            _trace = get_active_trace()
+            if _trace is not None:
+                _trace.record_final_answer(
+                    generated.answer,
+                    answer_kind=generated.generation_backend,
+                )
+        except Exception:  # noqa: BLE001
+            pass
 
         return QueryResponse(
             query=user_query,
@@ -795,4 +1187,5 @@ class EnterpriseRAG:
             confidence_score=generated.retrieval_confidence,
             access_granted=True,
             message=f"Answer generated from {sources_label}.",
+            response_layout=generated.response_layout,
         )

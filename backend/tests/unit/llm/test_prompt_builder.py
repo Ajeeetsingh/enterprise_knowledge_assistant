@@ -67,3 +67,14 @@ class TestPromptBuilder:
         prompt = PromptBuilder().build("Question?", [_chunk()])
 
         assert prompt.total_length == len(prompt.system) + len(prompt.user)
+
+    def test_uses_tenant_org_label_not_hardcoded_brand(self) -> None:
+        prompt = PromptBuilder(org_label="Acme Corporation").build(
+            "What is our mission?",
+            [_chunk()],
+        )
+        assert "Acme Corporation" in prompt.system
+        assert "GlobalTrust" not in prompt.system
+        assert "ONLY source of truth" in prompt.system
+        assert "Never invent" in prompt.system
+        assert "official website" in prompt.system

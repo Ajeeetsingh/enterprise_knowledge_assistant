@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 
 import Button from '@/components/ui/Button'
 import Card from '@/components/ui/Card'
@@ -11,27 +12,44 @@ import {
 } from '@/features/document-viewer/services/documentFileApi'
 import {
   DeleteDocumentDialog,
+  DocumentDomainFilters,
+  DocumentListPagination,
   DocumentTable,
   DocumentUploadDialog,
 } from '@/features/documents/components'
+import { ALL_DOMAINS_VALUE } from '@/features/documents/components/DocumentDomainFilters'
 import { useDeleteDocument } from '@/features/documents/hooks/useDeleteDocument'
+import { useDebouncedValue } from '@/features/documents/hooks/useDebouncedValue'
 import {
   formatUploadBatchSummary,
   useUploadDocuments,
 } from '@/features/documents/hooks/useUploadDocuments'
 import { useDocuments } from '@/features/documents/hooks/useDocuments'
+import { useUpdateDocumentDomain } from '@/features/documents/hooks/useUpdateDocumentDomain'
 import type { Document } from '@/features/documents/types'
 import {
   DUPLICATE_HIGHLIGHT_MS,
   resolveHighlightDocumentId,
 } from '@/features/documents/utils/duplicateHighlight'
+import { useKnowledgeDomains } from '@/features/knowledge-domains'
 import { getApiErrorMessage, resolveErrorMessage } from '@/services/errorHandler'
-import { Permission, hasPermission } from '@/types/permissions'
+import { Permission, hasPermission, isAdminUser } from '@/types/permissions'
+
+const PAGE_SIZE = 50
 
 export default function DocumentsPage() {
   const { user } = useAuth()
   const { showSuccess, showError } = useToast()
   const canUpload = hasPermission(user, Permission.DocumentCreate)
+  const canEditDomain = isAdminUser(user)
+  const [searchParams, setSearchParams] = useSearchParams()
+
+  const domainIdFromUrl = searchParams.get('domain_id') ?? ALL_DOMAINS_VALUE
+  const filenameFromUrl = searchParams.get('filename') ?? ''
+  const pageFromUrl = Math.max(Number(searchParams.get('page') ?? '1') || 1, 1)
+
+  const [searchInput, setSearchInput] = useState(filenameFromUrl)
+  const debouncedSearch = useDebouncedValue(searchInput, 300)
 
   const [uploadOpen, setUploadOpen] = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
@@ -40,13 +58,52 @@ export default function DocumentsPage() {
   const [deleteTarget, setDeleteTarget] = useState<Document | null>(null)
   const [deleteError, setDeleteError] = useState<string | null>(null)
 
-  const { data, isLoading, isError, error } = useDocuments()
+  const domainsQuery = useKnowledgeDomains()
+  const domains = domainsQuery.data ?? []
+
+  const selectedDomainName = useMemo(() => {
+    if (!domainIdFromUrl) return null
+    return domains.find((domain) => domain.id === domainIdFromUrl)?.name ?? null
+  }, [domainIdFromUrl, domains])
+
+  const offset = (pageFromUrl - 1) * PAGE_SIZE
+  const { data, isLoading, isFetching, isError, error } = useDocuments({
+    limit: PAGE_SIZE,
+    offset,
+    ...(debouncedSearch.trim() ? { filename: debouncedSearch.trim() } : {}),
+    ...(domainIdFromUrl ? { domain_id: domainIdFromUrl } : {}),
+  })
   const { items: uploadProgress, isUploading, uploadFiles, retryFailed, reset } =
     useUploadDocuments()
   const deleteDocument = useDeleteDocument()
+  const updateDocumentDomain = useUpdateDocumentDomain()
 
   const documents = data?.items ?? []
   const total = data?.total ?? 0
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
+  const showTableLoading = isLoading || (isFetching && documents.length === 0)
+
+  useEffect(() => {
+    setSearchInput(filenameFromUrl)
+  }, [filenameFromUrl])
+
+  useEffect(() => {
+    const trimmed = debouncedSearch.trim()
+    const currentFilename = searchParams.get('filename') ?? ''
+    if (currentFilename === trimmed) {
+      return
+    }
+
+    const next = new URLSearchParams(searchParams)
+    if (trimmed) {
+      next.set('filename', trimmed)
+    } else {
+      next.delete('filename')
+    }
+    // Reset to page 1 when the applied search changes.
+    next.delete('page')
+    setSearchParams(next, { replace: true })
+  }, [debouncedSearch, searchParams, setSearchParams])
 
   useEffect(() => {
     if (!highlightedDocumentId) return
@@ -55,6 +112,37 @@ export default function DocumentsPage() {
     }, DUPLICATE_HIGHLIGHT_MS)
     return () => window.clearTimeout(timer)
   }, [highlightedDocumentId])
+
+  function updateParams(mutator: (params: URLSearchParams) => void) {
+    const next = new URLSearchParams(searchParams)
+    mutator(next)
+    setSearchParams(next, { replace: true })
+  }
+
+  function handleFilterDomainChange(nextDomainId: string) {
+    updateParams((params) => {
+      if (nextDomainId) {
+        params.set('domain_id', nextDomainId)
+      } else {
+        params.delete('domain_id')
+      }
+      params.delete('page')
+    })
+  }
+
+  function handleSearchChange(value: string) {
+    setSearchInput(value)
+  }
+
+  function handlePageChange(nextPage: number) {
+    updateParams((params) => {
+      if (nextPage <= 1) {
+        params.delete('page')
+      } else {
+        params.set('page', String(nextPage))
+      }
+    })
+  }
 
   function openUpload() {
     if (!canUpload) return
@@ -76,13 +164,13 @@ export default function DocumentsPage() {
     }
   }
 
-  async function handleUpload(files: File[]) {
+  async function handleUpload(files: File[], domainId: string) {
     setUploadError(null)
     setUploadSummary(
       files.length === 1 ? '1 file selected — uploading…' : `${files.length} files selected — uploading…`,
     )
 
-    const result = await uploadFiles(files)
+    const result = await uploadFiles(files, domainId)
     if (result.total === 0) return
 
     const summary = formatUploadBatchSummary(result)
@@ -94,6 +182,7 @@ export default function DocumentsPage() {
           ? 'Document uploaded successfully.'
           : `${result.successCount} documents uploaded successfully.`,
       )
+      closeUpload()
       return
     }
 
@@ -127,6 +216,7 @@ export default function DocumentsPage() {
           ? 'Document uploaded successfully.'
           : `${result.successCount} documents uploaded successfully.`,
       )
+      closeUpload()
       return
     }
 
@@ -173,9 +263,41 @@ export default function DocumentsPage() {
     }
   }
 
+  async function handleDocumentDomainChange(document: Document, domainId: string | null) {
+    const previousDomainId = document.domain_id ?? null
+    if (previousDomainId === domainId) return
+
+    try {
+      await updateDocumentDomain.mutateAsync({
+        documentId: document.document_id,
+        domainId,
+      })
+      showSuccess('Document domain updated.')
+    } catch (domainFailure) {
+      const message = getApiErrorMessage(domainFailure)
+      showError(message)
+      throw domainFailure
+    }
+  }
+
+  const hasActiveFilters = Boolean(domainIdFromUrl) || Boolean(debouncedSearch.trim())
+  const emptyTitle = domainIdFromUrl
+    ? `No documents found in ${selectedDomainName ?? 'this domain'}.`
+    : debouncedSearch.trim()
+      ? 'No documents match your search'
+      : 'No documents uploaded yet'
+  const emptyDescription = domainIdFromUrl
+    ? 'Try another domain, clear the filter, or upload a document to this domain.'
+    : debouncedSearch.trim()
+      ? 'Try a different search term or clear the domain filter.'
+      : 'Upload your first document to make it available for knowledge search and chat.'
+
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div
+      className="flex min-h-0 flex-1 flex-col gap-4"
+      data-testid="documents-page"
+    >
+      <div className="flex shrink-0 flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-neutral-900 dark:text-neutral-50">Documents</h1>
           <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
@@ -191,6 +313,17 @@ export default function DocumentsPage() {
         </div>
       </div>
 
+      <div className="shrink-0">
+        <DocumentDomainFilters
+          search={searchInput}
+          onSearchChange={handleSearchChange}
+          domainId={domainIdFromUrl}
+          onDomainChange={handleFilterDomainChange}
+          domains={domains}
+          domainsLoading={domainsQuery.isLoading}
+        />
+      </div>
+
       {isError && (
         <Card>
           <p role="alert" className="text-sm text-error-500 dark:text-error-400">
@@ -199,13 +332,13 @@ export default function DocumentsPage() {
         </Card>
       )}
 
-      {!isError && !isLoading && documents.length === 0 ? (
+      {!isError && !showTableLoading && documents.length === 0 ? (
         <Card>
           <EmptyState
-            title="No documents uploaded yet"
-            description="Upload your first document to make it available for knowledge search and chat."
+            title={emptyTitle}
+            description={emptyDescription}
             action={
-              canUpload ? (
+              canUpload && !hasActiveFilters ? (
                 <Button size="sm" onClick={openUpload}>
                   Upload your first document
                 </Button>
@@ -214,13 +347,32 @@ export default function DocumentsPage() {
           />
         </Card>
       ) : (
-        <DocumentTable
-          documents={documents}
-          isLoading={isLoading}
-          highlightedDocumentId={highlightedDocumentId}
-          onDownload={(document) => void handleDownload(document)}
-          onDelete={openDelete}
-        />
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-3">
+          <DocumentTable
+            documents={documents}
+            isLoading={showTableLoading}
+            highlightedDocumentId={highlightedDocumentId}
+            domains={domains}
+            canEditDomain={canEditDomain}
+            updatingDomainDocumentId={
+              updateDocumentDomain.isPending
+                ? (updateDocumentDomain.variables?.documentId ?? null)
+                : null
+            }
+            onDomainChange={handleDocumentDomainChange}
+            onDownload={(document) => void handleDownload(document)}
+            onDelete={openDelete}
+          />
+          <div className="shrink-0">
+            <DocumentListPagination
+              page={Math.min(pageFromUrl, totalPages)}
+              totalPages={totalPages}
+              totalResults={total}
+              onPrevious={() => handlePageChange(Math.max(pageFromUrl - 1, 1))}
+              onNext={() => handlePageChange(Math.min(pageFromUrl + 1, totalPages))}
+            />
+          </div>
+        </div>
       )}
 
       {canUpload ? (
@@ -231,7 +383,7 @@ export default function DocumentsPage() {
           uploadProgress={uploadProgress}
           summary={uploadSummary}
           onClose={closeUpload}
-          onUpload={(files) => void handleUpload(files)}
+          onUpload={(files, domainId) => void handleUpload(files, domainId)}
           onRetryFailed={() => void handleRetryFailed()}
         />
       ) : null}

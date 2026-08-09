@@ -177,9 +177,50 @@ class EvaluationRunner:
         if not retrieval_results:
             access_granted = True
         else:
-            prompt = context.prompt_builder.build(case.question, retrieval_results)
+            try:
+                from app.answer_planning import plan_answer
+
+                eval_plan = plan_answer(case.question)
+            except Exception:  # noqa: BLE001
+                eval_plan = None
+            try:
+                from app.evidence_organization import organize_evidence
+
+                eval_graph = organize_evidence(retrieval_results, answer_plan=eval_plan)
+            except Exception:  # noqa: BLE001
+                eval_graph = None
+            try:
+                from app.evidence_composition import compose_answer_evidence
+
+                eval_composition = compose_answer_evidence(
+                    eval_graph,
+                    question=case.question,
+                    answer_plan=eval_plan,
+                )
+            except Exception:  # noqa: BLE001
+                eval_composition = None
+            try:
+                from app.answer_synthesis import plan_answer_synthesis
+
+                eval_synthesis = plan_answer_synthesis(
+                    question=case.question,
+                    answer_plan=eval_plan,
+                    evidence_graph=eval_graph,
+                    answer_composition=eval_composition,
+                )
+            except Exception:  # noqa: BLE001
+                eval_synthesis = None
+            prompt = context.prompt_builder.build(
+                case.question,
+                retrieval_results,
+                answer_plan=eval_plan,
+                evidence_graph=eval_graph,
+                answer_composition=eval_composition,
+                answer_synthesis=eval_synthesis,
+            )
             prompt_system = prompt.system
             prompt_user = prompt.user
+            # _generate_answer also plans; prompt above mirrors production structure.
             generated = engine._generate_answer(case.question, retrieval_results)
             generated_answer = generated.answer
             citations = _build_citations(retrieval_results)

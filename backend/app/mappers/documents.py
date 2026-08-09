@@ -40,12 +40,20 @@ def map_to_upload_response(result: DocumentUploadResult) -> DocumentUploadRespon
 
 def map_to_summary_response(document: _DocumentLike) -> DocumentSummaryResponse:
     """Convert a document entity into a summary API response."""
+    domain_id = getattr(document, "domain_id", None)
+    knowledge_domain = getattr(document, "knowledge_domain", None)
+    domain_name = None
+    if knowledge_domain is not None:
+        domain_name = getattr(knowledge_domain, "name", None)
+
     return DocumentSummaryResponse(
         document_id=str(document.id),
         filename=document.filename,
         status=document.status,
         uploaded_at=document.uploaded_at,
         uploaded_by=str(document.uploaded_by),
+        domain_id=domain_id,
+        domain_name=domain_name,
     )
 
 

@@ -13,7 +13,23 @@ from sqlalchemy.pool import StaticPool
 from app.auth.jwt import create_access_token
 from app.config import Settings, get_settings
 from app.db.base import Base
-from app.db.models import AuditLog, Conversation, Document, Message, Role, User  # noqa: F401 — register models
+from app.db.models import (  # noqa: F401 — register models
+    AuditLog,
+    Conversation,
+    Document,
+    DocumentKnowledgeRecord,
+    KnowledgeAlias,
+    KnowledgeCategory,
+    KnowledgeCollection,
+    KnowledgeDomain,
+    KnowledgeRegistryEntry,
+    KnowledgeRelationship,
+    KnowledgeVersionGroup,
+    Message,
+    RelationshipEvidence,
+    Role,
+    User,
+)
 from app.dependencies import get_db
 from app.main import app
 from tests.constants import TEST_PASSWORD, TEST_PASSWORD_HASH

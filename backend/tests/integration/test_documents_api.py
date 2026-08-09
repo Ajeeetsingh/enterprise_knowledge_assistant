@@ -23,6 +23,7 @@ from app.main import app
 from app.services.document_service import build_document_service
 from app.storage.local import LocalStorage
 from app.auth.dependencies import AUTHORIZATION_DENIED_MESSAGE
+from tests.helpers.knowledge_domains import make_knowledge_domain
 from tests.integration.conftest import access_token_for, bearer_headers
 
 UPLOAD_URL = "/api/v1/documents/upload"
@@ -91,11 +92,16 @@ def _upload_file(
     filename: str = "policy.txt",
     content: bytes = b"Annual leave: 20 days per year.",
     content_type: str = "text/plain",
+    domain_id: str | None = None,
 ) -> TestClient:
+    resolved_domain_id = domain_id or getattr(
+        client, "upload_domain_id", None
+    ) or str(uuid.uuid4())
     return client.post(
         UPLOAD_URL,
         headers=bearer_headers(token),
         files={"file": (filename, content, content_type)},
+        data={"domain_id": resolved_domain_id},
     )
 
 
@@ -120,6 +126,8 @@ def test_admin_upload_returns_document_upload_response(
     call_kwargs = mock_document_service.upload_document.call_args.kwargs
     assert call_kwargs["filename"] == "policy.txt"
     assert call_kwargs["content"] == b"Annual leave: 20 days per year."
+    assert "domain_id" in call_kwargs
+    assert call_kwargs["domain_repository"] is not None
 
 
 def test_document_id_is_returned(
@@ -197,6 +205,7 @@ def test_missing_jwt_returns_401(documents_client: TestClient) -> None:
     response = documents_client.post(
         UPLOAD_URL,
         files={"file": ("policy.txt", b"content", "text/plain")},
+        data={"domain_id": str(uuid.uuid4())},
     )
 
     assert response.status_code == 401
@@ -208,6 +217,7 @@ def test_invalid_jwt_returns_401(documents_client: TestClient) -> None:
         UPLOAD_URL,
         headers=bearer_headers("invalid-token"),
         files={"file": ("policy.txt", b"content", "text/plain")},
+        data={"domain_id": str(uuid.uuid4())},
     )
 
     assert response.status_code == 401
@@ -311,6 +321,7 @@ def real_document_client(
         embedding_provider=_mock_embedder(),
         vector_store=_mock_store(),
     )
+    domain = make_knowledge_domain(db_session, name="Finance")
 
     def override_get_db():
         yield db_session
@@ -318,6 +329,7 @@ def real_document_client(
     app.dependency_overrides[get_db] = override_get_db
     app.dependency_overrides[get_document_service_dep] = lambda: service
     with TestClient(app) as test_client:
+        test_client.upload_domain_id = str(domain.id)  # type: ignore[attr-defined]
         yield test_client
     app.dependency_overrides.clear()
 
@@ -341,6 +353,8 @@ def test_upload_persists_metadata_in_database(
     assert persisted.uploaded_by == admin_user.id
     assert persisted.status == DocumentStatus.SEARCHABLE.value
     assert persisted.storage_path
+    assert persisted.domain_id is not None
+    assert str(persisted.domain_id) == real_document_client.upload_domain_id  # type: ignore[attr-defined]
 
 
 def test_get_document_file_returns_stored_bytes(
@@ -388,7 +402,11 @@ def test_list_documents_returns_paginated_metadata(
         "status",
         "uploaded_at",
         "uploaded_by",
+        "domain_id",
+        "domain_name",
     }
+    assert data["items"][0]["domain_id"] is not None
+    assert data["items"][0]["domain_name"] is not None
     assert "storage_path" not in data["items"][0]
 
 

@@ -28,6 +28,7 @@ def _result(
     sparse_rank: int | None = None,
     fusion_score: float | None = None,
     metadata_bonus: float | None = None,
+    final_score: float | None = None,
 ) -> RetrievalResult:
     return RetrievalResult(
         content=content,
@@ -40,7 +41,14 @@ def _result(
         sparse_rank=sparse_rank,
         fusion_score=fusion_score,
         metadata_bonus=metadata_bonus,
+        final_score=final_score,
     )
+
+
+def replace_final(result: RetrievalResult, final_score: float) -> RetrievalResult:
+    from dataclasses import replace
+
+    return replace(result, final_score=final_score, confidence=final_score)
 
 
 def _settings(**overrides) -> RerankingSettings:
@@ -135,18 +143,89 @@ class TestApplyRerankerScores:
         assert [item.chunk_id for item in first] == [item.chunk_id for item in second]
         assert first[0].chunk_id == "a"
 
-    def test_metadata_bonus_weight_zero_matches_prior_behavior(self) -> None:
-        """Default (weight=0) blending must reproduce the original raw-score
-        ranking exactly — this is the backward-compatibility guard for the
-        metadata-aware reranking fix."""
+    def test_metadata_bonus_weight_zero_still_ranks_by_cross_encoder(self) -> None:
+        """With metadata weight 0, CE (+ hybrid) still dominates ranking order."""
         results = [
             _result("a", "alpha", metadata_bonus=0.15),
             _result("b", "beta", metadata_bonus=0.0),
             _result("c", "gamma", metadata_bonus=0.1),
         ]
-        reranked = apply_reranker_scores(results, [0.2, 0.9, 0.5])
+        reranked = apply_reranker_scores(
+            results, [0.2, 0.9, 0.5], metadata_bonus_weight=0.0
+        )
         assert [item.chunk_id for item in reranked] == ["b", "c", "a"]
-        assert reranked[0].final_score == reranked[0].reranker_score == 0.9
+        assert reranked[0].reranker_score == 0.9
+
+    def test_toc_like_passage_is_soft_penalized(self) -> None:
+        toc = (
+            "1. Metadata Principles\n2. Metadata Taxonomy\n"
+            "4.1 Administrative Metadata 4.2 Business Metadata "
+            "4.3 Technical Metadata 4.4 Compliance Metadata"
+        )
+        body = (
+            "Every registered L3 process must declare mandatory mappings to "
+            "departments, systems, documents, risk categories, and compliance entities."
+        )
+        results = [
+            replace_final(_result("distractor", "unrelated filler passage", metadata_bonus=0.0), 0.4),
+            replace_final(_result("toc", toc, metadata_bonus=0.05), 0.70),
+            replace_final(_result("body", body, metadata_bonus=0.05), 0.92),
+            replace_final(_result("weak", "weak unrelated", metadata_bonus=0.0), 0.3),
+        ]
+        # CE slightly prefers TOC over body; hybrid + TOC penalty should flip them.
+        reranked = apply_reranker_scores(
+            results,
+            [0.90, 0.62, 0.58, 0.10],
+            metadata_bonus_weight=0.25,
+            metadata_bonus_reference=0.15,
+        )
+        assert reranked.index(
+            next(item for item in reranked if item.chunk_id == "body")
+        ) < reranked.index(next(item for item in reranked if item.chunk_id == "toc"))
+
+    def test_cover_page_stub_is_soft_penalized(self) -> None:
+        """Cover/title stubs must not outrank answer-bearing body sections."""
+        mission = (
+            "1.4 Mission To steward our clients' financial lives with precision, "
+            "integrity, and durability - providing dependable access to capital."
+        )
+        results = [
+            replace_final(_result("cover_a", "Apex National Bank", metadata_bonus=0.10), 0.88),
+            replace_final(_result("cover_b", "Apex National Bank", metadata_bonus=0.10), 0.88),
+            replace_final(_result("mission", mission, metadata_bonus=0.05), 0.68),
+            replace_final(_result("weak", "unrelated filler passage text", metadata_bonus=0.0), 0.3),
+        ]
+        # CE ranks cover stubs highest (mission/vision regression pattern).
+        reranked = apply_reranker_scores(
+            results,
+            [0.09, 0.09, -5.0, -11.0],
+            metadata_bonus_weight=0.25,
+            metadata_bonus_reference=0.15,
+        )
+        assert reranked[0].chunk_id == "mission"
+
+    def test_document_masthead_is_soft_penalized(self) -> None:
+        """Short governance title banners must not outrank mission body text."""
+        masthead = (
+            "Apex National Bank - Enterprise Committee Charter "
+            "Enterprise Governance Reference | Committee Structure"
+        )
+        mission = (
+            "1.4 Mission To steward our clients' financial lives with precision, "
+            "integrity, and durability - providing dependable access to capital."
+        )
+        results = [
+            replace_final(_result("masthead", masthead, metadata_bonus=0.10), 0.88),
+            replace_final(_result("mission", mission, metadata_bonus=0.05), 0.68),
+            replace_final(_result("weak", "unrelated filler passage text here", metadata_bonus=0.0), 0.3),
+        ]
+        reranked = apply_reranker_scores(
+            results,
+            [-0.9, -5.0, -11.0],
+            metadata_bonus_weight=0.25,
+            metadata_bonus_reference=0.15,
+        )
+        assert reranked[0].chunk_id == "mission"
 
     def test_metadata_bonus_breaks_close_cross_encoder_tie(self) -> None:
         """When the cross-encoder is nearly undecided between two closely

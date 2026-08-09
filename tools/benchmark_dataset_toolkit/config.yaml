@@ -1,0 +1,84 @@
+# Knowra Benchmark Dataset Toolkit — default configuration
+# Paths are resolved relative to the repository root unless absolute.
+
+project:
+  name: Knowra Benchmark Dataset Toolkit
+  # Repository root relative to this config file: ../..
+  repo_root: ../..
+
+dataset:
+  input_dir: docs/apex_national_bank
+  # Output root for the active converter (markdown → pdf).
+  # Hierarchy under input_dir is preserved beneath this folder.
+  # Example: docs/apex_national_bank/03_finance/foo.md
+  #       → benchmark/pdf/03_finance/foo.pdf
+  output_dir: benchmark/pdf
+  # Strip this prefix from relative output paths (so output is not nested
+  # under apex_national_bank/ again).
+  strip_prefix: apex_national_bank
+  markdown_patterns:
+    - "**/*.md"
+  # Ignore generator scratch / hidden files
+  exclude_patterns:
+    - "**/.*"
+    - "**/_*"
+
+conversion:
+  workers: 4
+  skip_existing: true
+  continue_on_error: true
+  # Pandoc PDF engine:
+  #   chrome | edge     — recommended on Windows (uses installed browser headless print)
+  #   xelatex           — requires a working MiKTeX/TeX Live with packages installed
+  #   weasyprint        — pip package; needs native libs (often fails on Windows)
+  pdf_engine: chrome
+  from_format: markdown
+  toc: true
+  toc_depth: 3
+  number_sections: false
+  syntax_highlighting: tango
+  # Geometry / typography (passed as -V to Pandoc/LaTeX)
+  variables:
+    geometry: "margin=1in"
+    fontsize: "11pt"
+    documentclass: "article"
+    colorlinks: "true"
+    linkcolor: "blue"
+    urlcolor: "blue"
+    toccolor: "black"
+    mainfont: ""          # set e.g. "Segoe UI" / "DejaVu Sans" when using xelatex
+    monofont: ""
+  # Optional Pandoc header include (page style helpers)
+  include_header: assets/pandoc/header.tex
+  # Extra raw pandoc CLI args (advanced)
+  extra_args: []
+
+  # Enterprise PDF presentation (applied after conversion)
+  header_enabled: true
+  footer_enabled: true
+  page_numbers: true
+  pdf_metadata: true
+  # Prefer clickable TOC entries (Pandoc HTML/LaTeX hyperlinks)
+  toc_links: true
+  # Cover page (page 1) + PDF outline/bookmarks from markdown headings
+  cover_page: true
+  bookmarks: true
+
+reporting:
+  # Written under output_dir unless absolute
+  report_json: conversion_report.json
+  log_file: conversion.log
+  # Also emit a simple failures-only JSON beside the main report
+  failures_json: conversion_failures.json
+
+validation:
+  verify_pdf_magic: true
+  min_bytes: 64
+  # Soft checks for header/footer/metadata/TOC (warnings only; never fail conversion)
+  enterprise_checks: true
+
+logging:
+  level: INFO
+  # Console format; file logger always gets timestamps
+  console_format: "%(levelname)s %(message)s"
+  file_format: "%(asctime)s | %(levelname)-8s | %(name)s | %(message)s"

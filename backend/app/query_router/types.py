@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import StrEnum
 from typing import TYPE_CHECKING
+
+from app.query_router.document_catalog import DocumentRouteCatalog
+from app.query_router.route_signals import RouteSignalContext
 
 if TYPE_CHECKING:
     from app.query_router.conversation_hints import ConversationRouteHints
@@ -31,6 +34,21 @@ class UserQueryContext:
     conversation_hints: "ConversationRouteHints | None" = None
     """True for the public guest demo — never grants document access."""
     is_guest: bool = False
+    """Configurable tenant aliases (never hardcoded customer names in code)."""
+    org_aliases: tuple[str, ...] = ()
+    """Authorized document filenames/titles for data-driven DOCUMENT signals."""
+    document_catalog: DocumentRouteCatalog = field(default_factory=DocumentRouteCatalog)
+    """When False, skip embedding-based enterprise-intent matching."""
+    enable_semantic_enterprise_intent: bool = True
+
+    def to_signal_context(self) -> RouteSignalContext:
+        """Build classifier signal context from this request."""
+        return RouteSignalContext(
+            has_accessible_documents=self.has_accessible_documents,
+            org_aliases=self.org_aliases,
+            catalog=self.document_catalog,
+            enable_semantic_enterprise_intent=self.enable_semantic_enterprise_intent,
+        )
 
 
 @dataclass(frozen=True)

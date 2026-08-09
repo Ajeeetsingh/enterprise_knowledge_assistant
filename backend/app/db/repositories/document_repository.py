@@ -6,7 +6,7 @@ import uuid
 from dataclasses import dataclass
 
 from sqlalchemy import func, select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from app.db.models.document import Document
 from app.documents.status import DocumentStatus
@@ -20,6 +20,7 @@ class DocumentFilter:
     filename: str | None = None
     status: DocumentStatus | None = None
     uploaded_by: uuid.UUID | None = None
+    domain_id: uuid.UUID | None = None
 
 
 class DocumentRepository:
@@ -51,6 +52,7 @@ class DocumentRepository:
         owner_id: uuid.UUID | None = None,
         visibility: DocumentVisibility = DEFAULT_VISIBILITY,
         allowed_roles: list[str] | None = None,
+        domain_id: uuid.UUID | None = None,
     ) -> Document:
         """Persist a new document metadata record.
 
@@ -70,6 +72,7 @@ class DocumentRepository:
             owner_id: Optional document owner UUID (defaults to uploader).
             visibility: Access scope; defaults to ``RESTRICTED``.
             allowed_roles: Role names permitted when visibility is RESTRICTED.
+            domain_id: Optional Knowledge Domain FK (required by upload API).
         """
         document = Document(
             id=document_id,
@@ -86,6 +89,7 @@ class DocumentRepository:
             department=department,
             owner_id=owner_id,
             visibility=visibility.value,
+            domain_id=domain_id,
         )
         document.allowed_roles = allowed_roles
         self._db.add(document)
@@ -119,7 +123,7 @@ class DocumentRepository:
         listing. Pass ``filters.status=DocumentStatus.DELETED`` to include only
         deleted records for audit or admin review.
         """
-        query = select(Document)
+        query = select(Document).options(selectinload(Document.knowledge_domain))
         count_query = select(func.count()).select_from(Document)
 
         if filters is not None:
@@ -141,6 +145,12 @@ class DocumentRepository:
                 query = query.where(Document.uploaded_by == filters.uploaded_by)
                 count_query = count_query.where(
                     Document.uploaded_by == filters.uploaded_by
+                )
+            if filters.domain_id is not None:
+                # NULL domain_id rows are excluded when a specific domain is chosen.
+                query = query.where(Document.domain_id == filters.domain_id)
+                count_query = count_query.where(
+                    Document.domain_id == filters.domain_id
                 )
         else:
             query = query.where(Document.status != DocumentStatus.DELETED.value)
@@ -184,6 +194,18 @@ class DocumentRepository:
         if document is None:
             return None
         document.status = status.value
+        return self.update(document)
+
+    def update_domain(
+        self,
+        document_id: uuid.UUID,
+        domain_id: uuid.UUID | None,
+    ) -> Document | None:
+        """Update the Knowledge Domain FK for a document."""
+        document = self.get_by_id(document_id)
+        if document is None:
+            return None
+        document.domain_id = domain_id
         return self.update(document)
 
     def mark_deleted(self, document_id: uuid.UUID) -> Document | None:

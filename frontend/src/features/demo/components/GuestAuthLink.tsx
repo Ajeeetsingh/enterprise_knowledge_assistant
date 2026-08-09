@@ -5,8 +5,10 @@ import { useAuth } from '@/contexts/AuthContext'
 import { cn } from '@/utils/cn'
 
 import { GUEST_POST_AUTH_PATH } from '../constants'
-import { loadGuestSession } from '../storage/guestSessionStorage'
-import { markGuestImportPending } from '../storage/guestTransitionStorage'
+import {
+  clearAllGuestDemoState,
+  markGuestImportPending,
+} from '../storage/guestTransitionStorage'
 
 export interface GuestAuthLinkProps {
   to?: '/login' | '/register'
@@ -18,7 +20,9 @@ export interface GuestAuthLinkProps {
 /**
  * Sign In / Create Account control from the guest demo.
  * Preserves a safe return intent without putting conversation contents in the URL.
- * Authenticated visitors are sent to chat (with an explicit continue choice when history exists).
+ *
+ * Already-authenticated visitors go straight to the workspace — never show the
+ * guest migration banner (auth takes precedence over leftover demo state).
  */
 export default function GuestAuthLink({
   to = '/login',
@@ -36,9 +40,7 @@ export default function GuestAuthLink({
         className={className}
         onClick={(event) => {
           onClick?.(event)
-          if (loadGuestSession().messages.length > 0) {
-            markGuestImportPending()
-          }
+          clearAllGuestDemoState()
           navigate(GUEST_POST_AUTH_PATH)
         }}
       >

@@ -1,0 +1,19 @@
+% Knowra benchmark PDF header — included via Pandoc -H
+% Provides page numbers in the footer and slightly tighter table styling.
+
+\usepackage{fancyhdr}
+\usepackage{longtable}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{graphicx}
+\usepackage{hyperref}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyfoot[C]{\thepage}
+\renewcommand{\headrulewidth}{0pt}
+\renewcommand{\footrulewidth}{0.2pt}
+
+% Prefer breaking long tables across pages when Pandoc emits longtable
+\setlength{\LTleft}{0pt}
+\setlength{\LTright}{0pt}

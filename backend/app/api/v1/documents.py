@@ -7,7 +7,17 @@ import time
 import uuid
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, Response, UploadFile
+from fastapi import (
+    APIRouter,
+    Depends,
+    File,
+    Form,
+    HTTPException,
+    Query,
+    Request,
+    Response,
+    UploadFile,
+)
 from urllib.parse import quote
 
 from app.audit.service import AuditService
@@ -23,10 +33,12 @@ from app.core.request_utils import client_ip as _client_ip
 from app.db.models import User
 from app.db.models.document import Document
 from app.db.repositories.document_repository import DocumentRepository
+from app.db.repositories.knowledge_domain_repository import KnowledgeDomainRepository
 from app.dependencies import (
     get_audit_service,
     get_document_repository,
     get_document_service_dep,
+    get_knowledge_domain_repository,
 )
 from app.documents.status import DocumentStatus
 from app.ingestion.supported_types import EXTENSION_TO_MIME, MAX_FILE_SIZE_BYTES
@@ -34,12 +46,15 @@ from app.mappers.documents import (
     map_to_detail_response,
     map_to_lifecycle_response,
     map_to_paginated_response,
+    map_to_summary_response,
     map_to_upload_response,
 )
 from app.schemas.documents import (
     DEFAULT_LIST_LIMIT,
     DocumentDetailResponse,
+    DocumentDomainUpdateRequest,
     DocumentLifecycleResponse,
+    DocumentSummaryResponse,
     DocumentUploadResponse,
     PaginatedDocumentResponse,
 )
@@ -195,15 +210,31 @@ def list_documents(
         None,
         description="Optional filter for documents uploaded by a specific user.",
     ),
+    domain_id: uuid.UUID | None = Query(
+        None,
+        description=(
+            "Optional Knowledge Domain filter. When set, only documents belonging "
+            "to that domain are returned (legacy null-domain documents are excluded)."
+        ),
+    ),
     current_user: User = Depends(require_permission(Permission.DOCUMENT_READ)),
     document_service: DocumentService = Depends(get_document_service_dep),
     repository: DocumentRepository = Depends(get_document_repository),
+    domain_repository: KnowledgeDomainRepository = Depends(
+        get_knowledge_domain_repository
+    ),
 ) -> PaginatedDocumentResponse:
     """Return paginated document metadata visible to the caller."""
     if status == DocumentStatus.DELETED and not _is_document_admin(current_user):
         raise HTTPException(
             status_code=403,
             detail="Only administrators can list deleted documents.",
+        )
+
+    if domain_id is not None and domain_repository.get_by_id(domain_id) is None:
+        raise HTTPException(
+            status_code=422,
+            detail="Knowledge domain not found.",
         )
 
     documents, total = document_service.list_documents(
@@ -213,6 +244,7 @@ def list_documents(
         filename=filename,
         status=status,
         uploaded_by=uploaded_by,
+        domain_id=domain_id,
         viewer=current_user,
     )
 
@@ -296,6 +328,45 @@ def get_document_file(
     )
 
 
+@router.patch(
+    "/{document_id}/domain",
+    response_model=DocumentSummaryResponse,
+    summary="Update document Knowledge Domain",
+    description=(
+        "Assign or clear the Knowledge Domain for an existing document. "
+        "Requires administrator privileges, document update permission, "
+        "and document-level access. Pass ``domain_id: null`` to mark the "
+        "document as uncategorized."
+    ),
+    responses=_DOCUMENT_ERROR_RESPONSES,
+)
+def update_document_domain(
+    document_id: uuid.UUID,
+    body: DocumentDomainUpdateRequest,
+    current_user: User = Depends(require_permission(Permission.DOCUMENT_UPDATE)),
+    document: Document = Depends(require_document_access("update")),
+    document_service: DocumentService = Depends(get_document_service_dep),
+    repository: DocumentRepository = Depends(get_document_repository),
+    domain_repository: KnowledgeDomainRepository = Depends(
+        get_knowledge_domain_repository
+    ),
+) -> DocumentSummaryResponse:
+    """Persist a Knowledge Domain assignment for an existing document."""
+    if not _is_document_admin(current_user):
+        raise HTTPException(
+            status_code=403,
+            detail="Only administrators can change a document's knowledge domain.",
+        )
+
+    updated = document_service.update_document_domain(
+        repository,
+        document,
+        domain_id=body.domain_id,
+        domain_repository=domain_repository,
+    )
+    return map_to_summary_response(updated)
+
+
 @router.delete(
     "/{document_id}",
     response_model=DocumentLifecycleResponse,
@@ -356,9 +427,16 @@ def upload_document(
         ...,
         description="Enterprise document file to ingest into the knowledge base.",
     ),
+    domain_id: uuid.UUID = Form(
+        ...,
+        description="Knowledge Domain ID assigned to the uploaded document.",
+    ),
     current_user: User = Depends(require_permission(Permission.DOCUMENT_CREATE)),
     document_service: DocumentService = Depends(get_document_service_dep),
     repository: DocumentRepository = Depends(get_document_repository),
+    domain_repository: KnowledgeDomainRepository = Depends(
+        get_knowledge_domain_repository
+    ),
     audit_service: PersistedAuditService = Depends(get_audit_service),
 ) -> DocumentUploadResponse:
     """Accept a document upload and return its lifecycle status."""
@@ -377,10 +455,11 @@ def upload_document(
     started_at = time.perf_counter()
 
     logger.info(
-        "upload_lifecycle state=Uploading filename=%s bytes=%d user_id=%s",
+        "upload_lifecycle state=Uploading filename=%s bytes=%d user_id=%s domain_id=%s",
         filename,
         len(content),
         user_id,
+        domain_id,
     )
 
     result = document_service.upload_document(
@@ -390,6 +469,8 @@ def upload_document(
         content=content,
         uploaded_by=current_user.id,
         requesting_user=current_user,
+        domain_id=domain_id,
+        domain_repository=domain_repository,
     )
 
     elapsed_s = time.perf_counter() - started_at

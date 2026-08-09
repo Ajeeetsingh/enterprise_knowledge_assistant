@@ -1,15 +1,45 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it, vi } from 'vitest'
+import { type ReactElement, beforeEach, describe, expect, it, vi } from 'vitest'
+
+vi.mock('@/features/knowledge-domains/services/knowledgeDomainApi', () => ({
+  listKnowledgeDomains: vi.fn(),
+  createKnowledgeDomain: vi.fn(),
+}))
+
+import * as knowledgeDomainApi from '@/features/knowledge-domains/services/knowledgeDomainApi'
 
 import DocumentUploadDialog from './DocumentUploadDialog'
 
+const DOMAIN = {
+  id: 'domain-finance',
+  name: 'Finance',
+  description: null,
+}
+
+function renderWithProviders(ui: ReactElement) {
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  })
+  return render(<QueryClientProvider client={client}>{ui}</QueryClientProvider>)
+}
+
 describe('DocumentUploadDialog', () => {
+  beforeEach(() => {
+    vi.mocked(knowledgeDomainApi.listKnowledgeDomains).mockResolvedValue([DOMAIN])
+  })
+
+  async function selectDomain(user: ReturnType<typeof userEvent.setup>) {
+    const select = await screen.findByLabelText('Knowledge Domain')
+    await user.selectOptions(select, DOMAIN.id)
+  }
+
   it('allows selecting multiple files via the file picker', async () => {
     const user = userEvent.setup()
     const onUpload = vi.fn()
 
-    render(
+    renderWithProviders(
       <DocumentUploadDialog
         isOpen
         isUploading={false}
@@ -27,14 +57,36 @@ describe('DocumentUploadDialog', () => {
       new File(['beta'], 'b.pdf', { type: 'application/pdf' }),
     ]
     await user.upload(input, files)
+    await selectDomain(user)
 
     expect(await screen.findByText('2 files selected')).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Upload 2 files' }))
-    expect(onUpload).toHaveBeenCalledWith(files)
+    expect(onUpload).toHaveBeenCalledWith(files, DOMAIN.id)
+  })
+
+  it('keeps Upload disabled until a knowledge domain is selected', async () => {
+    const user = userEvent.setup()
+    renderWithProviders(
+      <DocumentUploadDialog
+        isOpen
+        isUploading={false}
+        error={null}
+        onClose={vi.fn()}
+        onUpload={vi.fn()}
+      />,
+    )
+
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement
+    await user.upload(input, [new File(['a'], 'a.pdf', { type: 'application/pdf' })])
+
+    const uploadButton = await screen.findByRole('button', { name: 'Upload' })
+    expect(uploadButton).toBeDisabled()
+    await selectDomain(user)
+    expect(uploadButton).toBeEnabled()
   })
 
   it('supports drag-and-drop of multiple files', async () => {
-    render(
+    renderWithProviders(
       <DocumentUploadDialog
         isOpen
         isUploading={false}
@@ -59,7 +111,8 @@ describe('DocumentUploadDialog', () => {
   })
 
   it('shows mixed valid and invalid files without discarding invalid ones', async () => {
-    render(
+    const user = userEvent.setup()
+    renderWithProviders(
       <DocumentUploadDialog
         isOpen
         isUploading={false}
@@ -82,11 +135,12 @@ describe('DocumentUploadDialog', () => {
     expect(await screen.findByText('ok.pdf')).toBeInTheDocument()
     expect(screen.getByText('bad.exe')).toBeInTheDocument()
     expect(screen.getByText(/Unsupported file type/)).toBeInTheDocument()
+    await selectDomain(user)
     expect(screen.getByRole('button', { name: 'Upload' })).toBeEnabled()
   })
 
   it('skips duplicate selections with a clear message', async () => {
-    render(
+    renderWithProviders(
       <DocumentUploadDialog
         isOpen
         isUploading={false}
@@ -112,7 +166,7 @@ describe('DocumentUploadDialog', () => {
 
   it('shows Already exists for duplicate upload progress, not Failed', () => {
     const file = new File(['x'], 'mmf-statistics-04-2026.pdf', { type: 'application/pdf' })
-    render(
+    renderWithProviders(
       <DocumentUploadDialog
         isOpen
         isUploading={false}
@@ -144,7 +198,7 @@ describe('DocumentUploadDialog', () => {
 
   it('removes an individual selected file', async () => {
     const user = userEvent.setup()
-    render(
+    renderWithProviders(
       <DocumentUploadDialog
         isOpen
         isUploading={false}

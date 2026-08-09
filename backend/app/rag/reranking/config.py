@@ -12,7 +12,7 @@ class RerankingSettings:
     """Cross-encoder reranking tunables loaded from application settings."""
 
     enabled: bool = True
-    rerank_top_n: int = 20
+    rerank_top_n: int = 40
     rerank_model_id: str = "ms-marco-minilm-l6-v2"
     max_batch_size: int = 16
     max_sequence_length: int = 512

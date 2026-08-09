@@ -1,0 +1,1 @@
+"""Knowledge Registry unit tests."""

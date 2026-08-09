@@ -12,6 +12,17 @@ from app.ingestion.structure.line_stream import AnnotatedLine
 _SENTENCE_END_RE = re.compile(r"[.!?]")
 _PUNCTUATION_RE = re.compile(r"[,.;:!?]")
 _NUMERIC_CELL_RE = re.compile(r"\d")
+# Numbered document section headings (e.g. "1.4 Mission", "7. Strategic Priorities").
+# Stacked/gap table scanners must stop here so following prose is not absorbed
+# into the previous table (Company Profile Mission/Vision regression).
+_SECTION_BOUNDARY_RE = re.compile(
+    r"^(?:"
+    r"(?:Section|Chapter|Appendix|Annex)\s+[\dIVXLC]+\b"
+    r"|\d+\.\d+(?:\.\d+)*\s+\S"
+    r"|\d+\.\s+[A-Za-z]"
+    r")",
+    re.IGNORECASE,
+)
 _COVER_METADATA_MARKERS = (
     "document id",
     "version",
@@ -52,6 +63,11 @@ class DetectedTable:
 class _TableCandidate:
     table: DetectedTable
     confidence: float
+
+
+def _is_section_boundary_line(text: str) -> bool:
+    """Return True when *text* starts a new numbered document section."""
+    return bool(_SECTION_BOUNDARY_RE.match((text or "").strip()))
 
 
 def _split_columns(line: str, min_gap: int) -> list[str] | None:
@@ -333,6 +349,8 @@ def _detect_gap_tables(
                 break
             if candidate.index in consumed:
                 break
+            if _is_section_boundary_line(candidate.text):
+                break
             next_columns = _split_columns(candidate.text, settings.table_column_gap_spaces)
             if next_columns is None or len(next_columns) != column_count:
                 break
@@ -392,6 +410,8 @@ def _build_stacked_candidate(
     while scan < len(lines):
         candidate = lines[scan]
         if candidate.is_blank or candidate.index in consumed:
+            break
+        if _is_section_boundary_line(candidate.text):
             break
         if len(candidate.text) > 120 or not _is_probable_table_data_line(candidate.text):
             break

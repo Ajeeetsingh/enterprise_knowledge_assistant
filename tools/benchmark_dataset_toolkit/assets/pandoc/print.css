@@ -1,0 +1,87 @@
+/* Knowra benchmark print stylesheet (Chrome/Edge --print-to-pdf) */
+
+@page {
+  size: A4;
+  /* Extra top/bottom room for stamped enterprise header/footer */
+  margin: 28mm 18mm 28mm 18mm;
+}
+
+html {
+  font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  font-size: 11pt;
+  line-height: 1.45;
+  color: #111;
+}
+
+body {
+  max-width: 100%;
+}
+
+h1, h2, h3, h4 {
+  page-break-after: avoid;
+  color: #0f172a;
+}
+
+h1 { font-size: 1.6rem; margin-top: 0; }
+h2 { font-size: 1.3rem; border-bottom: 1px solid #cbd5e1; padding-bottom: 0.2rem; }
+h3 { font-size: 1.1rem; }
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 0.8rem 0 1.2rem;
+  font-size: 0.92rem;
+  page-break-inside: auto;
+}
+
+th, td {
+  border: 1px solid #94a3b8;
+  padding: 0.35rem 0.5rem;
+  vertical-align: top;
+  text-align: left;
+}
+
+th {
+  background: #f1f5f9;
+}
+
+tr { page-break-inside: avoid; }
+
+code, pre {
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 0.88rem;
+}
+
+pre {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  padding: 0.75rem;
+  overflow-x: auto;
+  white-space: pre-wrap;
+}
+
+a { color: #1d4ed8; text-decoration: none; }
+
+blockquote {
+  border-left: 3px solid #94a3b8;
+  margin-left: 0;
+  padding-left: 0.8rem;
+  color: #334155;
+}
+
+/* Hyperlinked table of contents */
+#TOC {
+  page-break-after: always;
+  margin-bottom: 1.5rem;
+}
+
+#TOC ul { padding-left: 1.2rem; }
+
+#TOC a {
+  color: #1d4ed8;
+  text-decoration: none;
+}
+
+#TOC a:hover {
+  text-decoration: underline;
+}

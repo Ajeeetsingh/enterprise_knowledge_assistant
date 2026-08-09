@@ -41,15 +41,15 @@ export default function AdminUploadsPage() {
 
   const recentUploads = (data?.items ?? []) as AdminDocumentRow[]
 
-  async function handleUpload(files: File[]) {
-    if (isUploading || files.length === 0) return
+  async function handleUpload(files: File[], domainId: string) {
+    if (isUploading || files.length === 0 || !domainId) return
 
     setUploadError(null)
     setUploadSummary(
       files.length === 1 ? '1 file selected — uploading…' : `${files.length} files selected — uploading…`,
     )
 
-    const result = await uploadFiles(files)
+    const result = await uploadFiles(files, domainId)
     void refetch()
 
     const summary = formatUploadBatchSummary(result)
@@ -128,7 +128,7 @@ export default function AdminUploadsPage() {
         resetKey={formResetKey}
         uploadProgress={uploadProgress}
         summary={uploadSummary}
-        onUpload={(files) => void handleUpload(files)}
+        onUpload={(files, domainId) => void handleUpload(files, domainId)}
         onRetryFailed={() => void handleRetryFailed()}
       />
 

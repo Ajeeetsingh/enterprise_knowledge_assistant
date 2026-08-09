@@ -135,6 +135,8 @@ def test_index_validation_failure_sets_failed_indexing_status(
             content_type="text/plain",
             content=SAMPLE_TEXT.encode("utf-8"),
             uploaded_by=uuid.uuid4(),
+            domain_id=uuid.uuid4(),
+            domain_repository=MagicMock(get_by_id=MagicMock(return_value=MagicMock())),
         )
 
     repository.update_status.assert_called()

@@ -11,9 +11,10 @@ from sqlalchemy.pool import StaticPool
 
 from tests.constants import TEST_PASSWORD_HASH
 from app.db.base import Base
-from app.db.models import Document, Role, User  # noqa: F401
+from app.db.models import Document, KnowledgeDomain, Role, User  # noqa: F401
 from app.db.repositories.document_repository import DocumentFilter, DocumentRepository
 from app.documents.status import DocumentStatus
+from tests.helpers.knowledge_domains import make_knowledge_domain
 
 
 @pytest.fixture
@@ -61,6 +62,7 @@ def _create_document(
     uploader_id: uuid.UUID,
     filename: str = "policy.txt",
     status: DocumentStatus = DocumentStatus.SEARCHABLE,
+    domain_id: uuid.UUID | None = None,
 ) -> Document:
     document_id = uuid.uuid4()
     return repository.create(
@@ -73,6 +75,7 @@ def _create_document(
         uploaded_by=uploader_id,
         status=status,
         tenant_id="default",
+        domain_id=domain_id,
     )
 
 
@@ -349,3 +352,155 @@ def test_find_by_filename_returns_match(
 
     assert found is not None
     assert found.id == created.id
+
+
+def test_list_filters_by_domain_id(
+    db_session: Session,
+    uploader_id: uuid.UUID,
+) -> None:
+    repository = DocumentRepository(db_session)
+    finance = make_knowledge_domain(db_session, name="Finance")
+    hr = make_knowledge_domain(db_session, name="Human Resources")
+
+    _create_document(
+        repository,
+        uploader_id=uploader_id,
+        filename="budget.pdf",
+        domain_id=finance.id,
+    )
+    _create_document(
+        repository,
+        uploader_id=uploader_id,
+        filename="handbook.pdf",
+        domain_id=hr.id,
+    )
+    _create_document(
+        repository,
+        uploader_id=uploader_id,
+        filename="legacy.pdf",
+        domain_id=None,
+    )
+
+    finance_page, finance_total = repository.list(
+        limit=20,
+        offset=0,
+        filters=DocumentFilter(domain_id=finance.id),
+    )
+    assert finance_total == 1
+    assert finance_page[0].filename == "budget.pdf"
+    assert finance_page[0].knowledge_domain is not None
+    assert finance_page[0].knowledge_domain.name == "Finance"
+
+    hr_page, hr_total = repository.list(
+        limit=20,
+        offset=0,
+        filters=DocumentFilter(domain_id=hr.id),
+    )
+    assert hr_total == 1
+    assert hr_page[0].filename == "handbook.pdf"
+
+    all_page, all_total = repository.list(limit=20, offset=0)
+    assert all_total == 3
+    filenames = {doc.filename for doc in all_page}
+    assert filenames == {"budget.pdf", "handbook.pdf", "legacy.pdf"}
+
+
+def test_list_domain_filter_excludes_null_domain_documents(
+    db_session: Session,
+    uploader_id: uuid.UUID,
+) -> None:
+    repository = DocumentRepository(db_session)
+    finance = make_knowledge_domain(db_session, name="Finance")
+    _create_document(
+        repository,
+        uploader_id=uploader_id,
+        filename="uncategorized.pdf",
+        domain_id=None,
+    )
+
+    page, total = repository.list(
+        limit=20,
+        offset=0,
+        filters=DocumentFilter(domain_id=finance.id),
+    )
+
+    assert total == 0
+    assert page == []
+
+
+def test_list_domain_and_filename_filters_combine(
+    db_session: Session,
+    uploader_id: uuid.UUID,
+) -> None:
+    repository = DocumentRepository(db_session)
+    finance = make_knowledge_domain(db_session, name="Finance")
+    hr = make_knowledge_domain(db_session, name="Human Resources")
+
+    _create_document(
+        repository,
+        uploader_id=uploader_id,
+        filename="budget-fy2026.pdf",
+        domain_id=finance.id,
+    )
+    _create_document(
+        repository,
+        uploader_id=uploader_id,
+        filename="expense-policy.pdf",
+        domain_id=finance.id,
+    )
+    _create_document(
+        repository,
+        uploader_id=uploader_id,
+        filename="budget-notes.pdf",
+        domain_id=hr.id,
+    )
+
+    page, total = repository.list(
+        limit=20,
+        offset=0,
+        filters=DocumentFilter(domain_id=finance.id, filename="budget"),
+    )
+
+    assert total == 1
+    assert page[0].filename == "budget-fy2026.pdf"
+
+
+def test_list_domain_filter_pagination_uses_filtered_total(
+    db_session: Session,
+    uploader_id: uuid.UUID,
+) -> None:
+    repository = DocumentRepository(db_session)
+    finance = make_knowledge_domain(db_session, name="Finance")
+    hr = make_knowledge_domain(db_session, name="Human Resources")
+
+    for index in range(5):
+        _create_document(
+            repository,
+            uploader_id=uploader_id,
+            filename=f"finance-{index}.pdf",
+            domain_id=finance.id,
+        )
+    _create_document(
+        repository,
+        uploader_id=uploader_id,
+        filename="hr-only.pdf",
+        domain_id=hr.id,
+    )
+
+    page1, total = repository.list(
+        limit=2,
+        offset=0,
+        filters=DocumentFilter(domain_id=finance.id),
+    )
+    page2, total2 = repository.list(
+        limit=2,
+        offset=2,
+        filters=DocumentFilter(domain_id=finance.id),
+    )
+
+    assert total == 5
+    assert total2 == 5
+    assert len(page1) == 2
+    assert len(page2) == 2
+    assert {doc.filename for doc in page1}.isdisjoint({doc.filename for doc in page2})
+    assert all(doc.domain_id == finance.id for doc in page1 + page2)

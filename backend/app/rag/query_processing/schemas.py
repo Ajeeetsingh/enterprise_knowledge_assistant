@@ -57,6 +57,8 @@ class QueryProcessingMetrics:
     processing_latency_ms: float
     fallback_used: bool = False
     fallback_reason: str | None = None
+    expansion_strategy: str | None = None
+    understanding_intent: str | None = None
 
 
 @dataclass(frozen=True)
@@ -74,6 +76,11 @@ class QueryProcessingOutcome:
     confidence_prediction: float = 0.5
     metrics: QueryProcessingMetrics | None = None
     fallback_used: bool = False
+    # Structured understanding used to drive enterprise expansion (optional).
+    understanding_intent: str | None = None
+    understanding_concepts: tuple[str, ...] = ()
+    understanding_likely_documents: tuple[str, ...] = ()
+    expansion_strategy: str | None = None
 
     @classmethod
     def passthrough(cls, query: str, *, strategy: RetrievalStrategy) -> QueryProcessingOutcome:

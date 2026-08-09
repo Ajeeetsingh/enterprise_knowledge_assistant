@@ -16,6 +16,7 @@ from app.core.exceptions import (
     DocumentIntegrityError,
     DocumentNotFoundError,
     DocumentStorageError,
+    DocumentValidationError,
     DuplicateDocumentError,
     EmbeddingError,
     StorageError,
@@ -24,6 +25,7 @@ from app.core.logging import get_logger, log_with_fields
 from app.db.models.document import Document
 from app.db.models.user import User
 from app.db.repositories.document_repository import DocumentFilter, DocumentRepository
+from app.db.repositories.knowledge_domain_repository import KnowledgeDomainRepository
 from app.documents.checksum import ChecksumProvider, Sha256ChecksumProvider
 from app.documents.dispatcher import LifecycleEventCollector, get_lifecycle_event_collector
 from app.documents.events import (
@@ -403,6 +405,8 @@ class DocumentService:
         content_type: str,
         content: bytes,
         uploaded_by: uuid.UUID,
+        domain_id: uuid.UUID,
+        domain_repository: KnowledgeDomainRepository,
         tenant_id: str | None = None,
         requesting_user: User | None = None,
     ) -> DocumentUploadResult:
@@ -414,7 +418,12 @@ class DocumentService:
 
         When a duplicate is detected, ``existing_document_id`` is included on
         the error only if *requesting_user* is authorized to read that document.
+
+        ``domain_id`` is required and must reference an existing Knowledge Domain.
         """
+        if domain_repository.get_by_id(domain_id) is None:
+            raise DocumentValidationError("Knowledge domain not found.")
+
         settings = get_settings()
         resolved_tenant = tenant_id or settings.tenant_id
         user_id = str(uploaded_by)
@@ -476,6 +485,7 @@ class DocumentService:
                 version=version_info.version,
                 parent_document_id=version_info.parent_document_id,
                 owner_id=uploaded_by,
+                domain_id=domain_id,
             )
         except IntegrityError:
             # Concurrent upload of the same content for this tenant.
@@ -742,6 +752,7 @@ class DocumentService:
         filename: str | None = None,
         status: DocumentStatus | None = None,
         uploaded_by: uuid.UUID | None = None,
+        domain_id: uuid.UUID | None = None,
         viewer: User | None = None,
     ) -> tuple[list[Document], int]:
         """Return a paginated list of document metadata records.
@@ -749,6 +760,8 @@ class DocumentService:
         When *viewer* is provided and is not an Admin/superuser, results are
         filtered through ``DocumentAuthorizationService.can_read_document`` so
         PRIVATE/RESTRICTED documents are not enumerable by unauthorized users.
+
+        ``domain_id`` is applied at the database layer before ACL filtering.
         """
         from app.auth.dependencies import get_user_system_roles
         from app.auth.document_authorization import DocumentAuthorizationService
@@ -760,6 +773,7 @@ class DocumentService:
             filename=filename,
             status=status,
             uploaded_by=uploaded_by,
+            domain_id=domain_id,
         )
 
         is_admin = False
@@ -805,6 +819,33 @@ class DocumentService:
         if document is None or document.status == DocumentStatus.DELETED.value:
             raise DocumentNotFoundError(f"Document '{document_id}' not found.")
         return document
+
+    def update_document_domain(
+        self,
+        repository: DocumentRepository,
+        document: Document,
+        *,
+        domain_id: uuid.UUID | None,
+        domain_repository: KnowledgeDomainRepository,
+    ) -> Document:
+        """Assign or clear the Knowledge Domain for an existing document.
+
+        ``domain_id=None`` clears the assignment (uncategorized). When a domain
+        ID is provided it must already exist.
+        """
+        knowledge_domain = None
+        if domain_id is not None:
+            knowledge_domain = domain_repository.get_by_id(domain_id)
+            if knowledge_domain is None:
+                raise DocumentValidationError("Knowledge domain not found.")
+
+        updated = repository.update_domain(document.id, domain_id)
+        if updated is None:
+            raise DocumentNotFoundError(f"Document '{document.id}' not found.")
+
+        # Keep the relationship in sync for response mapping without an extra query.
+        updated.knowledge_domain = knowledge_domain
+        return updated
 
 
 @lru_cache

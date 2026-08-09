@@ -17,8 +17,9 @@ from app.core.exceptions import (
     DocumentValidationError,
 )
 from app.db.base import Base
-from app.db.models import Document, Role, User  # noqa: F401
+from app.db.models import Document, KnowledgeDomain, Role, User  # noqa: F401
 from app.db.repositories.document_repository import DocumentRepository
+from tests.helpers.knowledge_domains import domain_upload_kwargs
 from app.documents.dispatcher import LifecycleEventCollector
 from app.documents.events import (
     DocumentProcessingCompleted,
@@ -234,6 +235,7 @@ def test_upload_publishes_processing_events(tmp_path, db_session, uploader_id) -
         content_type="text/plain",
         content=b"Employee handbook content.",
         uploaded_by=uploader_id,
+        **domain_upload_kwargs(db_session),
     )
 
     operations = [event.operation for event in events.history]
@@ -264,6 +266,7 @@ def test_upload_failure_marks_document_failed(tmp_path, db_session, uploader_id)
             content_type="text/plain",
             content=b"fail",
             uploaded_by=uploader_id,
+            **domain_upload_kwargs(db_session),
         )
 
     documents, total = repository.list(limit=10, offset=0)
@@ -345,6 +348,7 @@ def test_retry_document_reuses_pipeline(tmp_path, db_session, uploader_id) -> No
         content_type="text/plain",
         content=b"Employee handbook content.",
         uploaded_by=uploader_id,
+        **domain_upload_kwargs(db_session),
     )
     document_id = uuid.UUID(upload.document_id)
     repository.update_status(document_id, DocumentStatus.FAILED)
@@ -457,6 +461,7 @@ def test_validation_failure_before_storage_marks_failed(
             content_type="text/plain",
             content=b"",
             uploaded_by=uploader_id,
+            **domain_upload_kwargs(db_session),
         )
 
     documents, _ = repository.list(limit=10, offset=0)
@@ -475,6 +480,7 @@ def test_processing_completed_event_includes_duration(tmp_path, db_session, uplo
         content_type="text/plain",
         content=b"Employee handbook content.",
         uploaded_by=uploader_id,
+        **domain_upload_kwargs(db_session),
     )
 
     completed = [
@@ -496,6 +502,7 @@ def test_processing_started_event_includes_stage(tmp_path, db_session, uploader_
         content_type="text/plain",
         content=b"Employee handbook content.",
         uploaded_by=uploader_id,
+        **domain_upload_kwargs(db_session),
     )
 
     started = [

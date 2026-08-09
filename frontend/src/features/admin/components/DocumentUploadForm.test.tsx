@@ -1,13 +1,34 @@
+﻿import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it, vi } from 'vitest'
+import { type ReactElement, beforeEach, describe, expect, it, vi } from 'vitest'
+
+vi.mock('@/features/knowledge-domains/services/knowledgeDomainApi', () => ({
+  listKnowledgeDomains: vi.fn(),
+  createKnowledgeDomain: vi.fn(),
+}))
+
+import * as knowledgeDomainApi from '@/features/knowledge-domains/services/knowledgeDomainApi'
 
 import { MAX_BATCH_UPLOAD_FILES } from '../utils/uploadValidation'
 import DocumentUploadForm from './DocumentUploadForm'
 
+const DOMAIN = { id: 'domain-finance', name: 'Finance', description: null }
+
+function renderWithProviders(ui: ReactElement) {
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  })
+  return render(<QueryClientProvider client={client}>{ui}</QueryClientProvider>)
+}
+
 describe('DocumentUploadForm', () => {
+  beforeEach(() => {
+    vi.mocked(knowledgeDomainApi.listKnowledgeDomains).mockResolvedValue([DOMAIN])
+  })
+
   it('renders multi-file upload controls', () => {
-    render(
+    renderWithProviders(
       <DocumentUploadForm isUploading={false} error={null} onUpload={vi.fn()} />,
     )
 
@@ -18,7 +39,7 @@ describe('DocumentUploadForm', () => {
   })
 
   it('keeps invalid files visible with a per-file error', async () => {
-    render(
+    renderWithProviders(
       <DocumentUploadForm isUploading={false} error={null} onUpload={vi.fn()} />,
     )
 
@@ -32,7 +53,7 @@ describe('DocumentUploadForm', () => {
   })
 
   it('accepts up to the batch cap and reports overflow', async () => {
-    render(
+    renderWithProviders(
       <DocumentUploadForm isUploading={false} error={null} onUpload={vi.fn()} />,
     )
 
@@ -47,7 +68,7 @@ describe('DocumentUploadForm', () => {
   })
 
   it('disables upload button during upload', () => {
-    render(
+    renderWithProviders(
       <DocumentUploadForm isUploading error={null} onUpload={vi.fn()} />,
     )
 
@@ -55,7 +76,7 @@ describe('DocumentUploadForm', () => {
   })
 
   it('shows upload error state', () => {
-    render(
+    renderWithProviders(
       <DocumentUploadForm
         isUploading={false}
         error="Unable to upload document."
@@ -70,7 +91,7 @@ describe('DocumentUploadForm', () => {
     const user = userEvent.setup()
     const onUpload = vi.fn()
 
-    render(
+    renderWithProviders(
       <DocumentUploadForm isUploading={false} error={null} onUpload={onUpload} />,
     )
 
@@ -81,14 +102,15 @@ describe('DocumentUploadForm', () => {
     ]
     await user.upload(input, files)
     await screen.findByText('handbook.pdf')
+    await user.selectOptions(await screen.findByLabelText('Knowledge Domain'), DOMAIN.id)
     await user.click(screen.getByRole('button', { name: 'Upload 2 files' }))
 
-    expect(onUpload).toHaveBeenCalledWith(files)
+    expect(onUpload).toHaveBeenCalledWith(files, DOMAIN.id)
   })
 
   it('adds files to an existing selection and skips duplicates', async () => {
     const user = userEvent.setup()
-    render(
+    renderWithProviders(
       <DocumentUploadForm isUploading={false} error={null} onUpload={vi.fn()} />,
     )
 
@@ -113,7 +135,7 @@ describe('DocumentUploadForm', () => {
 
   it('removes a selected file', async () => {
     const user = userEvent.setup()
-    render(
+    renderWithProviders(
       <DocumentUploadForm isUploading={false} error={null} onUpload={vi.fn()} />,
     )
 
@@ -134,7 +156,7 @@ describe('DocumentUploadForm', () => {
   })
 
   it('supports drag-and-drop of multiple files', async () => {
-    render(
+    renderWithProviders(
       <DocumentUploadForm isUploading={false} error={null} onUpload={vi.fn()} />,
     )
 
@@ -155,7 +177,7 @@ describe('DocumentUploadForm', () => {
 
   it('renders per-file upload progress rows', () => {
     const file = new File(['x'], 'one.pdf', { type: 'application/pdf' })
-    render(
+    renderWithProviders(
       <DocumentUploadForm
         isUploading
         error={null}
@@ -200,7 +222,7 @@ describe('DocumentUploadForm', () => {
   it('shows Retry failed only for genuine failures, not duplicates', () => {
     const file = new File(['x'], 'dup.pdf', { type: 'application/pdf' })
     const onRetryFailed = vi.fn()
-    render(
+    renderWithProviders(
       <DocumentUploadForm
         isUploading={false}
         error={null}

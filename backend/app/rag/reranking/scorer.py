@@ -3,13 +3,59 @@
 from __future__ import annotations
 
 import math
+import re
 import time
 from dataclasses import replace
 
+from app.rag.passage_quality import (
+    document_masthead_penalty,
+    low_information_stub_penalty,
+)
 from app.rag.reranking.config import RerankingSettings
 from app.rag.reranking.runtime import CrossEncoderRuntime
 from app.rag.reranking.schemas import RerankOutcome, RerankerMetrics
 from app.rag.types import calibrate_confidence
+
+# Packed TOC lines like "4.1 Foo 4.2 Bar 4.3 Baz" or many short numbered headings.
+_PACKED_TOC_RE = re.compile(r"\b\d+\.\d*\s+[A-Z]")
+_NUMBERED_LINE_RE = re.compile(r"^\d+(?:\.\d+)*\b")
+
+
+def _toc_like_penalty(content: str | None) -> float:
+    """Return [0, 1] penalty for table-of-contents style passages.
+
+    Phase 3B: CrossEncoder systematically preferred TOC/list-of-headings chunks
+    over body sections that answer the question (BPC mappings, metadata taxonomy
+    body). Soft-penalize TOC-like text when blending ranking scores.
+    """
+    text = (content or "").strip()
+    if not text:
+        return 0.0
+    lines = [line.strip() for line in text.splitlines() if line.strip()]
+    packed = len(_PACKED_TOC_RE.findall(text))
+    if lines:
+        numbered = sum(1 for line in lines if _NUMBERED_LINE_RE.match(line))
+        numbered_ratio = numbered / len(lines)
+    else:
+        numbered_ratio = 0.0
+    penalty = 0.0
+    if packed >= 4:
+        penalty += 0.30
+    elif packed >= 2:
+        penalty += 0.15
+    if numbered_ratio >= 0.55:
+        penalty += 0.30
+    elif numbered_ratio >= 0.35:
+        penalty += 0.12
+    # Very short TOC stubs with little prose.
+    if len(text) < 280 and packed + numbered_ratio * max(len(lines), 1) >= 3:
+        penalty += 0.15
+    # Mixed heading+prose sections (e.g. search taxonomy) should not be
+    # crushed — only pure TOC stubs need a strong penalty.
+    prose_chars = sum(len(line) for line in lines if len(line.split()) >= 12)
+    if prose_chars >= 180:
+        penalty *= 0.35
+    return min(1.0, penalty)
 
 
 def _normalize_scores(scores: list[float]) -> list[float]:
@@ -134,19 +180,44 @@ def apply_reranker_scores(
         return results
 
     normalized_scores = _normalize_scores(scores)
+    hybrid_scores = [
+        float(result.final_score or result.confidence or 0.0) for result in results
+    ]
+    normalized_hybrid = _normalize_scores(hybrid_scores)
+    # Keep CE dominant; give hybrid retrieval quality a real vote and soft-penalize TOC.
+    # Weights sum to 1.0 before TOC penalty: CE 0.55 / hybrid 0.20 / metadata 0.25
+    # (metadata weight still comes from settings when > 0).
+    meta_w = max(0.0, min(1.0, metadata_bonus_weight))
+    hybrid_w = 0.20
+    ce_w = max(0.0, 1.0 - meta_w - hybrid_w)
+
     enriched: list = []
-    for result, reranker_score, normalized_score in zip(
-        results, scores, normalized_scores, strict=True
+    for index, (result, reranker_score, normalized_score) in enumerate(
+        zip(results, scores, normalized_scores, strict=True)
     ):
         display_confidence = _reranker_display_confidence(result, reranker_score)
-        combined_score = reranker_score
-        if metadata_bonus_weight > 0:
+        stub_penalty = low_information_stub_penalty(result.content)
+        masthead_penalty = document_masthead_penalty(result.content)
+        if meta_w > 0 or hybrid_w > 0:
             metadata_component = _metadata_component(
                 result.metadata_bonus, metadata_bonus_reference
             )
+            toc_penalty = _toc_like_penalty(result.content)
             combined_score = (
-                (1 - metadata_bonus_weight) * normalized_score
-                + metadata_bonus_weight * metadata_component
+                ce_w * normalized_score
+                + hybrid_w * normalized_hybrid[index]
+                + meta_w * metadata_component
+                - 0.18 * toc_penalty
+                - 0.55 * stub_penalty
+                - 0.45 * masthead_penalty
+            )
+        else:
+            toc_penalty = _toc_like_penalty(result.content)
+            combined_score = (
+                normalized_score
+                - 0.18 * toc_penalty
+                - 0.55 * stub_penalty
+                - 0.45 * masthead_penalty
             )
         enriched.append(
             replace(

@@ -2,9 +2,10 @@
 
 from functools import lru_cache
 from pathlib import Path
+from typing import Annotated
 
-from pydantic import model_validator
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import field_validator, model_validator
+from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 BACKEND_ROOT = Path(__file__).resolve().parent.parent
 
@@ -42,6 +43,35 @@ class Settings(BaseSettings):
 
     # Single-tenant MVP placeholder
     tenant_id: str = "default"
+    # Tenant branding / routing aliases (comma-separated in env: ORG_ALIASES).
+    # Example: ORG_ALIASES=Acme Corp,Acme,ACME — never hardcode customer names in code.
+    org_display_name: str = ""
+    # NoDecode: allow comma-separated env values without JSON parsing first.
+    org_aliases: Annotated[list[str], NoDecode] = []
+    # Temporary Phase-1 acceptance logging for routing/RAG diagnostics.
+    routing_debug_logging: bool = True
+    # Phase-2B: full RAG retrieval diagnostics (reports under storage/diagnostics).
+    rag_diagnostics_enabled: bool = True
+
+    @field_validator("org_aliases", mode="before")
+    @classmethod
+    def _split_org_aliases(cls, value: object) -> object:
+        """Accept JSON lists or comma-separated ORG_ALIASES env values."""
+        if value is None or value == "":
+            return []
+        if isinstance(value, str):
+            stripped = value.strip()
+            if stripped.startswith("[") and stripped.endswith("]"):
+                import json
+
+                try:
+                    parsed = json.loads(stripped)
+                except json.JSONDecodeError:
+                    parsed = None
+                if isinstance(parsed, list):
+                    return [str(part).strip() for part in parsed if str(part).strip()]
+            return [part.strip() for part in value.split(",") if part.strip()]
+        return value
 
     # Local filesystem storage (MVP)
     storage_path: Path = BACKEND_ROOT / "storage"
@@ -135,7 +165,9 @@ class Settings(BaseSettings):
 
     # Cross-encoder reranking (Phase 12.8)
     reranking_enabled: bool = True
-    rerank_top_n: int = 20
+    # Phase 3B: 40 so strong mid-merge evidence (e.g. metadata taxonomy at
+    # merge rank ~26) still enters the CrossEncoder pool (was truncated at 20).
+    rerank_top_n: int = 40
     rerank_model: str = "ms-marco-minilm-l6-v2"
     rerank_max_batch_size: int = 16
     rerank_max_sequence_length: int = 512
@@ -155,10 +187,49 @@ class Settings(BaseSettings):
     query_intelligence_enabled: bool = True
     query_expansion_enabled: bool = True
     multi_query_enabled: bool = True
-    max_generated_queries: int = 4
+    max_generated_queries: int = 8
     entity_normalization_enabled: bool = True
     synonym_expansion_enabled: bool = True
     strategy_selection_enabled: bool = True
+
+    # Knowledge Intelligence Engine (Phase 13.1) — Shadow Mode
+    # When enabled, generates DocumentKnowledge objects in parallel with
+    # legacy ingestion. Fail-open: never alters upload/API/retrieval behavior.
+    knowledge_engine_shadow_enabled: bool = True
+    knowledge_engine_llm_enrichment_enabled: bool = False
+
+    # Knowledge Registry (Phase 13.2) — Shadow Mode organizational layer.
+    # Registers Knowledge Objects into collections/taxonomy/health. Fail-open.
+    # Nothing in production retrieval consumes registry data yet.
+    knowledge_registry_shadow_enabled: bool = True
+
+    # Knowledge Relationship Engine (Phase 13.3) — Shadow Mode.
+    # Discovers relationships between Registry entries. Fail-open.
+    # Nothing in production retrieval consumes relationship data yet.
+    knowledge_relationship_shadow_enabled: bool = True
+
+    # Hybrid Knowledge Index (Phase 13.4) — Shadow Mode.
+    # Indexes Knowledge Objects / Registry / Relationships. Fail-open.
+    # Nothing in production retrieval consumes these indexes yet.
+    knowledge_index_shadow_enabled: bool = True
+
+    # Intelligent Query Planner (Phase 13.5) — Shadow Mode.
+    # Builds retrieval execution plans only. Never retrieves / never alters answers.
+    query_planner_shadow_enabled: bool = True
+
+    # Knowledge Execution Engine (Phase 13.6) — Shadow Mode.
+    # Executes QueryExecutionPlans against Hybrid Indexes only. Fail-open.
+    # Never calls FAISS/BM25/LLM; never influences production answers.
+    knowledge_execution_shadow_enabled: bool = True
+
+    # Knowledge Graph (Phase 13.7) — Shadow Mode.
+    # Typed graph traversal/expansion for Shadow consumers only. Fail-open.
+    knowledge_graph_shadow_enabled: bool = True
+
+    # Worker Orchestration (Phase 13.8) — Shadow Mode.
+    # Coordinates workers wrapping existing providers. Fail-open.
+    # Not an AI agent runtime; never influences production answers.
+    knowledge_orchestration_shadow_enabled: bool = True
 
     @model_validator(mode="after")
     def _require_real_jwt_secret(self) -> "Settings":

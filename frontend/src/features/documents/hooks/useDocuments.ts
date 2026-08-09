@@ -13,16 +13,21 @@ export function useDocuments(params: DocumentListParams = {}) {
     offset = DEFAULT_OFFSET,
     filename,
     status,
+    domain_id,
   } = params
 
   return useQuery({
-    queryKey: [...documentQueryKeys.list(), { limit, offset, filename, status }],
+    queryKey: [
+      ...documentQueryKeys.list(),
+      { limit, offset, filename, status, domain_id },
+    ],
     queryFn: () =>
       documentApi.getDocuments({
         limit,
         offset,
         ...(filename ? { filename } : {}),
         ...(status ? { status } : {}),
+        ...(domain_id ? { domain_id } : {}),
       }),
   })
 }

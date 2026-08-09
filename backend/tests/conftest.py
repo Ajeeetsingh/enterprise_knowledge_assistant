@@ -24,6 +24,14 @@ def _patch_database_lifecycle_for_tests() -> None:
     main.check_database_connection = lambda: True  # type: ignore[method-assign]
     db_session.engine.dispose = lambda: None  # type: ignore[method-assign]
     bootstrap_module.bootstrap_search_index = lambda *args, **kwargs: 0  # type: ignore[method-assign]
+    # Shadow Mode talks to SessionLocal; keep tests isolated from Postgres.
+    main.ensure_shadow_knowledge_wired = lambda: None  # type: ignore[method-assign]
+    main.ensure_shadow_relationships_wired = lambda: None  # type: ignore[method-assign]
+    main.ensure_shadow_knowledge_index_wired = lambda: None  # type: ignore[method-assign]
+    main.ensure_shadow_query_planner_wired = lambda: None  # type: ignore[method-assign]
+    main.ensure_shadow_knowledge_execution_wired = lambda: None  # type: ignore[method-assign]
+    main.ensure_shadow_knowledge_graph_wired = lambda: None  # type: ignore[method-assign]
+    main.ensure_shadow_knowledge_orchestration_wired = lambda: None  # type: ignore[method-assign]
 
 
 def pytest_configure(config: pytest.Config) -> None:

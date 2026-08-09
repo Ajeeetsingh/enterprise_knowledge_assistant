@@ -9,6 +9,7 @@ import * as chatApi from '@/features/chat/services/chatApi'
 import {
   GUEST_STORAGE_KEY,
   GUEST_TRANSITION_KEY,
+  armGuestContinuePrompt,
   clearGuestImportPending,
   markGuestImportPending,
 } from '@/features/demo'
@@ -75,6 +76,19 @@ function renderChat() {
   )
 }
 
+function seedGuestConversation() {
+  markGuestImportPending()
+  saveGuestSession({
+    version: 1,
+    messages: [
+      createGuestMessage('user', 'What is RAG?'),
+      createGuestMessage('assistant', 'Retrieval-augmented generation.'),
+    ],
+    successfulQuestionCount: 1,
+    updatedAt: new Date().toISOString(),
+  })
+}
+
 describe('ChatPage guest continue prompt', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -95,30 +109,27 @@ describe('ChatPage guest continue prompt', () => {
     expect(mockImportGuest).not.toHaveBeenCalled()
   })
 
-  it('shows continue prompt when transition is pending', () => {
-    markGuestImportPending()
-    saveGuestSession({
-      version: 1,
-      messages: [
-        createGuestMessage('user', 'What is RAG?'),
-        createGuestMessage('assistant', 'Retrieval-augmented generation.'),
-      ],
-      successfulQuestionCount: 1,
-      updatedAt: new Date().toISOString(),
+  it('does not show continue prompt for authenticated users with only stale guest storage', async () => {
+    seedGuestConversation()
+    renderChat()
+    expect(screen.queryByText(/continue your guest conversation/i)).not.toBeInTheDocument()
+    await waitFor(() => {
+      expect(sessionStorage.getItem(GUEST_STORAGE_KEY)).toBeNull()
+      expect(sessionStorage.getItem(GUEST_TRANSITION_KEY)).toBeNull()
     })
+  })
+
+  it('shows continue prompt only when post-login ready flag is armed', () => {
+    seedGuestConversation()
+    armGuestContinuePrompt()
     renderChat()
     expect(screen.getByText(/continue your guest conversation/i)).toBeInTheDocument()
     expect(mockImportGuest).not.toHaveBeenCalled()
   })
 
   it('Start fresh clears guest state without import', async () => {
-    markGuestImportPending()
-    saveGuestSession({
-      version: 1,
-      messages: [createGuestMessage('user', 'Hello')],
-      successfulQuestionCount: 1,
-      updatedAt: new Date().toISOString(),
-    })
+    seedGuestConversation()
+    armGuestContinuePrompt()
     const user = userEvent.setup()
     renderChat()
 
@@ -131,16 +142,8 @@ describe('ChatPage guest continue prompt', () => {
   })
 
   it('Continue imports and clears guest state', async () => {
-    markGuestImportPending()
-    saveGuestSession({
-      version: 1,
-      messages: [
-        createGuestMessage('user', 'What is RAG?'),
-        createGuestMessage('assistant', 'Retrieval-augmented generation.'),
-      ],
-      successfulQuestionCount: 1,
-      updatedAt: new Date().toISOString(),
-    })
+    seedGuestConversation()
+    armGuestContinuePrompt()
     mockImportGuest.mockResolvedValue({
       id: 'conv-imported',
       title: 'Guest conversation',
@@ -168,13 +171,8 @@ describe('ChatPage guest continue prompt', () => {
   })
 
   it('failed import preserves guest state', async () => {
-    markGuestImportPending()
-    saveGuestSession({
-      version: 1,
-      messages: [createGuestMessage('user', 'Keep me')],
-      successfulQuestionCount: 1,
-      updatedAt: new Date().toISOString(),
-    })
+    seedGuestConversation()
+    armGuestContinuePrompt()
     mockImportGuest.mockRejectedValue(new Error('import failed'))
     const user = userEvent.setup()
     renderChat()

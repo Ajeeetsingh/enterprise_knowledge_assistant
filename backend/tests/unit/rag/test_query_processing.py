@@ -134,7 +134,19 @@ class TestMultiQuery:
             ],
             limit=2,
         )
+        # Original-query reservation keeps both original hits before RRF fill.
         assert [item.chunk_id for item in merged] == ["a", "b"]
+
+    def test_merge_reserves_original_query_hits(self) -> None:
+        """Strong original-query evidence must not be drowned by expansion TOC hits."""
+        original = [
+            _result("toc", score=0.95),
+            _result("body", score=0.90),
+        ]
+        # Many expansions only retrieve toc/noise — previously body fell out of top-N.
+        expansions = [[_result("toc", score=0.9), _result(f"noise-{i}", score=0.8)] for i in range(6)]
+        merged = merge_multi_query_results([original, *expansions], limit=4)
+        assert "body" in {item.chunk_id for item in merged}
 
 
 class TestStrategy:

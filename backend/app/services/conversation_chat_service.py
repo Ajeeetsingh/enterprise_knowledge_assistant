@@ -39,10 +39,12 @@ from app.rag.answer_generator import UNAVAILABLE_MESSAGE
 from app.rag.types import Citation, QueryResponse
 from app.query_router import QueryRouter, QueryRoute, UserQueryContext, get_query_router
 from app.query_router.conversation_hints import infer_route_hints
+from app.query_router.document_catalog import build_document_route_catalog
 from app.query_router.general_responder import (
     GeneralQueryResponder,
     format_general_conversation_history,
 )
+from app.query_router.routing_debug import log_final_response_type
 from app.query_router.messages import (
     ANSWER_KIND_DOCUMENT_GROUNDED,
     ANSWER_KIND_DOCUMENT_INSUFFICIENT,
@@ -159,16 +161,20 @@ class ConversationChatService:
 
         sources = authorized_sources if authorized_sources is not None else frozenset()
         route_hints = infer_route_hints(context.history_messages)
+        org_aliases = _load_org_aliases()
         route_context = UserQueryContext(
             role_name=role_name,
             can_upload=user_has_permission(user, Permission.DOCUMENT_CREATE),
             has_accessible_documents=len(sources) > 0,
             accessible_document_count=len(sources),
             conversation_hints=route_hints,
+            org_aliases=org_aliases,
+            document_catalog=build_document_route_catalog(sources),
         )
         decision = self._router().route(context.current_question, route_context)
         # RAG may use a larger conversational window; general answers stay small.
         rag_history = ContextBuilder.format_history(context.history_messages)
+        rag_executed = False
 
         if decision.route == QueryRoute.GENERAL_QUERY:
             general_history = _general_history_for_prompt(
@@ -196,6 +202,7 @@ class ConversationChatService:
             )
         else:
             # Always pass a frozenset (never None) so RAG cannot become unrestricted.
+            rag_executed = True
             query_response = rag_service.answer_question(
                 context.current_question,
                 role_name,
@@ -207,6 +214,15 @@ class ConversationChatService:
             confidence = query_response.confidence_score
             status_message = query_response.message
             answer_kind = _document_answer_kind(query_response, assistant_content)
+
+        try:
+            log_final_response_type(
+                question=context.current_question,
+                answer_kind=answer_kind or "unknown",
+                rag_executed=rag_executed,
+            )
+        except Exception:  # noqa: BLE001
+            pass
 
         self._conversation_service.add_assistant_message(
             user,
@@ -271,6 +287,25 @@ class ConversationChatService:
                 conversation_id=str(conversation_id),
                 reason=type(exc).__name__,
             )
+
+
+def _load_org_aliases() -> tuple[str, ...]:
+    """Load configured tenant aliases for data-driven DOCUMENT routing."""
+    try:
+        from app.config import get_settings
+
+        settings = get_settings()
+        aliases: list[str] = []
+        display = (getattr(settings, "org_display_name", None) or "").strip()
+        if display:
+            aliases.append(display)
+        for alias in getattr(settings, "org_aliases", None) or []:
+            cleaned = str(alias).strip()
+            if cleaned and cleaned not in aliases:
+                aliases.append(cleaned)
+        return tuple(aliases)
+    except Exception:  # noqa: BLE001
+        return ()
 
 
 def _document_answer_kind(query_response: QueryResponse, assistant_content: str) -> str:
